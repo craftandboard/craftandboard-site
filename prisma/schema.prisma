@@ -1,0 +1,209 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum MaterialCode {
+  BIRCH_18
+  WALNUT_18
+  MAPLE_18
+  MDF_18
+}
+
+enum OrderStatus {
+  DRAFT
+  RECEIVED
+  IN_PRODUCTION
+  COMPLETE
+}
+
+enum PartStatus {
+  PENDING
+  BATCHED
+  CUT
+  PACKED
+}
+
+enum BatchStatus {
+  DRAFT
+  PLANNED
+  RELEASED
+  COMPLETE
+}
+
+enum StationType {
+  SCAN
+  ASSEMBLY
+  PACK
+  SHIP
+}
+
+enum ShipmentStatus {
+  PENDING
+  READY
+  SHIPPED
+  DELIVERED
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  users     User[]
+  orders    Order[]
+  batches   Batch[]
+  stations  Station[]
+}
+
+model User {
+  id             String       @id @default(cuid())
+  organizationId String
+  email          String       @unique
+  name           String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+}
+
+model Order {
+  id             String       @id @default(cuid())
+  organizationId String
+  externalRef    String?
+  customerName   String
+  status         OrderStatus  @default(DRAFT)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  items          OrderItem[]
+  shipments      Shipment[]
+  artifacts      Artifact[]
+}
+
+model OrderItem {
+  id          String   @id @default(cuid())
+  orderId      String
+  sku          String
+  quantity     Int      @default(1)
+  materialCode MaterialCode?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  order        Order    @relation(fields: [orderId], references: [id])
+  parts        Part[]
+}
+
+model Part {
+  id           String       @id @default(cuid())
+  orderItemId   String?
+  batchId       String?
+  name         String
+  materialCode MaterialCode?
+  status       PartStatus   @default(PENDING)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  orderItem    OrderItem?   @relation(fields: [orderItemId], references: [id])
+  batch        Batch?       @relation(fields: [batchId], references: [id])
+  placements   SheetPlacement[]
+}
+
+model Batch {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  status         BatchStatus  @default(DRAFT)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  parts          Part[]
+  sheets         Sheet[]
+  cncJobs        CncJob[]
+  artifacts      Artifact[]
+}
+
+model Sheet {
+  id          String           @id @default(cuid())
+  batchId      String
+  materialCode MaterialCode
+  widthMm     Int
+  heightMm    Int
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  batch       Batch            @relation(fields: [batchId], references: [id])
+  placements  SheetPlacement[]
+  artifacts   Artifact[]
+}
+
+model SheetPlacement {
+  id        String   @id @default(cuid())
+  sheetId    String
+  partId     String
+  xMm       Int
+  yMm       Int
+  rotation  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sheet      Sheet   @relation(fields: [sheetId], references: [id])
+  part       Part    @relation(fields: [partId], references: [id])
+}
+
+model CncJob {
+  id         String   @id @default(cuid())
+  batchId     String?
+  machineCode String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  batch      Batch?   @relation(fields: [batchId], references: [id])
+  artifacts  Artifact[]
+}
+
+model Station {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  type           StationType
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  scanEvents     ScanEvent[]
+}
+
+model ScanEvent {
+  id         String   @id @default(cuid())
+  stationId   String
+  code       String
+  createdAt  DateTime @default(now())
+  station    Station  @relation(fields: [stationId], references: [id])
+}
+
+model Shipment {
+  id         String         @id @default(cuid())
+  orderId     String
+  carrierCode String?
+  trackingNo  String?
+  status      ShipmentStatus @default(PENDING)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  order       Order          @relation(fields: [orderId], references: [id])
+  artifacts   Artifact[]
+}
+
+model Artifact {
+  id         String    @id @default(cuid())
+  type       String
+  uri        String
+  orderId     String?
+  batchId     String?
+  sheetId     String?
+  cncJobId    String?
+  shipmentId  String?
+  createdAt  DateTime  @default(now())
+  order      Order?    @relation(fields: [orderId], references: [id])
+  batch      Batch?    @relation(fields: [batchId], references: [id])
+  sheet      Sheet?    @relation(fields: [sheetId], references: [id])
+  cncJob     CncJob?   @relation(fields: [cncJobId], references: [id])
+  shipment   Shipment? @relation(fields: [shipmentId], references: [id])
+}

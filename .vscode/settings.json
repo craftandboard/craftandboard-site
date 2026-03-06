@@ -1,0 +1,24 @@
+{
+  "editor.formatOnSave": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "eslint.workingDirectories": [
+    {
+      "mode": "auto"
+    }
+  ],
+  "workbench.colorCustomizations": {
+    "titleBar.activeBackground": "#0f5a2f",
+    "titleBar.activeForeground": "#f4fff7",
+    "titleBar.inactiveBackground": "#2d6f48",
+    "titleBar.inactiveForeground": "#dcefe3",
+    "activityBar.background": "#124d2e",
+    "activityBar.foreground": "#f4fff7",
+    "activityBar.activeBorder": "#86d69d",
+    "statusBar.background": "#0f5a2f",
+    "statusBar.foreground": "#f4fff7",
+    "statusBar.debuggingBackground": "#2a7f46",
+    "statusBar.debuggingForeground": "#f4fff7"
+  }
+}

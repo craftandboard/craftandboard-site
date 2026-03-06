@@ -1,0 +1,2 @@
+# Placeholder requirements for the initial scaffold.
+# CadQuery and manufacturing libraries will be added in later specs.

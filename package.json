@@ -1,0 +1,26 @@
+{
+  "name": "craft-and-board",
+  "private": true,
+  "packageManager": "pnpm@9.15.5",
+  "scripts": {
+    "dev:web": "pnpm --filter web dev",
+    "dev:api": "pnpm --filter api dev",
+    "dev:worker": "pnpm --filter worker dev",
+    "dev": "concurrently -n web,api,worker -c green,blue,yellow \"pnpm dev:web\" \"pnpm dev:api\" \"pnpm dev:worker\"",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "prettier --write .",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d",
+    "db:down": "docker compose -f infrastructure/docker/docker-compose.yml down"
+  },
+  "devDependencies": {
+    "@prisma/client": "^6.5.0",
+    "@types/node": "^24.0.0",
+    "concurrently": "^9.1.2",
+    "prettier": "^3.5.3",
+    "prisma": "^6.5.0",
+    "typescript": "^5.8.2"
+  }
+}

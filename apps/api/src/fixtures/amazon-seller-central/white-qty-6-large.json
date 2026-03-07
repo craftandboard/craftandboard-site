@@ -1,0 +1,21 @@
+{
+  "amazonOrderId": "111-5237066-4129813",
+  "amazonOrderItemId": "123098226833565",
+  "asin": "B0DW299RT6",
+  "quantity": 6,
+  "buyerName": "Mason Turner",
+  "shipToName": "Mason Turner",
+  "purchaseDate": "2026-03-08T18:02:00-08:00",
+  "shipByDate": "2026-03-10",
+  "productTitle": "Sublime Design - Made to Fit - Custom - Cabinet Replacement Shelves (White)",
+  "sku": "CST-White Melamine Shelf - 3/4\" Thick",
+  "customizations": {
+    "lengthInches": "35",
+    "lengthFraction": "No Adjustment",
+    "depthInches": "24",
+    "depthAdjustment": "No Adjustment",
+    "edgebanding": "Edgeband On Short Side",
+    "contactInfo": "mason@example.com",
+    "notes": "Large quantity to force multiple sheets in nesting"
+  }
+}

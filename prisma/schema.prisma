@@ -8,24 +8,37 @@ datasource db {
 }
 
 enum MaterialCode {
+  WHITE_MELAMINE
+  MAPLE_MELAMINE
   BIRCH_18
   WALNUT_18
   MAPLE_18
   MDF_18
 }
 
+enum EdgeBandPattern {
+  ALL_FOUR
+}
+
 enum OrderStatus {
   DRAFT
+  IMPORTED
+  READY_FOR_BATCH
   RECEIVED
   IN_PRODUCTION
   COMPLETE
+  HOLD
+  ERROR
 }
 
 enum PartStatus {
   PENDING
+  READY_FOR_BATCH
   BATCHED
   CUT
   PACKED
+  HOLD
+  ERROR
 }
 
 enum BatchStatus {
@@ -33,6 +46,52 @@ enum BatchStatus {
   PLANNED
   RELEASED
   COMPLETE
+}
+
+enum ProductionBundleStatus {
+  DRAFT
+  READY_FOR_NESTING
+  NESTED
+  READY_FOR_CNC
+  CNC_GENERATED
+  APPROVED_FOR_PRODUCTION
+  IN_PRODUCTION
+  CUT_COMPLETE
+  QC_HOLD
+  PACKED
+  SHIPPED
+  ERROR
+}
+
+enum SheetStatus {
+  PLANNED
+  POSTED
+  CUTTING
+  CUT_COMPLETE
+  QC_HOLD
+  SCRAPPED
+}
+
+enum CncJobStatus {
+  GENERATED
+  APPROVED
+  POSTED
+  RAN
+  FAILED
+  SUPERSEDED
+}
+
+enum ArtifactType {
+  SHEET_MAP_SVG
+  SHEET_MAP_HTML
+  CNC_FILE
+  BUNDLE_PACKET_HTML
+}
+
+enum SalesChannel {
+  AMAZON
+  WEBSITE
+  MANUAL
 }
 
 enum StationType {
@@ -57,7 +116,10 @@ model Organization {
   users     User[]
   orders    Order[]
   batches   Batch[]
+  bundles   ProductionBundle[]
   stations  Station[]
+  machineProfiles  MachineProfile[]
+  materialProfiles MaterialProfile[]
 }
 
 model User {
@@ -71,43 +133,92 @@ model User {
 }
 
 model Order {
-  id             String       @id @default(cuid())
-  organizationId String
-  externalRef    String?
-  customerName   String
-  status         OrderStatus  @default(DRAFT)
-  createdAt      DateTime     @default(now())
-  updatedAt      DateTime     @updatedAt
-  organization   Organization @relation(fields: [organizationId], references: [id])
-  items          OrderItem[]
-  shipments      Shipment[]
-  artifacts      Artifact[]
+  id               String       @id @default(cuid())
+  organizationId   String
+  externalRef      String?
+  externalOrderId  String?      @unique
+  amazonOrderId    String?      @unique
+  amazonOrderSource String?
+  orderDate        DateTime?
+  purchaseDate     DateTime?
+  shipByDate       DateTime?
+  customerName     String
+  customerFullName String?
+  shipToName       String?
+  customerLastName String?
+  status           OrderStatus  @default(DRAFT)
+  channel          SalesChannel @default(MANUAL)
+  rawPayload       Json?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  items            OrderItem[]
+  parts            Part[]
+  shipments        Shipment[]
+  artifacts        Artifact[]
+
+  @@index([organizationId, shipByDate])
+  @@index([customerLastName])
 }
 
 model OrderItem {
-  id          String   @id @default(cuid())
-  orderId      String
-  sku          String
-  quantity     Int      @default(1)
-  materialCode MaterialCode?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  order        Order    @relation(fields: [orderId], references: [id])
-  parts        Part[]
+  id                    String          @id @default(cuid())
+  orderId               String
+  externalOrderItemId   String?         @unique
+  amazonOrderItemId     String?         @unique
+  asin                  String?
+  sku                   String
+  title                 String
+  productLabel          String
+  normalizedLegacyXmlName String?
+  quantity              Int             @default(1)
+  materialCode          MaterialCode?
+  edgeBandPattern       EdgeBandPattern @default(ALL_FOUR)
+  widthIn               Decimal         @db.Decimal(8, 3)
+  depthIn               Decimal         @db.Decimal(8, 3)
+  thicknessIn           Decimal         @db.Decimal(8, 3)
+  sourceLengthIn        Decimal?        @db.Decimal(8, 3)
+  sourceDepthIn         Decimal?        @db.Decimal(8, 3)
+  sourceEdgeBandText    String?
+  sourceCustomizationJson Json?
+  notes                 String?
+  rawPayload            Json?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  order                 Order           @relation(fields: [orderId], references: [id])
+  parts                 Part[]
+
+  @@index([orderId])
 }
 
 model Part {
-  id           String       @id @default(cuid())
-  orderItemId   String?
-  batchId       String?
-  name         String
-  materialCode MaterialCode?
-  status       PartStatus   @default(PENDING)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
-  orderItem    OrderItem?   @relation(fields: [orderItemId], references: [id])
-  batch        Batch?       @relation(fields: [batchId], references: [id])
-  placements   SheetPlacement[]
+  id               String           @id @default(cuid())
+  orderItemId      String?
+  batchId          String?
+  orderId          String?
+  name             String
+  partCode         String           @unique
+  qrPayload        String
+  serialNumber     Int?
+  instanceNumber   Int              @default(1)
+  materialCode     MaterialCode?
+  edgeBandPattern  EdgeBandPattern  @default(ALL_FOUR)
+  widthIn          Decimal          @db.Decimal(8, 3)
+  depthIn          Decimal          @db.Decimal(8, 3)
+  thicknessIn      Decimal          @db.Decimal(8, 3)
+  shipByDate       DateTime?
+  customerLastName String?
+  status           PartStatus       @default(READY_FOR_BATCH)
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  order            Order?           @relation(fields: [orderId], references: [id])
+  orderItem        OrderItem?       @relation(fields: [orderItemId], references: [id])
+  batch            Batch?           @relation(fields: [batchId], references: [id])
+  placements       SheetPlacement[]
+
+  @@index([shipByDate, materialCode])
+  @@index([orderItemId])
+  @@index([customerLastName])
 }
 
 model Batch {
@@ -124,40 +235,123 @@ model Batch {
   artifacts      Artifact[]
 }
 
+model ProductionBundle {
+  id                    String                 @id @default(cuid())
+  organizationId        String
+  code                  String                 @unique
+  shipByDate            DateTime
+  materialCode          MaterialCode
+  status                ProductionBundleStatus @default(DRAFT)
+  releasedAt            DateTime?
+  releasedBy            String?
+  nestingApprovedAt     DateTime?
+  nestingApprovedBy     String?
+  cncApprovedAt         DateTime?
+  cncApprovedBy         String?
+  currentNestVersion    Int?
+  currentCncVersion     Int?
+  totalLineItems        Int                    @default(0)
+  totalPhysicalParts    Int                    @default(0)
+  notes                 String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  organization          Organization           @relation(fields: [organizationId], references: [id])
+  sheets                Sheet[]
+  cncJobs               CncJob[]
+  artifacts             Artifact[]
+
+  @@index([organizationId, shipByDate])
+  @@index([status, materialCode])
+}
+
 model Sheet {
-  id          String           @id @default(cuid())
-  batchId      String
-  materialCode MaterialCode
-  widthMm     Int
-  heightMm    Int
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  batch       Batch            @relation(fields: [batchId], references: [id])
-  placements  SheetPlacement[]
-  artifacts   Artifact[]
+  id                   String           @id @default(cuid())
+  batchId              String?
+  productionBundleId   String?
+  productionBundleCode String?
+  materialCode         MaterialCode
+  sheetNumber          Int
+  version              Int              @default(1)
+  widthMm              Int
+  heightMm             Int
+  widthIn              Decimal          @db.Decimal(8, 3)
+  heightIn             Decimal          @db.Decimal(8, 3)
+  usableXIn            Decimal          @db.Decimal(8, 3)
+  usableYIn            Decimal          @db.Decimal(8, 3)
+  usableWidthIn        Decimal          @db.Decimal(8, 3)
+  usableHeightIn       Decimal          @db.Decimal(8, 3)
+  utilizationPct       Decimal          @db.Decimal(6, 3)
+  status               SheetStatus      @default(PLANNED)
+  isCurrent            Boolean          @default(true)
+  approvedAt           DateTime?
+  postedAt             DateTime?
+  completedAt          DateTime?
+  scrapReason          String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  batch                Batch?           @relation(fields: [batchId], references: [id])
+  productionBundle     ProductionBundle? @relation(fields: [productionBundleId], references: [id])
+  placements           SheetPlacement[]
+  artifacts            Artifact[]
+  cncJobs              CncJob[]
+
+  @@index([productionBundleId, version])
+  @@index([productionBundleCode, materialCode])
 }
 
 model SheetPlacement {
-  id        String   @id @default(cuid())
-  sheetId    String
-  partId     String
-  xMm       Int
-  yMm       Int
-  rotation  Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  sheet      Sheet   @relation(fields: [sheetId], references: [id])
-  part       Part    @relation(fields: [partId], references: [id])
+  id             String   @id @default(cuid())
+  sheetId        String
+  partId         String
+  xMm            Int
+  yMm            Int
+  xIn            Decimal  @db.Decimal(8, 3)
+  yIn            Decimal  @db.Decimal(8, 3)
+  widthIn        Decimal  @db.Decimal(8, 3)
+  depthIn        Decimal  @db.Decimal(8, 3)
+  rotation       Int      @default(0)
+  rotationDeg    Int      @default(0)
+  sequenceNumber Int      @default(1)
+  onionSkin      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  sheet          Sheet    @relation(fields: [sheetId], references: [id])
+  part           Part     @relation(fields: [partId], references: [id])
 }
 
 model CncJob {
-  id         String   @id @default(cuid())
-  batchId     String?
-  machineCode String?
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
-  batch      Batch?   @relation(fields: [batchId], references: [id])
-  artifacts  Artifact[]
+  id                   String        @id @default(cuid())
+  batchId              String?
+  productionBundleId   String?
+  productionBundleCode String?
+  sheetId              String?
+  code                 String        @unique
+  materialCode         MaterialCode
+  controllerType       String
+  fileExtension        String
+  version              Int           @default(1)
+  status               CncJobStatus  @default(GENERATED)
+  isCurrent            Boolean       @default(true)
+  toolDiameterIn       Decimal       @db.Decimal(8, 3)
+  spindleRpm           Int
+  feedRateIpm          Int
+  plungeRateIpm        Int
+  approvedAt           DateTime?
+  approvedBy           String?
+  postedAt             DateTime?
+  ranAt                DateTime?
+  supersededAt         DateTime?
+  failureReason        String?
+  machineCode          String?
+  createdAt            DateTime      @default(now())
+  updatedAt            DateTime      @updatedAt
+  batch                Batch?        @relation(fields: [batchId], references: [id])
+  productionBundle     ProductionBundle? @relation(fields: [productionBundleId], references: [id])
+  sheet                Sheet?        @relation(fields: [sheetId], references: [id])
+  artifacts            Artifact[]
+
+  @@index([productionBundleId, version])
+  @@index([productionBundleCode, materialCode])
 }
 
 model Station {
@@ -172,38 +366,87 @@ model Station {
 }
 
 model ScanEvent {
-  id         String   @id @default(cuid())
-  stationId   String
-  code       String
-  createdAt  DateTime @default(now())
-  station    Station  @relation(fields: [stationId], references: [id])
+  id        String   @id @default(cuid())
+  stationId String
+  code      String
+  createdAt DateTime @default(now())
+  station   Station  @relation(fields: [stationId], references: [id])
 }
 
 model Shipment {
-  id         String         @id @default(cuid())
+  id          String          @id @default(cuid())
   orderId     String
   carrierCode String?
   trackingNo  String?
-  status      ShipmentStatus @default(PENDING)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
-  order       Order          @relation(fields: [orderId], references: [id])
+  status      ShipmentStatus  @default(PENDING)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  order       Order           @relation(fields: [orderId], references: [id])
   artifacts   Artifact[]
 }
 
 model Artifact {
-  id         String    @id @default(cuid())
+  id         String       @id @default(cuid())
   type       String
+  artifactType ArtifactType?
   uri        String
-  orderId     String?
-  batchId     String?
-  sheetId     String?
-  cncJobId    String?
-  shipmentId  String?
+  mimeType   String?
+  version    Int          @default(1)
+  isCurrent  Boolean      @default(true)
+  supersededAt DateTime?
+  generatedFrom String?
+  orderId    String?
+  batchId    String?
+  productionBundleId String?
+  productionBundleCode String?
+  sheetId    String?
+  cncJobId   String?
+  shipmentId String?
   createdAt  DateTime  @default(now())
   order      Order?    @relation(fields: [orderId], references: [id])
   batch      Batch?    @relation(fields: [batchId], references: [id])
+  productionBundle ProductionBundle? @relation(fields: [productionBundleId], references: [id])
   sheet      Sheet?    @relation(fields: [sheetId], references: [id])
   cncJob     CncJob?   @relation(fields: [cncJobId], references: [id])
   shipment   Shipment? @relation(fields: [shipmentId], references: [id])
+}
+
+model MachineProfile {
+  id                  String       @id @default(cuid())
+  organizationId      String
+  code                String       @unique
+  name                String
+  controllerType      String
+  fileExtension       String
+  units               String
+  toolDiameterIn      Decimal      @db.Decimal(8, 3)
+  spindleRpm          Int
+  feedRateIpm         Int
+  plungeRateIpm       Int?
+  cutDepthIn          Decimal      @db.Decimal(8, 3)
+  onionSkinDepthIn    Decimal      @db.Decimal(8, 3)
+  safeZIn             Decimal      @db.Decimal(8, 3)
+  defaultCutStrategy  String
+  active              Boolean      @default(true)
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  organization        Organization @relation(fields: [organizationId], references: [id])
+}
+
+model MaterialProfile {
+  id                     String           @id @default(cuid())
+  organizationId         String
+  code                   MaterialCode
+  name                   String
+  thicknessIn            Decimal          @db.Decimal(8, 3)
+  sheetWidthIn           Decimal          @db.Decimal(8, 3)
+  sheetDepthIn           Decimal          @db.Decimal(8, 3)
+  trimMarginIn           Decimal          @db.Decimal(8, 3)
+  defaultEdgeBandPattern EdgeBandPattern
+  active                 Boolean          @default(true)
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  organization           Organization     @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, code])
 }

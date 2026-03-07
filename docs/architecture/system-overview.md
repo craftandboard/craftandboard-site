@@ -5,7 +5,7 @@ Craft & Board uses a pnpm monorepo so the web app, API, worker, shared types, Pr
 ## Structure
 
 - `apps/web` provides the operator-facing interface using Next.js App Router.
-- `apps/api` exposes HTTP endpoints for orders, batches, stations, and health checks.
+- `apps/api` exposes HTTP endpoints for fixture imports, orders, daily production outputs, reports, batches, stations, and health checks.
 - `apps/worker` hosts background queue wiring for async workflows such as import and batch planning.
 - `packages/shared` contains reusable TypeScript contracts.
 - `services/python-cam` reserves the Python boundary for geometry, nesting, and CNC logic.
@@ -14,6 +14,8 @@ Craft & Board uses a pnpm monorepo so the web app, API, worker, shared types, Pr
 ## Why this architecture
 
 The split keeps UI, synchronous API behavior, async orchestration, and manufacturing computation isolated while still sharing contracts and tooling. That supports future multi-tenant growth without forcing all concerns into a single runtime.
+
+The current workflow starts with local raw-order fixtures, normalizes them into orders, order items, and physical parts, and then generates production-report, label, optimizer, and legacy XML view models from persisted records.
 
 ## Planned later modules
 

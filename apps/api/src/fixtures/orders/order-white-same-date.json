@@ -1,0 +1,21 @@
+{
+  "externalOrderId": "EXT-1005",
+  "amazonOrderId": "112-5555555-5555555",
+  "orderDate": "2026-03-05T22:05:00.000Z",
+  "shipByDate": "2026-03-10",
+  "customerName": "Liam Vanderberg-Smythe",
+  "lineItems": [
+    {
+      "externalOrderItemId": "EXT-1005-1",
+      "sku": "CB-WMS-21-24",
+      "title": "White Melamine Shelf 24 3/8 x 21",
+      "material": "White Melamine Shelf",
+      "quantity": 3,
+      "widthWhole": 24,
+      "widthFraction": "3/8",
+      "depthWhole": 21,
+      "depthFraction": "0",
+      "notes": "Legacy-style dimensions for white bundle density"
+    }
+  ]
+}

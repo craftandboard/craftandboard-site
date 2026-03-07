@@ -1,0 +1,144 @@
+.shelf-label-batch {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.shelf-label-sheet {
+  display: flex;
+  justify-content: center;
+}
+
+.shelf-label {
+  width: 4in;
+  min-width: 4in;
+  height: 2in;
+  background: #fff;
+  color: #111;
+  border: 2px solid #111;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.shelf-label__row {
+  display: grid;
+}
+
+.shelf-label__row--top {
+  grid-template-columns: 0.88in 1.5in 0.7in 0.92in;
+  min-height: 0.48in;
+}
+
+.shelf-label__row--middle {
+  grid-template-columns: 0.4in 1.55in 1.02in 1.03in;
+  min-height: 0.72in;
+}
+
+.shelf-label__row--bottom {
+  grid-template-columns: 2.95in 1.05in;
+  min-height: 0.8in;
+}
+
+.shelf-label__cell {
+  border-right: 1.5px solid #111;
+  border-bottom: 1.5px solid #111;
+  padding: 0.07in 0.08in;
+  overflow: hidden;
+}
+
+.shelf-label__cell--row-bottom {
+  border-bottom: none;
+}
+
+.shelf-label__meta {
+  font-size: 0.11in;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.01in;
+}
+
+.shelf-label__value {
+  margin-top: 0.03in;
+  font-size: 0.22in;
+  font-weight: 800;
+  line-height: 1.05;
+}
+
+.shelf-label__value--name {
+  font-size: 0.28in;
+}
+
+.shelf-label__value--dim {
+  font-size: 0.26in;
+}
+
+.shelf-label__value--ship {
+  font-size: 0.24in;
+}
+
+.shelf-label__vertical {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.24in;
+  font-weight: 900;
+  letter-spacing: 0.03in;
+}
+
+.shelf-label__barcode-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.03in;
+  justify-content: center;
+  height: 100%;
+}
+
+.shelf-label__barcode svg {
+  width: 100%;
+  height: 0.38in;
+}
+
+.shelf-label__barcode-text {
+  font-size: 0.14in;
+  font-weight: 700;
+  letter-spacing: 0.01in;
+  word-break: break-all;
+}
+
+.shelf-label__empty {
+  color: #666;
+}
+
+.shelf-label__cell--no-right {
+  border-right: none;
+}
+
+.label-print-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+@media print {
+  @page {
+    size: auto;
+    margin: 0.2in;
+  }
+
+  .label-print-toolbar {
+    display: none;
+  }
+
+  .shelf-label-batch {
+    gap: 0.08in;
+  }
+
+  body {
+    background: #fff;
+  }
+}

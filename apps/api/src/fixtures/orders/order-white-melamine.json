@@ -1,0 +1,33 @@
+{
+  "externalOrderId": "EXT-1001",
+  "amazonOrderId": "112-1111111-1111111",
+  "orderDate": "2026-03-05T12:30:00.000Z",
+  "shipByDate": "2026-03-10",
+  "customerName": "Amelia Carter",
+  "lineItems": [
+    {
+      "externalOrderItemId": "EXT-1001-1",
+      "sku": "CB-WMS-24-12",
+      "title": "White Melamine Shelf 24 x 12",
+      "material": "White Melamine Shelf",
+      "quantity": 1,
+      "widthWhole": 24,
+      "widthFraction": "1/2",
+      "depthWhole": 12,
+      "depthFraction": "1/4",
+      "notes": "Front edge clean finish"
+    },
+    {
+      "externalOrderItemId": "EXT-1001-2",
+      "sku": "CB-WMS-30-16",
+      "title": "White Melamine Shelf 30 x 16",
+      "material": "White Melamine Shelf",
+      "quantity": 2,
+      "widthWhole": 30,
+      "widthFraction": "3/8",
+      "depthWhole": 16,
+      "depthFraction": "1/2",
+      "notes": "Second box in same white bundle"
+    }
+  ]
+}

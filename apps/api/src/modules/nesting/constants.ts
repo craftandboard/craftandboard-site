@@ -1,0 +1,8 @@
+export const SHEET_WIDTH_IN = 48;
+export const SHEET_HEIGHT_IN = 96;
+export const TRIM_MARGIN_IN = 0.25;
+export const USABLE_X_IN = TRIM_MARGIN_IN;
+export const USABLE_Y_IN = TRIM_MARGIN_IN;
+export const USABLE_WIDTH_IN = SHEET_WIDTH_IN - TRIM_MARGIN_IN * 2;
+export const USABLE_HEIGHT_IN = SHEET_HEIGHT_IN - TRIM_MARGIN_IN * 2;
+export const USABLE_AREA_SQ_IN = USABLE_WIDTH_IN * USABLE_HEIGHT_IN;

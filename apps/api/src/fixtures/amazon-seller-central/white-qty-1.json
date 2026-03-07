@@ -1,0 +1,21 @@
+{
+  "amazonOrderId": "111-5237066-4129810",
+  "amazonOrderItemId": "123098226833562",
+  "asin": "B0DW299RT3",
+  "quantity": 1,
+  "buyerName": "Susan Miller",
+  "shipToName": "Susan Miller",
+  "purchaseDate": "2026-03-08T17:21:00-08:00",
+  "shipByDate": "2026-03-10",
+  "productTitle": "Sublime Design - Made to Fit - Custom - Cabinet Replacement Shelves (White)",
+  "sku": "CST-White Melamine Shelf - 3/4\" Thick",
+  "customizations": {
+    "lengthInches": "12",
+    "lengthFraction": "",
+    "depthInches": "12",
+    "depthAdjustment": "No Adjustment",
+    "edgebanding": "Edgeband On Short Side",
+    "contactInfo": "",
+    "notes": "Small white shelf to exercise onion skin"
+  }
+}

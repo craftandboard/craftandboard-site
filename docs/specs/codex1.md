@@ -14,11 +14,14 @@ This scaffold implemented the local Craft & Board foundation only.
 - Docker Compose stack for Postgres and Redis
 - VS Code workspace settings with a green visual identity
 - Initial architecture and database documentation
+- Fixture-driven Amazon-style order normalization pipeline
+- Daily production, label, optimizer, legacy XML, and ship-by summary endpoints
+- Orders and Production web pages tied to the local import/report flow
 
 ## What the next spec should build
 
 - Prisma migrations and first real persistence flows
-- Order ingestion contracts and queue handoff
+- Real marketplace ingestion contracts and queue handoff
 - Batch-building domain logic
 - Shop-floor scan event workflows
 - Python service API boundary for geometry and nesting

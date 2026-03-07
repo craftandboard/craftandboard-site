@@ -1,0 +1,20 @@
+{
+  "externalOrderId": "EXT-1004",
+  "amazonOrderId": "112-4444444-4444444",
+  "orderDate": "2026-03-06T14:45:00.000Z",
+  "shipByDate": "2026-03-12",
+  "customerName": "Ethan De Luca",
+  "lineItems": [
+    {
+      "externalOrderItemId": "EXT-1004-1",
+      "sku": "CB-MMS-30-11D",
+      "title": "Maple Melamine Shelf 30.25 x 11.5",
+      "material": "Maple Melamine Shelf",
+      "quantity": 2,
+      "widthIn": 30.25,
+      "depthIn": "11.5",
+      "edgeBandPattern": "TWO_LONG_EDGES",
+      "notes": "Decimal dimensions path"
+    }
+  ]
+}

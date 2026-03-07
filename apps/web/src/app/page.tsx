@@ -4,12 +4,12 @@ const cards = [
     detail: "Web, API, worker, Prisma, Redis, Postgres, and Python service are wired for local development."
   },
   {
-    title: "Feature scope",
-    detail: "Amazon import, batching, nesting, CNC output, and shipping are intentionally deferred to later specs."
+    title: "Order normalization",
+    detail: "Fixture-driven Amazon-style imports now normalize dimensions, materials, last names, and per-piece part instances."
   },
   {
     title: "Next step",
-    detail: "Bring up Postgres and Redis, generate Prisma, then begin feature slices on stable contracts."
+    detail: "Bring up Postgres and Redis, import fixture orders, then inspect Orders and Production for daily output previews."
   }
 ];
 

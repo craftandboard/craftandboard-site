@@ -1,0 +1,21 @@
+{
+  "amazonOrderId": "111-5237066-4129809",
+  "amazonOrderItemId": "123098226833561",
+  "asin": "B0DW299RT2",
+  "quantity": 3,
+  "buyerName": "Teresa Primorac",
+  "shipToName": "Teresa Primorac",
+  "purchaseDate": "2026-03-08T14:43:00-08:00",
+  "shipByDate": "2026-03-10",
+  "productTitle": "Sublime Design - Made to Fit - Custom - Cabinet Replacement Shelves (Maple)",
+  "sku": "CST-Maple Melamine Shelf - 3/4\" Thick",
+  "customizations": {
+    "lengthInches": "19",
+    "lengthFraction": "No Adjustment",
+    "depthInches": "21",
+    "depthAdjustment": "No Adjustment",
+    "edgebanding": "Edgeband On Short Side",
+    "contactInfo": "nvsquirrel@frontier.com",
+    "notes": ""
+  }
+}

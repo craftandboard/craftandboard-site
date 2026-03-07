@@ -1,0 +1,21 @@
+{
+  "externalOrderId": "EXT-1003",
+  "amazonOrderId": "112-3333333-3333333",
+  "orderDate": "2026-03-06T08:15:00.000Z",
+  "shipByDate": "2026-03-11",
+  "customerName": "Sophia Van Buren",
+  "lineItems": [
+    {
+      "externalOrderItemId": "EXT-1003-1",
+      "sku": "CB-WMS-18-10",
+      "title": "White Melamine Shelf 18 x 10",
+      "material": "White Melamine Shelf",
+      "quantity": 3,
+      "widthWhole": 18,
+      "widthFraction": "3/4",
+      "depthWhole": 10,
+      "depthFraction": "1/2",
+      "notes": "Three matching shelves"
+    }
+  ]
+}

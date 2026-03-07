@@ -1,28 +1,218 @@
+export type MaterialCode =
+  | "WHITE_MELAMINE"
+  | "MAPLE_MELAMINE"
+  | "BIRCH_18"
+  | "WALNUT_18"
+  | "MAPLE_18"
+  | "MDF_18";
+
+export type EdgeBandPattern = "ALL_FOUR";
+export type SalesChannel = "AMAZON" | "WEBSITE" | "MANUAL";
+export type ProductionBundleStatus =
+  | "draft"
+  | "ready_for_nesting"
+  | "nested"
+  | "ready_for_cnc"
+  | "cnc_generated"
+  | "approved_for_production"
+  | "in_production"
+  | "cut_complete"
+  | "qc_hold"
+  | "packed"
+  | "shipped"
+  | "error";
+export type SheetStatus =
+  | "planned"
+  | "posted"
+  | "cutting"
+  | "cut_complete"
+  | "qc_hold"
+  | "scrapped";
+export type CncJobStatus =
+  | "generated"
+  | "approved"
+  | "posted"
+  | "ran"
+  | "failed"
+  | "superseded";
+export type ArtifactType =
+  | "SHEET_MAP_SVG"
+  | "SHEET_MAP_HTML"
+  | "CNC_FILE"
+  | "BUNDLE_PACKET_HTML";
+export type OrderStatus =
+  | "draft"
+  | "imported"
+  | "ready_for_batch"
+  | "received"
+  | "in_production"
+  | "complete"
+  | "hold"
+  | "error";
+export type PartStatus =
+  | "pending"
+  | "ready_for_batch"
+  | "batched"
+  | "cut"
+  | "packed"
+  | "hold"
+  | "error";
+
+export interface RawFixtureLineItem {
+  externalOrderItemId: string;
+  sku: string;
+  title: string;
+  material?: string;
+  quantity: number;
+  widthWhole?: number | string | null;
+  widthFraction?: number | string | null;
+  widthIn?: number | string | null;
+  depthWhole?: number | string | null;
+  depthFraction?: number | string | null;
+  depthIn?: number | string | null;
+  edgeBandPattern?: string | null;
+  notes?: string | null;
+}
+
+export interface RawFixtureOrder {
+  externalOrderId: string;
+  amazonOrderId: string;
+  orderDate: string;
+  shipByDate: string;
+  customerName: string;
+  lineItems: RawFixtureLineItem[];
+}
+
+export interface AmazonSellerCentralCustomization {
+  lengthInches?: string | number | null;
+  lengthFraction?: string | number | null;
+  lengthAdjustment?: string | number | null;
+  depthInches?: string | number | null;
+  depthFraction?: string | number | null;
+  depthAdjustment?: string | number | null;
+  edgebanding?: string | null;
+  contactInfo?: string | null;
+  notes?: string | null;
+}
+
+export interface AmazonSellerCentralFixture {
+  amazonOrderId: string;
+  amazonOrderItemId: string;
+  asin?: string | null;
+  quantity: number;
+  buyerName: string;
+  shipToName?: string | null;
+  purchaseDate?: string | null;
+  shipByDate: string;
+  productTitle: string;
+  sku: string;
+  material?: MaterialCode | string | null;
+  customizations: AmazonSellerCentralCustomization;
+}
+
+export interface NormalizedOrderItemInput {
+  externalOrderItemId: string;
+  amazonOrderItemId?: string;
+  asin?: string;
+  sku: string;
+  title: string;
+  productLabel: string;
+  normalizedLegacyXmlName?: string;
+  materialCode: MaterialCode;
+  materialLabel: string;
+  quantity: number;
+  widthIn: number;
+  depthIn: number;
+  thicknessIn: number;
+  edgeBandPattern: EdgeBandPattern;
+  edgeBandLabel: string;
+  sourceLengthIn?: number;
+  sourceDepthIn?: number;
+  sourceEdgeBandText?: string;
+  sourceCustomizationJson?: unknown;
+  notes?: string;
+}
+
+export interface NormalizedOrderInput {
+  externalOrderId: string;
+  amazonOrderId?: string;
+  amazonOrderSource?: string;
+  orderDate: string;
+  purchaseDate?: string;
+  shipByDate: string;
+  customerName: string;
+  customerFullName?: string;
+  shipToName?: string;
+  customerLastName: string;
+  status: OrderStatus;
+  channel?: SalesChannel;
+  rawPayload: unknown;
+  lineItems: NormalizedOrderItemInput[];
+}
+
 export interface OrderItem {
   id: string;
   orderId: string;
+  externalOrderItemId?: string;
+  amazonOrderItemId?: string;
+  asin?: string;
   sku: string;
+  title: string;
+  productLabel: string;
+  normalizedLegacyXmlName?: string;
   quantity: number;
-  materialCode?: string;
+  materialCode?: MaterialCode;
+  edgeBandPattern?: EdgeBandPattern;
+  widthIn: number;
+  depthIn: number;
+  thicknessIn: number;
+  sourceLengthIn?: number;
+  sourceDepthIn?: number;
+  sourceEdgeBandText?: string;
+  sourceCustomizationJson?: unknown;
+  notes?: string;
+}
+
+export interface PartInstance {
+  id: string;
+  orderId?: string;
+  orderItemId?: string;
+  partCode: string;
+  qrPayload: string;
+  serialNumber?: number;
+  instanceNumber: number;
+  materialCode?: MaterialCode;
+  edgeBandPattern?: EdgeBandPattern;
+  widthIn: number;
+  depthIn: number;
+  thicknessIn: number;
+  shipByDate?: string;
+  customerLastName?: string;
+  status: PartStatus;
 }
 
 export interface Order {
   id: string;
   organizationId: string;
   externalRef?: string;
-  status: "draft" | "received" | "in_production" | "completed";
+  externalOrderId?: string;
+  amazonOrderId?: string;
+  amazonOrderSource?: string;
+  orderDate?: string;
+  purchaseDate?: string;
+  shipByDate?: string;
+  status: OrderStatus;
+  channel?: SalesChannel;
   customerName: string;
+  customerFullName?: string;
+  shipToName?: string;
+  customerLastName?: string;
+  materialSummary?: MaterialCode[];
+  quantityTotal?: number;
+  rawPayload?: unknown;
   createdAt: string;
   updatedAt: string;
   items: OrderItem[];
-}
-
-export interface Part {
-  id: string;
-  orderItemId?: string;
-  batchId?: string;
-  materialCode?: string;
-  status: "pending" | "batched" | "cut" | "packed";
 }
 
 export interface Batch {
@@ -36,10 +226,27 @@ export interface Batch {
 
 export interface Sheet {
   id: string;
-  batchId: string;
-  materialCode: string;
+  batchId?: string;
+  productionBundleId?: string;
+  productionBundleCode?: string;
+  materialCode: MaterialCode;
+  sheetNumber: number;
+  version?: number;
   widthMm: number;
   heightMm: number;
+  widthIn: number;
+  heightIn: number;
+  usableXIn: number;
+  usableYIn: number;
+  usableWidthIn: number;
+  usableHeightIn: number;
+  utilizationPct: number;
+  status: SheetStatus;
+  isCurrent?: boolean;
+  approvedAt?: string;
+  postedAt?: string;
+  completedAt?: string;
+  scrapReason?: string;
 }
 
 export interface Station {
@@ -56,6 +263,403 @@ export interface LabelData {
   orderId?: string;
   batchId?: string;
   partId?: string;
+}
+
+export interface LabelRow {
+  shipByDate: string;
+  productLabel: string;
+  quantityDisplay: string;
+  customerLastName: string;
+  orderCode: string;
+  widthIn: number;
+  depthIn: number;
+  thicknessIn: number;
+  materialLabel: string;
+  edgeBandLabel: string;
+  jobNumber: string;
+  partCode: string;
+  qrPayload: string;
+}
+
+export interface OptimizerRow {
+  shipByDate: string;
+  partCode: string;
+  materialCode: MaterialCode;
+  customerLastName: string;
+  widthMm: number;
+  depthMm: number;
+  edgeBandPattern: EdgeBandPattern;
+}
+
+export interface ProductionReportRow {
+  orderCode: string;
+  customerLastName: string;
+  productLabel: string;
+  materialCode: MaterialCode;
+  widthIn: number;
+  depthIn: number;
+  quantity: number;
+  partCodes: string[];
+}
+
+export interface ProductionReport {
+  shipByDate: string;
+  materialFilter?: MaterialCode;
+  totalPhysicalParts: number;
+  ordersIncluded: number;
+  lineItemsIncluded: number;
+  partsExpanded: number;
+  countsByMaterial: Array<{
+    materialCode: MaterialCode;
+    materialLabel: string;
+    partCount: number;
+  }>;
+  rows: ProductionReportRow[];
+}
+
+export interface LegacyXmlExportResult {
+  shipByDate: string;
+  partCount: number;
+  xml: string;
+  warning: string;
+}
+
+export interface ProductionBundleSummary {
+  id?: string;
+  bundleCode: string;
+  shipByDate: string;
+  materialCode: MaterialCode;
+  productLabel: string;
+  totalLineItems: number;
+  totalPhysicalParts: number;
+  status?: ProductionBundleStatus;
+  releasedAt?: string;
+  nestingApprovedAt?: string;
+  cncApprovedAt?: string;
+  currentNestVersion?: number;
+  currentCncVersion?: number;
+  notes?: string;
+}
+
+export interface PickListRow {
+  shipByDate: string;
+  productLabel: string;
+  quantity: number;
+  customerLastName: string;
+  orderId: string;
+  boxCode: string | null;
+  totalShelfLengthIn: number;
+  totalShelfDepthIn: number;
+  materialCode: MaterialCode;
+  orderItemId: string;
+}
+
+export interface ProductionPickList {
+  bundleCode: string;
+  shipByDate: string;
+  materialCode: MaterialCode;
+  productLabel: string;
+  totalLineItems: number;
+  totalQuantity: number;
+  rows: PickListRow[];
+}
+
+export interface LabelExportRow {
+  shipByDate: string;
+  productLabel: string;
+  quantityDisplay: string;
+  customerLastName: string;
+  orderId: string;
+  boxCode: string | null;
+  totalShelfLengthIn: number;
+  totalShelfDepthIn: number;
+  thicknessIn: number;
+  materialCode: MaterialCode;
+  jobNumber: number;
+  partCode: string;
+  qrPayload: string;
+}
+
+export interface OptimizerExportRow {
+  rowType: "1";
+  depthMm: number;
+  widthMm: number;
+  customerLastName: string;
+  sequenceNumber: number;
+  field6: "None";
+  field7: "None";
+  field8: "None";
+  field9: "None";
+  partCode: string;
+  materialCode: MaterialCode;
+}
+
+export interface LegacyXmlProductRow {
+  quantity: number;
+  name: string;
+  library: string;
+  description: string;
+  depthIn: number;
+  heightIn: number;
+  widthIn: number;
+}
+
+export interface LegacyXmlBundleExport {
+  bundleCode: string;
+  shipByDate: string;
+  materialCode: MaterialCode;
+  products: LegacyXmlProductRow[];
+  xml: string;
+  warning: string;
+}
+
+export interface ShelfLabelData {
+  bundleCode: string;
+  shipByDate: string;
+  productLabel: string;
+  quantityDisplay: string;
+  customerLastName: string;
+  orderId: string;
+  boxCode: string | null;
+  shelfLengthIn: string;
+  shelfDepthIn: string;
+  jobNumber: number;
+  partCode: string;
+  barcodeValue: string;
+  materialCode: string;
+}
+
+export interface ShelfLabelBatch {
+  bundleCode: string;
+  labelCount: number;
+  labels: ShelfLabelData[];
+}
+
+export interface ShelfLabelRenderOptions {
+  showDebug?: boolean;
+  includePrintControls?: boolean;
+  includeCutGuides?: boolean;
+}
+
+export interface NestingPartInput {
+  id: string;
+  partCode: string;
+  orderId?: string;
+  orderItemId?: string;
+  customerLastName?: string;
+  materialCode: MaterialCode;
+  shipByDate?: string;
+  widthIn: number;
+  depthIn: number;
+  thicknessIn: number;
+  sequenceHint?: number;
+}
+
+export interface SheetPlacementView {
+  id?: string;
+  sheetId?: string;
+  partId: string;
+  partCode: string;
+  xIn: number;
+  yIn: number;
+  widthIn: number;
+  depthIn: number;
+  rotationDeg: 0 | 90;
+  sequenceNumber: number;
+  onionSkin: boolean;
+  customerLastName?: string;
+}
+
+export interface SheetSummary {
+  id?: string;
+  productionBundleCode: string;
+  materialCode: MaterialCode;
+  sheetNumber: number;
+  version?: number;
+  widthIn: number;
+  heightIn: number;
+  usableXIn: number;
+  usableYIn: number;
+  usableWidthIn: number;
+  usableHeightIn: number;
+  utilizationPct: number;
+  status?: SheetStatus;
+  isCurrent?: boolean;
+  approvedAt?: string;
+  postedAt?: string;
+  completedAt?: string;
+  scrapReason?: string;
+  totalParts: number;
+  placements: SheetPlacementView[];
+}
+
+export interface NestingResult {
+  bundleCode: string;
+  materialCode: MaterialCode;
+  sheetCount: number;
+  totalParts: number;
+  totalPartAreaSqIn: number;
+  onionSkinPartCount: number;
+  utilizationPct: number;
+  sheets: SheetSummary[];
+  warnings: string[];
+}
+
+export interface CncJobSummary {
+  id?: string;
+  version?: number;
+  isCurrent?: boolean;
+  code: string;
+  bundleCode: string;
+  materialCode: MaterialCode;
+  sheetId?: string;
+  sheetNumber: number;
+  controllerType: string;
+  fileExtension: string;
+  status: CncJobStatus;
+  toolDiameterIn: number;
+  spindleRpm: number;
+  feedRateIpm: number;
+  plungeRateIpm: number;
+  lineCount: number;
+  fileName: string;
+  approvedAt?: string;
+  approvedBy?: string;
+  postedAt?: string;
+  ranAt?: string;
+  supersededAt?: string;
+  failureReason?: string;
+}
+
+export interface ManufacturingBundleSummary {
+  id?: string;
+  bundleCode: string;
+  shipByDate: string;
+  materialCode: MaterialCode;
+  productLabel: string;
+  totalPhysicalParts: number;
+  nestingBuilt: boolean;
+  cncGenerated: boolean;
+  totalSheets: number;
+  utilizationPct?: number;
+  onionSkinPartCount: number;
+  status?: ProductionBundleStatus;
+  currentNestVersion?: number;
+  currentCncVersion?: number;
+}
+
+export interface SheetMapArtifact {
+  sheetId?: string;
+  bundleCode: string;
+  sheetNumber: number;
+  svg: string;
+  html: string;
+  manifest: {
+    bundleCode: string;
+    materialCode: MaterialCode;
+    sheetNumber: number;
+    utilizationPct: number;
+    placements: SheetPlacementView[];
+  };
+}
+
+export interface ShelfConfiguratorInput {
+  widthIn: number;
+  depthIn: number;
+  thicknessIn?: number;
+  materialCode: MaterialCode;
+  edgeBandPattern?: EdgeBandPattern;
+  quantity: number;
+  channel: SalesChannel;
+}
+
+export interface ShelfValidationResult {
+  valid: boolean;
+  normalizedWidthIn: number;
+  normalizedDepthIn: number;
+  materialCode: MaterialCode;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ShelfNormalizedSpec {
+  widthIn: number;
+  depthIn: number;
+  thicknessIn: number;
+  materialCode: MaterialCode;
+  edgeBandPattern: EdgeBandPattern;
+  quantity: number;
+  channel: SalesChannel;
+  productLabel: string;
+}
+
+export interface ShelfQuoteRequest extends ShelfConfiguratorInput {}
+
+export interface ShelfQuoteResult {
+  spec: ShelfNormalizedSpec;
+  unitPrice: number;
+  totalPrice: number;
+  estimatedLeadTimeDays: number;
+  pricingVersion: string;
+}
+
+export interface BundleLifecycleView {
+  bundleCode: string;
+  status: ProductionBundleStatus;
+  currentNestVersion?: number;
+  currentCncVersion?: number;
+  releasedAt?: string;
+  nestingApprovedAt?: string;
+  cncApprovedAt?: string;
+  nextAllowedActions: string[];
+}
+
+export interface BundleActionResult {
+  bundleCode: string;
+  status: ProductionBundleStatus;
+  message: string;
+  version?: number;
+}
+
+export interface NestVersionSummary {
+  version: number;
+  isCurrent: boolean;
+  sheetCount: number;
+  utilizationPct: number;
+  createdAt?: string;
+  approvedAt?: string;
+}
+
+export interface CncVersionSummary {
+  version: number;
+  isCurrent: boolean;
+  jobCount: number;
+  createdAt?: string;
+  approvedAt?: string;
+  postedAt?: string;
+  ranAt?: string;
+  failureReason?: string;
+}
+
+export interface ArtifactVersionSummary {
+  id?: string;
+  artifactType: ArtifactType;
+  version: number;
+  isCurrent: boolean;
+  uri: string;
+  mimeType?: string;
+  supersededAt?: string;
+}
+
+export interface CustomerOrderStatusView {
+  orderId: string;
+  customerStatus:
+    | "order_received"
+    | "in_production"
+    | "preparing_shipment"
+    | "shipped"
+    | "issue_detected";
+  detail: string;
 }
 
 export interface ApiHealthResponse {

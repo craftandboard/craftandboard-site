@@ -1,0 +1,21 @@
+{
+  "externalOrderId": "EXT-1002",
+  "amazonOrderId": "112-2222222-2222222",
+  "orderDate": "2026-03-05T18:10:00.000Z",
+  "shipByDate": "2026-03-10",
+  "customerName": "Oliver Martinez",
+  "lineItems": [
+    {
+      "externalOrderItemId": "EXT-1002-1",
+      "sku": "CB-MMS-36-14",
+      "title": "Maple Melamine Shelf 36 x 14",
+      "material": "Maple Melamine Shelf",
+      "quantity": 1,
+      "widthWhole": "36",
+      "widthFraction": "0",
+      "depthWhole": 14,
+      "depthFraction": "3/4",
+      "edgeBandPattern": "FRONT_ONLY"
+    }
+  ]
+}

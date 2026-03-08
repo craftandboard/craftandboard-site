@@ -3,6 +3,8 @@ import { prisma } from '../../lib/prisma.js';
 import type { MaterialCode } from '@craft-and-board/shared';
 
 const LOCAL_ORG_ID = 'org_local_craft_board';
+const LOCAL_ORG_NAME = 'Craft & Board Demo';
+const LOCAL_ORG_SLUG = 'craft-board-demo';
 const db = prisma as any;
 
 function decimal(value: number) {
@@ -12,8 +14,8 @@ function decimal(value: number) {
 export async function ensureDefaultProfiles() {
   await db.organization.upsert({
     where: { id: LOCAL_ORG_ID },
-    update: { name: 'Craft & Board Local' },
-    create: { id: LOCAL_ORG_ID, name: 'Craft & Board Local' }
+    update: { name: LOCAL_ORG_NAME, slug: LOCAL_ORG_SLUG },
+    create: { id: LOCAL_ORG_ID, name: LOCAL_ORG_NAME, slug: LOCAL_ORG_SLUG }
   });
 
   await db.machineProfile.upsert({
@@ -90,16 +92,29 @@ export async function ensureDefaultProfiles() {
   }
 }
 
-export async function getDefaultMachineProfile() {
+export async function getDefaultMachineProfile(organizationId = LOCAL_ORG_ID) {
   await ensureDefaultProfiles();
-  return db.machineProfile.findUniqueOrThrow({ where: { code: 'LAGUNA_SYNTEC_V1' } });
-}
-
-export async function getMaterialProfile(materialCode: MaterialCode) {
-  await ensureDefaultProfiles();
-  return db.materialProfile.findFirstOrThrow({
-    where: { organizationId: LOCAL_ORG_ID, code: materialCode, active: true }
+  return db.machineProfile.findFirstOrThrow({
+    where: {
+      organizationId,
+      code: 'LAGUNA_SYNTEC_V1'
+    }
   });
 }
 
-export { LOCAL_ORG_ID };
+export async function getMaterialProfile(materialCode: MaterialCode, organizationId = LOCAL_ORG_ID) {
+  await ensureDefaultProfiles();
+  return db.materialProfile.findFirstOrThrow({
+    where: { organizationId, code: materialCode, active: true }
+  });
+}
+
+export function getCurrentOrganizationContext() {
+  return {
+    id: LOCAL_ORG_ID,
+    name: LOCAL_ORG_NAME,
+    slug: LOCAL_ORG_SLUG
+  };
+}
+
+export { LOCAL_ORG_ID, LOCAL_ORG_NAME, LOCAL_ORG_SLUG };

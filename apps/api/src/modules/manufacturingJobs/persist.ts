@@ -65,6 +65,7 @@ export async function replaceBundleNesting(input: {
   for (const sheet of input.result.sheets) {
     const createdSheet = await db.sheet.create({
       data: {
+        organizationId: bundle.organizationId,
         productionBundleId: bundle.id,
         productionBundleCode: bundle.code,
         materialCode: sheet.materialCode,
@@ -89,6 +90,7 @@ export async function replaceBundleNesting(input: {
     for (const placement of sheet.placements) {
       const createdPlacement = await db.sheetPlacement.create({
         data: {
+          organizationId: bundle.organizationId,
           sheetId: createdSheet.id,
           partId: placement.partId,
           xMm: Math.round(placement.xIn * 25.4),
@@ -161,6 +163,7 @@ export async function replaceBundleCncJobs(input: {
   for (const generated of input.jobs) {
     const createdJob = await db.cncJob.create({
       data: {
+        organizationId: bundle.organizationId,
         productionBundleId: bundle.id,
         productionBundleCode: input.bundleCode,
         sheetId: generated.job.sheetId,
@@ -180,6 +183,7 @@ export async function replaceBundleCncJobs(input: {
 
     await db.artifact.create({
       data: {
+        organizationId: bundle.organizationId,
         type: 'cnc-file',
         artifactType: 'CNC_FILE',
         uri: `/manufacturing/cnc/${createdJob.id}/file`,
@@ -233,6 +237,7 @@ export async function replaceBundleSheetArtifacts(input: {
     await db.artifact.createMany({
       data: [
         {
+          organizationId: bundle.organizationId,
           type: 'sheet-map-svg',
           artifactType: 'SHEET_MAP_SVG',
           uri: `/manufacturing/sheets/${map.sheetId}/map?format=svg`,
@@ -245,6 +250,7 @@ export async function replaceBundleSheetArtifacts(input: {
           sheetId: map.sheetId
         },
         {
+          organizationId: bundle.organizationId,
           type: 'sheet-map-html',
           artifactType: 'SHEET_MAP_HTML',
           uri: `/manufacturing/sheets/${map.sheetId}/map?format=html`,

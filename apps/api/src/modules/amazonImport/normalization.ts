@@ -84,10 +84,12 @@ export function normalizeAmazonFixture(rawInput: unknown): NormalizedOrderInput 
 export function buildAmazonPartCode(input: {
   shipByDate: string;
   materialCode: "WHITE_MELAMINE" | "MAPLE_MELAMINE";
+  orderItemKey: string;
   sequence: number;
 }): string {
   const materialShort = input.materialCode === "WHITE_MELAMINE" ? "WHITE" : "MAPLE";
-  return `SHF-${formatDateKey(new Date(input.shipByDate)).replaceAll("-", "")}-${materialShort}-${String(
+  const orderItemSuffix = input.orderItemKey.replace(/[^0-9A-Z]/gi, "").slice(-6).toUpperCase() || "ITEM";
+  return `SHF-${formatDateKey(new Date(input.shipByDate)).replaceAll("-", "")}-${materialShort}-${orderItemSuffix}-${String(
     input.sequence
   ).padStart(4, "0")}`;
 }

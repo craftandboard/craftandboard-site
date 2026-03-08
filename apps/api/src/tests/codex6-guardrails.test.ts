@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { quoteShelf, validateShelfConfiguratorInput } from '../modules/configurator/service.js';
+import {
+  quoteShelf,
+  translateShelfToManufacturingPart,
+  validateShelfConfiguratorInput
+} from '../modules/configurator/service.js';
 import { projectCustomerOrderStatus } from '../modules/customerStatus/service.js';
 import {
   canApproveCnc,
@@ -55,6 +59,30 @@ describe('configurator contract', () => {
     expect(quote.spec.edgeBandPattern).toBe('ALL_FOUR');
     expect(quote.spec.channel).toBe('AMAZON');
     expect(quote.totalPrice).toBeGreaterThan(quote.unitPrice);
+
+    const part = await translateShelfToManufacturingPart({
+      widthIn: 19.26,
+      depthIn: 12.49,
+      materialCode: 'WHITE_MELAMINE',
+      quantity: 2,
+      channel: 'WEBSITE'
+    });
+
+    expect(part).toEqual({
+      partType: 'SHELF',
+      width: 19.25,
+      depth: 12.5,
+      thickness: 0.75,
+      material: 'WHITE_MELAMINE',
+      edgeBandPattern: 'ALL_FOUR',
+      quantity: 2,
+      unit: 'IN',
+      manufacturingMode: 'CUT_AND_EDGE',
+      labelCode: 'SHELF-WM-19.25x12.5',
+      grainDirection: 'WIDTH',
+      cutMethod: 'RECTANGLE_CUT',
+      source: 'CONFIGURATOR'
+    });
   });
 });
 

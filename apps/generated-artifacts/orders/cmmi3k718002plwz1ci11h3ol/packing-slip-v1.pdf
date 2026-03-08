@@ -1,0 +1,42 @@
+%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Count 1 /Kids [4 0 R] >>
+endobj
+3 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+4 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents 5 0 R >>
+endobj
+5 0 obj
+<< /Length 780 >>
+stream
+0.3 w
+BT /F1 16 Tf 1 0 0 1 40.00 760.00 Tm (Packing Slip - cmmi3k718002plwz1ci11h3ol) Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 744.00 Tm (Source: CONFIGURATOR) Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 728.00 Tm (Status: READY_FOR_SHIPMENT) Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 712.00 Tm (Customer: Configurator WEBSITE) Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 696.00 Tm (Ship By: 2026-03-08T00:00:00.000Z) Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 680.00 Tm (Jobs: 1) Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 664.00 Tm (Parts: 1) Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 648.00 Tm () Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 632.00 Tm (Included Parts) Tj ET
+BT /F1 10 Tf 1 0 0 1 40.00 616.00 Tm (SHELF-WM-19.25x12.5-P01 | PART-bd150a3b-4d4e-478c-aa60-b3880e02793c | WHITE_MELAMINE | 19.25" x 12.5" x 0.75" | Batch UNBATCHED | PACKED) Tj ET
+endstream
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000185 00000 n 
+0000000311 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+1141
+%%EOF

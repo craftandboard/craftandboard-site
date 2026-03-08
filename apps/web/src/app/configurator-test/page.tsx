@@ -2,9 +2,12 @@
 
 import { useState } from 'react';
 import {
+  createConfiguratorJob,
   normalizeConfigurator,
   quoteConfigurator,
+  translateConfigurator,
   validateConfigurator,
+  type ConfiguratorResponse,
   type ShelfConfiguratorInput
 } from '../../lib/api';
 
@@ -18,11 +21,13 @@ const initialInput: ShelfConfiguratorInput = {
 
 export default function ConfiguratorTestPage() {
   const [input, setInput] = useState<ShelfConfiguratorInput>(initialInput);
-  const [result, setResult] = useState<unknown>(null);
+  const [result, setResult] = useState<ConfiguratorResponse | { hint: string }>({
+    hint: 'Run validate, normalize, or quote.'
+  });
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<string | null>(null);
 
-  async function run(action: 'validate' | 'normalize' | 'quote') {
+  async function run(action: 'validate' | 'normalize' | 'quote' | 'translate' | 'create-job') {
     setPending(action);
     setError(null);
     try {
@@ -30,11 +35,20 @@ export default function ConfiguratorTestPage() {
         setResult(await validateConfigurator(input));
       } else if (action === 'normalize') {
         setResult(await normalizeConfigurator(input));
+      } else if (action === 'translate') {
+        setResult(await translateConfigurator(input));
+      } else if (action === 'create-job') {
+        setResult(await createConfiguratorJob(input));
       } else {
         setResult(await quoteConfigurator(input));
       }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Request failed.');
+      const message = cause instanceof Error ? cause.message : 'Request failed.';
+      setError(message);
+      setResult({
+        ok: false,
+        error: message
+      });
     } finally {
       setPending(null);
     }
@@ -91,6 +105,12 @@ export default function ConfiguratorTestPage() {
             <button type="button" onClick={() => void run('quote')} disabled={pending !== null} className="rounded-full border border-white/10 px-5 py-3 text-sm text-white disabled:opacity-60">
               {pending === 'quote' ? 'Quoting...' : 'Quote'}
             </button>
+            <button type="button" onClick={() => void run('translate')} disabled={pending !== null} className="rounded-full border border-white/10 px-5 py-3 text-sm text-white disabled:opacity-60">
+              {pending === 'translate' ? 'Translating...' : 'Translate'}
+            </button>
+            <button type="button" onClick={() => void run('create-job')} disabled={pending !== null} className="rounded-full border border-white/10 px-5 py-3 text-sm text-white disabled:opacity-60">
+              {pending === 'create-job' ? 'Creating Job...' : 'Create Job'}
+            </button>
           </div>
           {error ? <p className="mt-4 text-sm text-red-200">{error}</p> : null}
         </div>
@@ -98,7 +118,7 @@ export default function ConfiguratorTestPage() {
         <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">API Response</p>
           <pre className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-slate-950/60 p-4 text-xs text-emerald-100">
-            {JSON.stringify(result ?? { hint: 'Run validate, normalize, or quote.' }, null, 2)}
+            {JSON.stringify(result, null, 2)}
           </pre>
         </div>
       </section>

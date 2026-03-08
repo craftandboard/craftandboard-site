@@ -44,9 +44,9 @@ export async function loadFixtureOrdersFromDisk() {
   return results;
 }
 
-export async function importFixtureOrders() {
+export async function importFixtureOrders(organizationId?: string) {
   const normalizedOrders = await loadFixtureOrdersFromDisk();
-  const persisted = await persistNormalizedOrders(normalizedOrders);
+  const persisted = await persistNormalizedOrders(normalizedOrders, organizationId);
 
   return {
     fixtureFiles: normalizedOrders.length,

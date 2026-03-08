@@ -46,6 +46,8 @@ export type OrderStatus =
   | "ready_for_batch"
   | "received"
   | "in_production"
+  | "ready_for_shipment"
+  | "shipped"
   | "complete"
   | "hold"
   | "error";
@@ -54,9 +56,22 @@ export type PartStatus =
   | "ready_for_batch"
   | "batched"
   | "cut"
+  | "edgebanded"
   | "packed"
   | "hold"
   | "error";
+
+export type ArtifactJobType =
+  | "generate-cnc-csv"
+  | "generate-cnc-mosaic"
+  | "generate-cnc-json"
+  | "deliver-cnc-watch-folder"
+  | "generate-label-csv"
+  | "generate-label-pdf"
+  | "generate-traveler-pdf"
+  | "generate-packing-slip";
+
+export type ArtifactJobStatus = "queued" | "active" | "completed" | "failed" | "unknown";
 
 export interface RawFixtureLineItem {
   externalOrderItemId: string;
@@ -218,10 +233,37 @@ export interface Order {
 export interface Batch {
   id: string;
   organizationId: string;
+  code?: string;
   name: string;
-  status: "draft" | "planned" | "released" | "completed";
+  status:
+    | "draft"
+    | "planned"
+    | "released"
+    | "cutting"
+    | "cut_complete"
+    | "ready_for_next_stage"
+    | "completed";
+  materialCode?: MaterialCode;
+  source?: "CONFIGURATOR" | "AMAZON";
+  partCount?: number;
+  jobCount?: number;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreatedBatchPart {
+  id: string;
+  partType: "SHELF";
+  labelCode: string;
+}
+
+export interface CreatedBatchSummary {
+  id: string;
+  batchCode: string;
+  status: "DRAFT";
+  material: MaterialCode;
+  partCount: number;
+  jobCount: number;
 }
 
 export interface Sheet {
@@ -601,6 +643,33 @@ export interface ShelfQuoteResult {
   totalPrice: number;
   estimatedLeadTimeDays: number;
   pricingVersion: string;
+}
+
+export interface ShelfManufacturingPart {
+  partType: "SHELF";
+  width: number;
+  depth: number;
+  thickness: number;
+  material: MaterialCode;
+  edgeBandPattern: EdgeBandPattern;
+  quantity: number;
+  unit: "IN";
+  manufacturingMode: "CUT_AND_EDGE";
+  labelCode: string;
+  grainDirection: "WIDTH";
+  cutMethod: "RECTANGLE_CUT";
+  source: "CONFIGURATOR" | "AMAZON";
+}
+
+export interface PersistedShelfManufacturingJob {
+  id: string;
+  status: "DRAFT";
+  source: "CONFIGURATOR" | "AMAZON";
+}
+
+export interface PersistedShelfManufacturingPart extends ShelfManufacturingPart {
+  id: string;
+  scanCode?: string;
 }
 
 export interface BundleLifecycleView {

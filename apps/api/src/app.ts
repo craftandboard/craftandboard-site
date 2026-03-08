@@ -1,10 +1,17 @@
 import cors from "cors";
 import express from "express";
+import { GENERATED_ARTIFACTS_DIR } from "./lib/generatedArtifacts.js";
+import { requestContextMiddleware } from "./lib/requestContext.js";
+import authRouter from "./routes/auth.js";
 import configuratorRouter from "./routes/configurator.js";
 import healthRouter from "./routes/health.js";
+import jobsRouter from "./routes/jobs.js";
 import labelsRouter from "./routes/labels.js";
 import manufacturingRouter from "./routes/manufacturing.js";
+import meRouter from "./routes/me.js";
+import orgRouter from "./routes/org.js";
 import ordersRouter from "./routes/orders.js";
+import partsRouter from "./routes/parts.js";
 import batchesRouter from "./routes/batches.js";
 import productionRouter from "./routes/production.js";
 import reportsRouter from "./routes/reports.js";
@@ -21,12 +28,19 @@ export function createApp() {
     })
   );
   app.use(express.json());
+  app.use(requestContextMiddleware);
+  app.use("/generated-artifacts", express.static(GENERATED_ARTIFACTS_DIR));
 
+  app.use("/auth", authRouter);
   app.use("/health", healthRouter);
+  app.use("/jobs", jobsRouter);
+  app.use("/me", meRouter);
+  app.use("/org", orgRouter);
   app.use("/labels", labelsRouter);
   app.use("/manufacturing", manufacturingRouter);
   app.use("/configurator", configuratorRouter);
   app.use("/orders", ordersRouter);
+  app.use("/parts", partsRouter);
   app.use("/batches", batchesRouter);
   app.use("/stations", stationsRouter);
   app.use("/production", productionRouter);

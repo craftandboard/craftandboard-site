@@ -4,7 +4,8 @@ export const queueNames = [
   "nesting",
   "cnc-generation",
   "pdf-generation",
-  "shipstation-sync"
+  "shipstation-sync",
+  "artifact-generation"
 ] as const;
 
 export type QueueName = (typeof queueNames)[number];

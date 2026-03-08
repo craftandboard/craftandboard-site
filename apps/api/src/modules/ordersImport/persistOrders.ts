@@ -1,9 +1,10 @@
 import { Prisma } from "@prisma/client";
+import { randomUUID } from "node:crypto";
 import type { NormalizedOrderInput } from "@craft-and-board/shared";
 import { prisma } from "../../lib/prisma.js";
+import { scanCodeForPartId } from "../parts/scanCode.js";
+import { LOCAL_ORG_ID, LOCAL_ORG_NAME, LOCAL_ORG_SLUG } from "../settings/service.js";
 import { buildPartInstances } from "./buildPartInstances.js";
-
-const LOCAL_ORG_ID = "org_local_craft_board";
 
 function decimal(value: number) {
   return new Prisma.Decimal(value.toFixed(3));
@@ -13,11 +14,14 @@ function toJsonValue<T>(value: T): Prisma.InputJsonValue {
   return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
-export async function persistNormalizedOrders(orders: NormalizedOrderInput[]) {
+export async function persistNormalizedOrders(
+  orders: NormalizedOrderInput[],
+  organizationId = LOCAL_ORG_ID
+) {
   await prisma.organization.upsert({
-    where: { id: LOCAL_ORG_ID },
-    update: { name: "Craft & Board Local" },
-    create: { id: LOCAL_ORG_ID, name: "Craft & Board Local" }
+    where: { id: organizationId },
+    update: { name: LOCAL_ORG_NAME, slug: LOCAL_ORG_SLUG },
+    create: { id: organizationId, name: LOCAL_ORG_NAME, slug: LOCAL_ORG_SLUG }
   });
 
   let lineItemsCreated = 0;
@@ -41,7 +45,7 @@ export async function persistNormalizedOrders(orders: NormalizedOrderInput[]) {
         rawPayload: toJsonValue(normalizedOrder.rawPayload)
       },
       create: {
-        organizationId: LOCAL_ORG_ID,
+        organizationId,
         externalOrderId: normalizedOrder.externalOrderId,
         amazonOrderId: normalizedOrder.amazonOrderId,
         externalRef: normalizedOrder.amazonOrderId,
@@ -85,6 +89,7 @@ export async function persistNormalizedOrders(orders: NormalizedOrderInput[]) {
           rawPayload: toJsonValue(item)
         },
         create: {
+          organizationId,
           orderId: orderRecord.id,
           externalOrderItemId: item.externalOrderItemId,
           amazonOrderItemId: item.amazonOrderItemId,
@@ -122,16 +127,19 @@ export async function persistNormalizedOrders(orders: NormalizedOrderInput[]) {
       });
 
       if (partInstances.length > 0) {
-        await prisma.part.createMany({
-          data: partInstances.map((part) => ({
+        const partRows = partInstances
+          .map((part) => ({
+            id: randomUUID(),
+            organizationId,
             orderId: orderRecord.id,
             orderItemId: orderItemRecord.id,
+            scanCode: "",
             name: part.name,
             partCode: part.partCode,
             qrPayload: part.qrPayload,
             instanceNumber: part.instanceNumber,
             materialCode: part.materialCode,
-            edgeBandPattern: "ALL_FOUR",
+            edgeBandPattern: "ALL_FOUR" as const,
             widthIn: decimal(part.widthIn),
             depthIn: decimal(part.depthIn),
             thicknessIn: decimal(part.thicknessIn),
@@ -140,6 +148,13 @@ export async function persistNormalizedOrders(orders: NormalizedOrderInput[]) {
             customerLastName: part.customerLastName,
             status: part.status
           }))
+          .map((part) => ({
+            ...part,
+            scanCode: scanCodeForPartId(part.id)
+          }));
+
+        await prisma.part.createMany({
+          data: partRows
         });
       }
 

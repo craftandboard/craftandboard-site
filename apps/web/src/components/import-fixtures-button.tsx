@@ -2,34 +2,32 @@
 
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
+import { importAmazonFixtures, previewAmazonFixtures } from "../lib/api";
 
 export function ImportFixturesButton() {
   const router = useRouter();
   const [message, setMessage] = useState<string | null>(null);
+  const [responseBody, setResponseBody] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
   async function handlePreview() {
     setPreviewing(true);
     setMessage(null);
+    setResponseBody(null);
 
     try {
-      const response = await fetch("http://localhost:4000/orders/import/amazon-fixtures/preview");
-      const payload = (await response.json()) as {
-        preview?: { filesProcessed: number; previews: unknown[]; errors: unknown[] };
-        message?: string;
-      };
+      const payload = await previewAmazonFixtures();
 
-      if (!response.ok) {
-        setMessage(payload.message ?? "Preview failed.");
+      if (!payload) {
+        setMessage("Preview failed.");
         return;
       }
 
       setMessage(
-        `Previewed ${payload.preview?.filesProcessed ?? 0} files with ${
-          payload.preview?.previews.length ?? 0
-        } normalized records and ${payload.preview?.errors.length ?? 0} errors.`
+        `Previewed ${payload.preview.filesProcessed} files with ${payload.preview.previews.length} normalized records and ${payload.preview.errors.length} errors.`
       );
+      setResponseBody(JSON.stringify(payload, null, 2));
     } catch {
       setMessage("API unavailable. Start the local API and database first.");
     } finally {
@@ -40,33 +38,20 @@ export function ImportFixturesButton() {
   async function handleImport() {
     setPending(true);
     setMessage(null);
+    setResponseBody(null);
 
     try {
-      const response = await fetch("http://localhost:4000/orders/import/amazon-fixtures", {
-        method: "POST"
-      });
-      const payload = (await response.json()) as {
-        ordersCreated?: number;
-        partInstancesCreated?: number;
-        errors?: unknown[];
-        message?: string;
-      };
-
-      if (!response.ok) {
-        setMessage(payload.message ?? "Import failed.");
-        return;
-      }
+      const payload = await importAmazonFixtures();
 
       setMessage(
-        `Imported ${payload.ordersCreated ?? 0} Amazon orders and created ${
-          payload.partInstancesCreated ?? 0
-        } physical parts. Errors: ${payload.errors?.length ?? 0}.`
+        `Imported ${payload.summary.ordersCreated} Amazon orders, created ${payload.summary.jobsCreated} manufacturing jobs, and created ${payload.summary.partsCreated} parts. Errors: ${payload.errors.length}.`
       );
+      setResponseBody(JSON.stringify(payload, null, 2));
       startTransition(() => {
         router.refresh();
       });
-    } catch {
-      setMessage("API unavailable. Start the local API and database first.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "API unavailable. Start the local API and database first.");
     } finally {
       setPending(false);
     }
@@ -93,6 +78,11 @@ export function ImportFixturesButton() {
         </button>
       </div>
       {message ? <p className="text-sm text-emerald-100/80">{message}</p> : null}
+      {responseBody ? (
+        <pre className="overflow-x-auto rounded-3xl border border-white/10 bg-slate-950/70 p-4 text-xs text-emerald-100">
+          {responseBody}
+        </pre>
+      ) : null}
     </div>
   );
 }

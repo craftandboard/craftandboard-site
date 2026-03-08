@@ -1,4 +1,42 @@
 const API_BASE_URL = process.env.API_BASE_URL ?? "http://localhost:4000";
+const ORG_COOKIE = "cb_org_slug";
+const SESSION_COOKIE = "cb_session";
+
+async function getContextHeaders() {
+  const headers: Record<string, string> = {};
+
+  if (typeof window === "undefined") {
+    const { cookies } = await import("next/headers");
+    const store = await cookies();
+    const orgSlug = store.get(ORG_COOKIE)?.value;
+    const sessionToken = store.get(SESSION_COOKIE)?.value;
+
+    if (orgSlug) {
+      headers["x-organization-slug"] = orgSlug;
+    }
+    if (sessionToken) {
+      headers["x-session-token"] = sessionToken;
+    }
+
+    return headers;
+  }
+
+  const sessionMatch = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${SESSION_COOKIE}=`));
+  const orgMatch = document.cookie
+    .split("; ")
+    .find((entry) => entry.startsWith(`${ORG_COOKIE}=`));
+
+  if (sessionMatch) {
+    headers["x-session-token"] = decodeURIComponent(sessionMatch.split("=").slice(1).join("="));
+  }
+  if (orgMatch) {
+    headers["x-organization-slug"] = decodeURIComponent(orgMatch.split("=").slice(1).join("="));
+  }
+
+  return headers;
+}
 
 interface BundleActionResult {
   bundleCode: string;
@@ -62,10 +100,250 @@ interface ShelfQuoteResult {
   pricingVersion: string;
 }
 
+interface ConfiguratorErrorResponse {
+  ok: false;
+  error: string;
+}
+
+interface ConfiguratorValidateResponse {
+  ok: true;
+  action: "validate";
+  validation: {
+    isValid: boolean;
+    errors: string[];
+  };
+}
+
+interface ConfiguratorNormalizeResponse {
+  ok: true;
+  action: "normalize";
+  normalized: {
+    width: number;
+    depth: number;
+    quantity: number;
+    material: string;
+    channel: string;
+    thickness: number;
+    edgeBandPattern: string;
+    unit: "IN";
+  };
+}
+
+interface ConfiguratorQuoteResponse {
+  ok: true;
+  action: "quote";
+  quote: {
+    currency: "USD";
+    unitPrice: number;
+    quantity: number;
+    subtotal: number;
+    status: "FOUNDATION_PLACEHOLDER";
+  };
+}
+
+interface ConfiguratorTranslateResponse {
+  ok: true;
+  action: "translate";
+  part: {
+    partType: "SHELF";
+    width: number;
+    depth: number;
+    thickness: number;
+    material: string;
+    edgeBandPattern: string;
+    quantity: number;
+    unit: "IN";
+    manufacturingMode: "CUT_AND_EDGE";
+    labelCode: string;
+    grainDirection: "WIDTH";
+    cutMethod: "RECTANGLE_CUT";
+    source: "CONFIGURATOR";
+  };
+}
+
+interface ConfiguratorCreateJobResponse {
+  ok: true;
+  action: "create-job";
+  job: {
+    id: string;
+    status: "DRAFT";
+    source: "CONFIGURATOR";
+  };
+  parts: Array<{
+    id: string;
+    partType: "SHELF";
+    width: number;
+    depth: number;
+    thickness: number;
+    material: string;
+    edgeBandPattern: string;
+    quantity: number;
+    unit: "IN";
+    manufacturingMode: "CUT_AND_EDGE";
+    labelCode: string;
+    grainDirection: "WIDTH";
+    cutMethod: "RECTANGLE_CUT";
+    source: "CONFIGURATOR";
+  }>;
+}
+
+interface CreateBatchResponse {
+  ok: true;
+  action: "create-batch";
+  batch: {
+    id: string;
+    batchCode: string;
+    status: "DRAFT";
+    material: "WHITE_MELAMINE" | "MAPLE_MELAMINE";
+    partCount: number;
+    jobCount: number;
+  };
+  parts: Array<{
+    id: string;
+    partType: "SHELF";
+    labelCode: string;
+  }>;
+}
+
+interface NestBatchResponse {
+  ok: true;
+  action: "nest-batch";
+  batchId: string;
+  sheets: Array<{
+    sheetIndex: number;
+    material: string;
+    parts: Array<{
+      partId: string;
+      x: number;
+      y: number;
+      width: number;
+      depth: number;
+    }>;
+  }>;
+}
+
+interface GenerateCncResponse {
+  ok: true;
+  action: "generate-cnc";
+  batchId: string;
+  packet: {
+    packetCode: string;
+    sheetCount: number;
+    partCount: number;
+    format: "FOUNDATION_JSON";
+  };
+  sheets: Array<{
+    sheetIndex: number;
+    material: string;
+    sheetWidth: number;
+    sheetHeight: number;
+    placements: Array<{
+      partId: string;
+      labelCode: string;
+      x: number;
+      y: number;
+      width: number;
+      depth: number;
+      cutMethod: "RECTANGLE_CUT";
+    }>;
+  }>;
+}
+
+interface GenerateLabelsResponse {
+  ok: true;
+  action: "generate-labels";
+  batchId: string;
+  packet: {
+    packetCode: string;
+    labelCount: number;
+    format: "FOUNDATION_JSON";
+  };
+  labels: Array<{
+    partId: string;
+    jobId?: string;
+    batchId: string;
+    labelCode: string;
+    scanCode: string;
+    partType: "SHELF";
+    material: string;
+    width: number;
+    depth: number;
+    thickness: number;
+    edgeBandPattern: string;
+    quantity: 1;
+    source: "CONFIGURATOR" | "AMAZON";
+    sheetIndex?: number;
+    x?: number;
+    y?: number;
+  }>;
+}
+
+interface GeneratePdfArtifactResponse {
+  ok: true;
+  action: "generate-label-pdf" | "generate-traveler-pdf";
+  batchId: string;
+  artifact: {
+    type: "batch-label-pdf" | "batch-traveler-pdf";
+    uri: string;
+    isCurrent: true;
+    version: number;
+  };
+}
+
+export type ConfiguratorResponse =
+  | ConfiguratorErrorResponse
+  | ConfiguratorValidateResponse
+  | ConfiguratorNormalizeResponse
+  | ConfiguratorQuoteResponse
+  | ConfiguratorTranslateResponse
+  | ConfiguratorCreateJobResponse;
+
+export type BatchActionResponse = ConfiguratorErrorResponse | CreateBatchResponse;
+export type BatchNestResponse = ConfiguratorErrorResponse | NestBatchResponse;
+export type BatchCncResponse = ConfiguratorErrorResponse | GenerateCncResponse;
+export type BatchLabelsResponse = ConfiguratorErrorResponse | GenerateLabelsResponse;
+export type BatchPdfArtifactResponse = ConfiguratorErrorResponse | GeneratePdfArtifactResponse;
+export type BatchExportArtifactResponse =
+  | ConfiguratorErrorResponse
+  | {
+      ok: true;
+      action: "generate-cnc-csv" | "generate-label-csv" | "generate-cnc-mosaic" | "generate-cnc-json";
+      batchId: string;
+      artifact: {
+        type: "batch-cnc-csv" | "batch-label-csv" | "batch-cnc-mosaic" | "batch-cnc-json";
+        uri: string;
+        isCurrent: true;
+        version: number;
+      };
+    };
+export interface StationQueueSuccessResponse {
+  ok: true;
+  station: "cutting" | "edgebanding" | "packing";
+  nextStatus: "CUT" | "EDGEBANDED" | "PACKED";
+  parts: Array<{
+    partId: string;
+    scanCode: string;
+    labelCode: string;
+    material: string;
+    width: number;
+    depth: number;
+    batchId: string;
+    batchCode: string;
+    batchStatus: string;
+  }>;
+}
+
+export type StationQueueResponse = StationQueueSuccessResponse | ConfiguratorErrorResponse;
+
 async function readJson<T>(input: string, init?: RequestInit): Promise<T | null> {
   try {
+    const contextHeaders = await getContextHeaders();
     const response = await fetch(`${API_BASE_URL}${input}`, {
       ...init,
+      headers: {
+        ...contextHeaders,
+        ...(init?.headers ?? {})
+      },
       cache: "no-store"
     });
 
@@ -80,11 +358,13 @@ async function readJson<T>(input: string, init?: RequestInit): Promise<T | null>
 }
 
 async function sendJson<T>(input: string, init?: RequestInit): Promise<T> {
+  const contextHeaders = await getContextHeaders();
   const response = await fetch(`${API_BASE_URL}${input}`, {
     ...init,
     cache: "no-store",
     headers: {
       "Content-Type": "application/json",
+      ...contextHeaders,
       ...(init?.headers ?? {})
     }
   });
@@ -101,7 +381,9 @@ async function sendJson<T>(input: string, init?: RequestInit): Promise<T> {
     const message =
       payload && typeof payload === "object" && "message" in payload && typeof payload.message === "string"
         ? payload.message
-        : "Request failed.";
+        : payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
+          ? payload.error
+          : "Request failed.";
     throw new Error(message);
   }
 
@@ -132,6 +414,266 @@ export async function getOrders() {
       }>;
     }>;
   }>("/orders");
+}
+
+export async function getCompletedOrders() {
+  return readJson<{
+    ok: true;
+    orders: Array<{
+      orderId: string;
+      source: "AMAZON" | "CONFIGURATOR";
+      status: "READY_FOR_SHIPMENT";
+      jobCount: number;
+      partCount: number;
+      completedAt: string;
+    }>;
+  }>("/orders/completed");
+}
+
+export interface ViewerContextResponse {
+  ok: true;
+  user: {
+    email: string;
+    name: string | null;
+  };
+  organization: {
+    id: string;
+    slug: string;
+    name: string;
+  };
+  membership: {
+    id: string;
+    role: "OWNER" | "ADMIN" | "OPERATOR";
+  };
+  organizations: Array<{
+    id: string;
+    slug: string;
+    name: string;
+    role: "OWNER" | "ADMIN" | "OPERATOR";
+  }>;
+}
+
+export async function getViewerContext() {
+  return readJson<ViewerContextResponse>("/me/context");
+}
+
+export interface OrganizationMemberRecord {
+  userId: string;
+  email: string;
+  name: string | null;
+  role: "OWNER" | "ADMIN" | "OPERATOR";
+}
+
+export interface OrganizationMembersResponse {
+  ok: true;
+  members: OrganizationMemberRecord[];
+}
+
+export async function getOrganizationMembers() {
+  return readJson<OrganizationMembersResponse>("/org/members");
+}
+
+export async function addOrganizationMember(input: {
+  email: string;
+  name?: string;
+  role: "OWNER" | "ADMIN" | "OPERATOR";
+}) {
+  return sendJson<{
+    ok: true;
+    member: OrganizationMemberRecord;
+    activation?: {
+      path: string;
+    };
+  } | ConfiguratorErrorResponse>("/org/members", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateOrganizationMemberRole(input: {
+  userId: string;
+  role: "OWNER" | "ADMIN" | "OPERATOR";
+}) {
+  return sendJson<{
+    ok: true;
+    member: OrganizationMemberRecord;
+  } | ConfiguratorErrorResponse>(`/org/members/${input.userId}/role`, {
+    method: "POST",
+    body: JSON.stringify({ role: input.role })
+  });
+}
+
+export type LoginResponse =
+  | ({
+      ok: true;
+      sessionToken: string;
+    } & ViewerContextResponse)
+  | ConfiguratorErrorResponse;
+
+export async function login(input: { email: string; password: string }) {
+  return sendJson<LoginResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function logout() {
+  return sendJson<{ ok: true }>("/auth/logout", {
+    method: "POST"
+  });
+}
+
+export async function getAuthSession() {
+  return readJson<ViewerContextResponse>("/auth/session");
+}
+
+export interface ActivationValidationResponse {
+  ok: true;
+  user: {
+    email: string;
+    name: string | null;
+  };
+  activation: {
+    expiresAt: string;
+  };
+}
+
+export type ActivationResponse =
+  | ({
+      ok: true;
+      sessionToken: string;
+    } & ViewerContextResponse)
+  | ConfiguratorErrorResponse;
+
+export async function validateActivationToken(token: string) {
+  return sendJson<ActivationValidationResponse | ConfiguratorErrorResponse>(
+    `/auth/activate/validate?token=${encodeURIComponent(token)}`,
+    {
+      method: "GET",
+      headers: {}
+    }
+  );
+}
+
+export async function activateAccount(input: { token: string; password: string }) {
+  return sendJson<ActivationResponse>("/auth/activate", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export interface ForgotPasswordResponse {
+  ok: true;
+  reset?: {
+    path: string;
+  };
+}
+
+export interface PasswordResetValidationResponse {
+  ok: true;
+  user: {
+    email: string;
+    name: string | null;
+  };
+  reset: {
+    expiresAt: string;
+  };
+}
+
+export async function requestPasswordReset(input: { email: string }) {
+  return sendJson<ForgotPasswordResponse | ConfiguratorErrorResponse>("/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function validatePasswordResetToken(token: string) {
+  return sendJson<PasswordResetValidationResponse | ConfiguratorErrorResponse>(
+    `/auth/reset-password/validate?token=${encodeURIComponent(token)}`,
+    {
+      method: "GET",
+      headers: {}
+    }
+  );
+}
+
+export async function resetPassword(input: { token: string; password: string }) {
+  return sendJson<ActivationResponse>("/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export type ShipOrderResponse =
+  | {
+      ok: true;
+      order: {
+        id: string;
+        status: "SHIPPED";
+      };
+    }
+  | ConfiguratorErrorResponse;
+
+export type PackingSlipArtifactResponse =
+  | {
+      ok: true;
+      action: "generate-packing-slip";
+      orderId: string;
+      artifact: {
+        type: "order-packing-slip-pdf";
+        uri: string;
+        isCurrent: true;
+        version: number;
+      };
+    }
+  | ConfiguratorErrorResponse;
+
+export interface ImportAmazonFixturesResponse {
+  ok: true;
+  action: "import-amazon-fixtures";
+  summary: {
+    ordersCreated: number;
+    jobsCreated: number;
+    partsCreated: number;
+  };
+  filesProcessed: number;
+  ordersCreated: number;
+  orderItemsCreated: number;
+  partInstancesCreated: number;
+  jobsCreated: number;
+  warnings: unknown[];
+  errors: unknown[];
+  orders: Array<{
+    id: string;
+    source: "AMAZON";
+  }>;
+  jobs: Array<{
+    id: string;
+    status: "DRAFT";
+    source: "AMAZON";
+    orderId: string;
+    orderItemId: string;
+  }>;
+  parts: Array<{
+    id: string;
+    jobId: string;
+    orderId: string;
+    orderItemId: string;
+    labelCode: string;
+    scanCode: string;
+    source: "AMAZON";
+  }>;
+}
+
+export interface PreviewAmazonFixturesResponse {
+  status: "ok";
+  scope: "amazon-import-v1";
+  preview: {
+    filesProcessed: number;
+    previews: unknown[];
+    warnings: unknown[];
+    errors: unknown[];
+  };
 }
 
 export async function getOrder(orderId: string) {
@@ -178,6 +720,31 @@ export async function getNormalizedOrder(orderId: string) {
   return readJson<{ normalized: unknown }>(`/orders/${encodeURIComponent(orderId)}/normalized`);
 }
 
+export async function previewAmazonFixtures() {
+  return readJson<PreviewAmazonFixturesResponse>("/orders/import/amazon-fixtures/preview");
+}
+
+export async function importAmazonFixtures() {
+  return sendJson<ImportAmazonFixturesResponse>("/orders/import/amazon-fixtures", {
+    method: "POST"
+  });
+}
+
+export async function shipOrder(orderId: string) {
+  return sendJson<ShipOrderResponse>(`/orders/${encodeURIComponent(orderId)}/ship`, {
+    method: "POST"
+  });
+}
+
+export async function generatePackingSlip(orderId: string) {
+  return sendJson<PackingSlipArtifactResponse>(
+    `/orders/${encodeURIComponent(orderId)}/generate-packing-slip`,
+    {
+      method: "POST"
+    }
+  );
+}
+
 export async function getProductionBundles() {
   return readJson<{
     bundles: Array<{
@@ -190,6 +757,287 @@ export async function getProductionBundles() {
     }>;
   }>("/production/bundles");
 }
+
+export async function getBatches() {
+  return readJson<{
+    batches: Array<{
+      id: string;
+      organizationId: string;
+      code?: string;
+      name: string;
+      status: string;
+      materialCode?: string;
+      source?: string;
+      partCount?: number;
+      jobCount?: number;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  }>("/batches");
+}
+
+export async function generateBatchCncCsv(batchId: string) {
+  return sendJson<BatchExportArtifactResponse>("/batches/generate-cnc-csv", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function generateBatchLabelCsv(batchId: string) {
+  return sendJson<BatchExportArtifactResponse>("/batches/generate-label-csv", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function generateBatchCncMosaic(batchId: string) {
+  return sendJson<BatchExportArtifactResponse>("/batches/generate-cnc-mosaic", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function generateBatchCncJson(batchId: string) {
+  return sendJson<BatchExportArtifactResponse>("/batches/generate-cnc-json", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function getBatchDetail(batchId: string) {
+  return readJson<{
+    ok: true;
+    batch: {
+      id: string;
+      code: string;
+      status: string;
+      material: string;
+      source: "CONFIGURATOR" | "AMAZON";
+      partCount: number;
+      jobCount: number;
+      createdAt: string;
+      updatedAt: string;
+      availableNextActions: string[];
+      progress: {
+        totalParts: number;
+        cutCount: number;
+        edgebandedCount: number;
+        packedCount: number;
+      };
+    };
+    jobs: Array<{
+      id: string;
+      source: "CONFIGURATOR" | "AMAZON";
+      status: "DRAFT";
+      channel: string;
+      labelCode: string;
+      partType: string;
+      material: string;
+      edgeBandPattern: string;
+      width: number;
+      depth: number;
+      thickness: number;
+      quantity: number;
+      partIds: string[];
+    }>;
+    parts: Array<{
+      id: string;
+      jobId?: string;
+      source: "CONFIGURATOR" | "AMAZON";
+      labelCode: string;
+      scanCode: string;
+      status: "pending" | "cut" | "edgebanded" | "packed";
+      availableNextActions: Array<"cut" | "edgebanded" | "packed">;
+      material: string;
+      edgeBandPattern: string;
+      width: number;
+      depth: number;
+      thickness: number;
+      instanceNumber: number;
+    }>;
+    sheets: Array<{
+      id: string;
+      sheetIndex: number;
+      material: string;
+      sheetWidth: number;
+      sheetHeight: number;
+      status: string;
+      placements: Array<{
+        id: string;
+        partId: string;
+        labelCode: string;
+        x: number;
+        y: number;
+        width: number;
+        depth: number;
+        sequenceNumber: number;
+      }>;
+    }>;
+    artifacts: {
+      cnc: {
+        artifact?: {
+          id: string;
+          type: string;
+          uri: string;
+          version: number;
+          isCurrent: boolean;
+          generatedFrom?: string;
+          createdAt: string;
+        };
+        packet?: {
+          packetCode: string;
+          sheetCount: number;
+          partCount: number;
+          format: "FOUNDATION_JSON";
+        };
+        sheets?: Array<{
+          sheetIndex: number;
+          material: string;
+          sheetWidth: number;
+          sheetHeight: number;
+          placements: Array<{
+            partId: string;
+            labelCode: string;
+            x: number;
+            y: number;
+            width: number;
+            depth: number;
+            cutMethod: "RECTANGLE_CUT";
+          }>;
+        }>;
+        csv?: {
+          id: string;
+          type: string;
+          uri: string;
+          version: number;
+          isCurrent: boolean;
+          generatedFrom?: string;
+          createdAt: string;
+        };
+        mosaic?: {
+          id: string;
+          type: string;
+          uri: string;
+          version: number;
+          isCurrent: boolean;
+          generatedFrom?: string;
+          createdAt: string;
+        };
+        json?: {
+          id: string;
+          type: string;
+          uri: string;
+          version: number;
+          isCurrent: boolean;
+          generatedFrom?: string;
+          createdAt: string;
+        };
+      };
+      labels: {
+        artifact?: {
+          id: string;
+          type: string;
+          uri: string;
+          version: number;
+          isCurrent: boolean;
+          generatedFrom?: string;
+          createdAt: string;
+        };
+        packet?: {
+          packetCode: string;
+          labelCount: number;
+          format: "FOUNDATION_JSON";
+        };
+        labels?: Array<{
+          partId: string;
+          jobId?: string;
+          batchId: string;
+          labelCode: string;
+          scanCode: string;
+          partType: "SHELF";
+          material: string;
+          width: number;
+          depth: number;
+          thickness: number;
+          edgeBandPattern: string;
+          quantity: 1;
+          source: "CONFIGURATOR" | "AMAZON";
+          currentStatus: string;
+          sheetIndex?: number;
+          x?: number;
+          y?: number;
+        }>;
+        csv?: {
+          id: string;
+          type: string;
+          uri: string;
+          version: number;
+          isCurrent: boolean;
+          generatedFrom?: string;
+          createdAt: string;
+        };
+        pdf?: {
+          id: string;
+          type: string;
+          uri: string;
+          version: number;
+          isCurrent: boolean;
+          generatedFrom?: string;
+          createdAt: string;
+        };
+      };
+      traveler: {
+        pdf?: {
+          id: string;
+          type: string;
+          uri: string;
+          version: number;
+          isCurrent: boolean;
+          generatedFrom?: string;
+          createdAt: string;
+        };
+      };
+    };
+  }>(`/batches/${encodeURIComponent(batchId)}`);
+}
+
+export type BatchStatusTransitionResponse =
+  | {
+      ok: true;
+      action: "transition-batch";
+      batch: {
+        id: string;
+        code: string;
+        status: string;
+        availableNextActions: string[];
+      };
+    }
+  | ConfiguratorErrorResponse;
+
+export type PartStatusTransitionResponse =
+  | {
+      ok: true;
+      action: "transition-part";
+      part: {
+        id: string;
+        labelCode: string;
+        scanCode: string;
+        status: "pending" | "cut" | "edgebanded" | "packed";
+        availableNextActions: Array<"cut" | "edgebanded" | "packed">;
+      };
+      jobStatus?: "DRAFT" | "COMPLETE";
+      orderStatus?:
+        | "DRAFT"
+        | "IMPORTED"
+        | "READY_FOR_BATCH"
+        | "RECEIVED"
+        | "IN_PRODUCTION"
+        | "READY_FOR_SHIPMENT"
+        | "COMPLETE"
+        | "HOLD"
+        | "ERROR";
+    }
+  | ConfiguratorErrorResponse;
 
 export async function getProductionBundle(bundleCode: string) {
   return readJson<{
@@ -636,22 +1484,122 @@ export async function generateBundlePacket(bundleCode: string) {
 }
 
 export async function validateConfigurator(input: ShelfConfiguratorInput) {
-  return sendJson<{ result: ShelfValidationResult }>("/configurator/validate", {
+  return sendJson<ConfiguratorValidateResponse>("/configurator/validate", {
     method: "POST",
     body: JSON.stringify(input)
   });
 }
 
 export async function normalizeConfigurator(input: ShelfConfiguratorInput) {
-  return sendJson<{ result: ShelfNormalizedSpec }>("/configurator/normalize", {
+  return sendJson<ConfiguratorNormalizeResponse>("/configurator/normalize", {
     method: "POST",
     body: JSON.stringify(input)
   });
 }
 
 export async function quoteConfigurator(input: ShelfConfiguratorInput) {
-  return sendJson<{ result: ShelfQuoteResult }>("/configurator/quote", {
+  return sendJson<ConfiguratorQuoteResponse>("/configurator/quote", {
     method: "POST",
     body: JSON.stringify(input)
   });
+}
+
+export async function translateConfigurator(input: ShelfConfiguratorInput) {
+  return sendJson<ConfiguratorTranslateResponse>("/configurator/translate", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createConfiguratorJob(input: ShelfConfiguratorInput) {
+  return sendJson<ConfiguratorCreateJobResponse>("/configurator/create-job", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createBatch(material: "WHITE_MELAMINE" | "MAPLE_MELAMINE") {
+  return sendJson<CreateBatchResponse>("/batches/build", {
+    method: "POST",
+    body: JSON.stringify({ material })
+  });
+}
+
+export async function nestBatch(batchId: string) {
+  return sendJson<NestBatchResponse>("/batches/nest", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function generateBatchCnc(batchId: string) {
+  return sendJson<GenerateCncResponse>("/batches/generate-cnc", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function generateBatchLabels(batchId: string) {
+  return sendJson<GenerateLabelsResponse>("/batches/generate-labels", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function generateBatchLabelPdf(batchId: string) {
+  return sendJson<GeneratePdfArtifactResponse>("/batches/generate-label-pdf", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function generateBatchTravelerPdf(batchId: string) {
+  return sendJson<GeneratePdfArtifactResponse>("/batches/generate-traveler-pdf", {
+    method: "POST",
+    body: JSON.stringify({ batchId })
+  });
+}
+
+export async function transitionBatchStatus(
+  batchId: string,
+  nextStatus: "PLANNED" | "RELEASED" | "CUTTING" | "CUT_COMPLETE" | "READY_FOR_NEXT_STAGE"
+) {
+  return sendJson<BatchStatusTransitionResponse>(`/batches/${encodeURIComponent(batchId)}/status`, {
+    method: "POST",
+    body: JSON.stringify({ nextStatus })
+  });
+}
+
+export async function transitionPartStatus(
+  partId: string,
+  nextStatus: "CUT" | "EDGEBANDED" | "PACKED"
+) {
+  return sendJson<PartStatusTransitionResponse>(`/parts/${encodeURIComponent(partId)}/status`, {
+    method: "POST",
+    body: JSON.stringify({ nextStatus })
+  });
+}
+
+export async function transitionPartStatusByLabel(
+  labelCode: string,
+  nextStatus: "CUT" | "EDGEBANDED" | "PACKED"
+) {
+  return sendJson<PartStatusTransitionResponse>("/parts/scan", {
+    method: "POST",
+    body: JSON.stringify({ labelCode, nextStatus })
+  });
+}
+
+export async function transitionPartStatusByScanCode(
+  scanCode: string,
+  nextStatus: "CUT" | "EDGEBANDED" | "PACKED"
+) {
+  return sendJson<PartStatusTransitionResponse>("/parts/scan", {
+    method: "POST",
+    body: JSON.stringify({ scanCode, nextStatus })
+  });
+}
+
+export async function getStationQueue(station: "cutting" | "edgebanding" | "packing") {
+  return readJson<StationQueueResponse>(`/stations/${encodeURIComponent(station)}`);
 }

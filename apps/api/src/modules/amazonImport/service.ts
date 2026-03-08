@@ -67,9 +67,12 @@ export async function previewAmazonFixtureImport(): Promise<AmazonImportPreview>
   };
 }
 
-export async function importAmazonFixtures(): Promise<AmazonImportResult> {
+export async function importAmazonFixtures(organizationId?: string): Promise<AmazonImportResult> {
   const preview = await previewAmazonFixtureImport();
-  const persisted = await persistAmazonOrders(preview.previews.map((previewRow) => previewRow.normalizedOrder));
+  const persisted = await persistAmazonOrders(
+    preview.previews.map((previewRow) => previewRow.normalizedOrder),
+    organizationId
+  );
 
   return {
     filesProcessed: preview.filesProcessed,

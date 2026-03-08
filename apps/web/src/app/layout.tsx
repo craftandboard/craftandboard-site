@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { CurrentContextChip } from "../components/current-context-chip";
 import { Nav } from "../components/nav";
+import { getViewerContext } from "../lib/api";
 import "../components/labels/shelf-label.css";
 import "./globals.css";
 
@@ -8,9 +10,11 @@ export const metadata: Metadata = {
   description: "Local foundation scaffold for the Craft & Board manufacturing SaaS."
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
+  const contextPromise = getViewerContext();
+
   return (
     <html lang="en">
       <body>
@@ -31,7 +35,10 @@ export default function RootLayout({
                   </p>
                 </div>
               </div>
-              <Nav />
+              <div className="flex flex-col items-start gap-4 lg:items-end">
+                <CurrentContextChip context={await contextPromise} />
+                <Nav />
+              </div>
             </div>
           </header>
           <main className="flex-1">{children}</main>

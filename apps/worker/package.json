@@ -8,6 +8,7 @@
     "lint": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
+    "@craft-and-board/shared": "workspace:*",
     "bullmq": "^5.43.1",
     "dotenv": "^16.4.7",
     "ioredis": "^5.4.2"

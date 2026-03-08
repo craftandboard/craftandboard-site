@@ -6,11 +6,25 @@ config();
 process.env.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/craftandboard";
 process.env.PORT_API ??= "4000";
 process.env.REDIS_URL ??= "redis://localhost:6379";
+process.env.ENABLE_BACKGROUND_WORKER ??= "false";
+process.env.CNC_WATCH_FOLDER_PATH ??= "";
+process.env.AUTH_SESSION_SECRET ??= "craft-board-dev-session-secret";
+process.env.ALLOW_DEV_AUTH_BYPASS ??= "false";
 
 const envSchema = z.object({
   DATABASE_URL: z.string().min(1).default("postgresql://postgres:postgres@localhost:5432/craftandboard"),
   PORT_API: z.coerce.number().default(4000),
-  REDIS_URL: z.string().min(1).default("redis://localhost:6379")
+  REDIS_URL: z.string().min(1).default("redis://localhost:6379"),
+  ENABLE_BACKGROUND_WORKER: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .default("false"),
+  CNC_WATCH_FOLDER_PATH: z.string().default(""),
+  AUTH_SESSION_SECRET: z.string().min(16),
+  ALLOW_DEV_AUTH_BYPASS: z
+    .enum(["true", "false"])
+    .transform((value) => value === "true")
+    .default("true")
 });
 
 export const env = envSchema.parse(process.env);

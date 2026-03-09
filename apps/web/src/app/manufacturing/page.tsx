@@ -1,99 +1,136 @@
-import Link from 'next/link';
-import { ManufacturingActions } from '../../components/manufacturing-actions';
-import { getManufacturingBundles } from '../../lib/api';
+import Link from "next/link";
+import {
+  getCanonicalManufacturingBatches,
+  getCanonicalManufacturingPackets,
+  getCanonicalManufacturingParts,
+  getMachineStageCandidates
+} from "../../lib/api";
 
 export default async function ManufacturingPage() {
-  const payload = await getManufacturingBundles();
-  const bundles = payload?.bundles ?? [];
+  const [packetsPayload, batchesPayload, partsPayload, candidatesPayload] = await Promise.all([
+    getCanonicalManufacturingPackets(),
+    getCanonicalManufacturingBatches(),
+    getCanonicalManufacturingParts(),
+    getMachineStageCandidates()
+  ]);
+
+  const packets = packetsPayload?.packets ?? [];
+  const batches = batchesPayload?.batches ?? [];
+  const parts = partsPayload?.parts ?? [];
+  const candidates = candidatesPayload?.candidates ?? [];
 
   return (
     <div className="space-y-8">
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8">
         <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Manufacturing</p>
-        <h2 className="mt-3 text-3xl font-semibold text-white">4x8 nesting and CNC job generation</h2>
+        <h2 className="mt-3 text-3xl font-semibold text-white">Packets, batches, parts, and execution state</h2>
         <p className="mt-3 max-w-3xl text-sm text-slate-300">
-          Bundle lifecycle is now operator-controlled. Release, nesting, CNC, approvals, and packet generation all run against persisted current versions.
+          This page favors the canonical manufacturing path: `ManufacturingPacket`,
+          `ManufacturingBatch`, and `ManufacturingPart`. Transitional legacy bundle
+          tools remain available separately.
         </p>
       </section>
 
-      {bundles.length === 0 ? (
-        <section className="rounded-[2rem] border border-dashed border-white/15 bg-white/5 p-8 text-sm text-slate-300">
-          No manufacturing bundles are available yet. Import orders first so bundle-derived physical parts exist.
-        </section>
-      ) : (
-        <section className="grid gap-4">
-          {bundles.map((bundle) => {
-            const nextAllowedActions =
-              bundle.status === 'draft'
-                ? ['release']
-                : bundle.status === 'ready_for_nesting'
-                  ? ['build_nesting']
-                  : bundle.status === 'nested'
-                    ? ['approve_nesting']
-                    : bundle.status === 'ready_for_cnc'
-                      ? ['generate_cnc']
-                      : bundle.status === 'cnc_generated'
-                        ? ['approve_cnc']
-                        : [];
+      <section className="grid gap-4 md:grid-cols-4">
+        <article className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Packets</p>
+          <p className="mt-3 text-3xl font-semibold text-white">{packets.length}</p>
+        </article>
+        <article className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Batches</p>
+          <p className="mt-3 text-3xl font-semibold text-white">{batches.length}</p>
+        </article>
+        <article className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Parts</p>
+          <p className="mt-3 text-3xl font-semibold text-white">{parts.length}</p>
+        </article>
+        <article className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Machine Candidates</p>
+          <p className="mt-3 text-3xl font-semibold text-white">{candidates.length}</p>
+        </article>
+      </section>
 
-            const lifecycle = {
-              bundleCode: bundle.bundleCode,
-              status: bundle.status ?? 'draft',
-              currentNestVersion: bundle.currentNestVersion,
-              currentCncVersion: bundle.currentCncVersion,
-              nextAllowedActions
-            };
+      <section className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold text-white">Manufacturing Packets</h3>
+            <span className="text-sm text-slate-400">{packets.length} total</span>
+          </div>
+          <div className="mt-4 space-y-3">
+            {packets.length === 0 ? (
+              <p className="text-sm text-slate-300">No packets exist yet.</p>
+            ) : (
+              packets.map((packet) => (
+                <div key={packet.id} className="rounded-2xl border border-white/10 p-4 text-sm">
+                  <p className="font-medium text-white">{packet.packetNumber}</p>
+                  <p className="mt-1 text-slate-300">{packet.sourceType}</p>
+                  <pre className="mt-3 overflow-x-auto text-xs text-slate-400">
+                    {JSON.stringify(packet.summaryJson, null, 2)}
+                  </pre>
+                </div>
+              ))
+            )}
+          </div>
+        </article>
 
-            return (
-              <div key={bundle.bundleCode} className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  <div>
-                    <Link href={`/manufacturing/${bundle.bundleCode}`} className="text-sm uppercase tracking-[0.25em] text-emerald-300">
-                      {bundle.bundleCode}
-                    </Link>
-                    <h3 className="mt-2 text-2xl font-semibold text-white">{bundle.productLabel}</h3>
-                    <p className="mt-2 text-sm text-slate-300">
-                      Ship by {bundle.shipByDate} · Material {bundle.materialCode} · Status {bundle.status ?? 'draft'}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-400">
-                      Current nest v{bundle.currentNestVersion ?? 0} · Current CNC v{bundle.currentCncVersion ?? 0}
-                    </p>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3 text-sm text-slate-200 lg:grid-cols-5">
-                    <div className="rounded-2xl border border-white/10 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Parts</p>
-                      <p className="mt-2 text-xl font-semibold text-white">{bundle.totalPhysicalParts}</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Sheets</p>
-                      <p className="mt-2 text-xl font-semibold text-white">{bundle.totalSheets}</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Nesting</p>
-                      <p className="mt-2 text-sm font-semibold text-white">{bundle.nestingBuilt ? 'Built' : 'Pending'}</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">CNC</p>
-                      <p className="mt-2 text-sm font-semibold text-white">{bundle.cncGenerated ? 'Generated' : 'Pending'}</p>
-                    </div>
-                    <div className="rounded-2xl border border-white/10 px-4 py-3">
-                      <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Utilization</p>
-                      <p className="mt-2 text-sm font-semibold text-white">{bundle.utilizationPct ?? 0}%</p>
-                    </div>
-                  </div>
+        <article className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold text-white">Manufacturing Batches</h3>
+            <Link href="/inventory" className="text-sm text-emerald-300">
+              Open inventory
+            </Link>
+          </div>
+          <div className="mt-4 space-y-3">
+            {batches.length === 0 ? (
+              <p className="text-sm text-slate-300">No manufacturing batches exist yet.</p>
+            ) : (
+              batches.map((batch) => (
+                <div key={batch.id} className="rounded-2xl border border-white/10 p-4 text-sm">
+                  <p className="font-medium text-white">{batch.batchNumber}</p>
+                  <p className="mt-1 text-slate-300">
+                    {batch.batchType} · {batch.status} · {batch.materialType ?? "Mixed"} · {batch.partCount} parts
+                  </p>
                 </div>
-                <div className="mt-5">
-                  <ManufacturingActions
-                    bundleCode={bundle.bundleCode}
-                    compact
-                    lifecycle={lifecycle}
-                  />
-                </div>
-              </div>
-            );
-          })}
-        </section>
-      )}
+              ))
+            )}
+          </div>
+        </article>
+      </section>
+
+      <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
+        <div className="flex items-center justify-between">
+          <h3 className="text-xl font-semibold text-white">Recent Manufacturing Parts</h3>
+          <Link href="/parts-scans" className="text-sm text-emerald-300">
+            Open parts & scans
+          </Link>
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="min-w-full text-left text-sm text-slate-200">
+            <thead className="text-xs uppercase tracking-[0.2em] text-slate-400">
+              <tr>
+                <th className="pb-3 pr-4">Part</th>
+                <th className="pb-3 pr-4">Material</th>
+                <th className="pb-3 pr-4">Dimensions</th>
+                <th className="pb-3 pr-4">Status</th>
+                <th className="pb-3 pr-4">Batch</th>
+              </tr>
+            </thead>
+            <tbody>
+              {parts.slice(0, 12).map((part) => (
+                <tr key={part.id} className="border-t border-white/5">
+                  <td className="py-3 pr-4">{part.partNumber}</td>
+                  <td className="py-3 pr-4">{part.materialType}</td>
+                  <td className="py-3 pr-4">
+                    {part.lengthIn}&quot; × {part.depthIn}&quot; × {part.thicknessIn}&quot;
+                  </td>
+                  <td className="py-3 pr-4">{part.status}</td>
+                  <td className="py-3 pr-4">{part.batchId ?? "Unbatched"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

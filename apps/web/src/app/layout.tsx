@@ -6,8 +6,8 @@ import "../components/labels/shelf-label.css";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Craft & Board",
-  description: "Local foundation scaffold for the Craft & Board manufacturing SaaS."
+  title: "FieldMetriq Ops",
+  description: "FieldMetriq operations workspace for Craft & Board."
 };
 
 export default async function RootLayout({
@@ -23,15 +23,16 @@ export default async function RootLayout({
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div className="space-y-3">
                 <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">
-                  craftandboard.com
+                  fieldmetriq ops
                 </p>
                 <div>
                   <h1 className="text-4xl font-semibold tracking-tight text-white">
                     Craft &amp; Board
                   </h1>
                   <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-                    Manufacturing SaaS foundation for custom shelving operations,
-                    batching, CNC prep, and shop-floor workflows.
+                    Tenant 1 on the FieldMetriq manufacturing platform. Orders,
+                    costing, manufacturing, telemetry, scans, containers, and
+                    remnant control now live in one ops shell.
                   </p>
                 </div>
               </div>

@@ -2463,3 +2463,288 @@ export async function removePartFromContainer(input: {
     body: JSON.stringify(input)
   });
 }
+
+export interface CanonicalSalesOrderSummary {
+  id: string;
+  sourceType: "AMAZON" | "WEBSITE" | "MANUAL";
+  sourceOrderId?: string;
+  customerName?: string;
+  currency: string;
+  status: "DRAFT" | "READY" | "HOLD" | "ERROR" | "CONVERTED";
+  createdAt: string;
+  updatedAt: string;
+  items: Array<{
+    id: string;
+    title: string;
+    quantity: number;
+    materialType?: string;
+    lengthIn?: number;
+    depthIn?: number;
+    normalizationStatus: string;
+    pricingStatus: string;
+  }>;
+  shelfJobs: Array<{
+    id: string;
+    salesOrderItemId: string;
+    quantity: number;
+    jobStatus: string;
+    createdAt: string;
+  }>;
+}
+
+export interface CanonicalShelfJobSummary {
+  id: string;
+  salesOrderId: string;
+  salesOrderItemId: string;
+  shelfProductId?: string;
+  costProfileId: string;
+  productionAssumptionProfileId: string;
+  packagingProfileId?: string;
+  pricingPolicyId: string;
+  quantity: number;
+  jobStatus: string;
+  normalizedSpecJson: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CanonicalManufacturingPacketSummary {
+  id: string;
+  packetNumber: string;
+  sourceType: string;
+  sourceIdsJson: string[];
+  summaryJson: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface CanonicalManufacturingPartSummary {
+  id: string;
+  manufacturingPacketId: string;
+  shelfJobId: string;
+  salesOrderId: string;
+  salesOrderItemId: string;
+  batchId?: string;
+  partNumber: string;
+  unitIndex: number;
+  quantity: number;
+  partType: string;
+  materialType: string;
+  thicknessIn: number;
+  lengthIn: number;
+  depthIn: number;
+  edgeBandPattern: string;
+  requiresPackaging: boolean;
+  labelDataJson: Record<string, unknown>;
+  status: string;
+  statusReason?: string;
+  sortGroup?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CanonicalManufacturingBatchSummary {
+  id: string;
+  batchNumber: string;
+  batchType: "CUT" | "EDGEBAND" | "PACKAGING";
+  materialType?: string;
+  thicknessIn?: number;
+  status: "OPEN" | "IN_PROGRESS" | "COMPLETE" | "HOLD";
+  notes?: string;
+  partCount: number;
+  createdAt: string;
+  updatedAt: string;
+  parts: CanonicalManufacturingPartSummary[];
+}
+
+export interface CostEstimateRecord {
+  id: string;
+  estimateStatus: "COMPLETE" | "PARTIAL" | "ERROR";
+  warnings: string[];
+  inputSnapshot: Record<string, unknown>;
+  assumptionSnapshot: Record<string, unknown>;
+  result: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MachineStageCandidateRecord {
+  id: string;
+  machineEventId: string;
+  machineId: string;
+  machineCode?: string;
+  machineName?: string;
+  machineType?: string;
+  entityType: string;
+  entityId: string;
+  suggestedAction: string;
+  confidence: string;
+  rationale: string;
+  status: string;
+  emittedAt: string;
+  createdAt: string;
+}
+
+export interface ScanEventRecord {
+  id: string;
+  entityType?: string;
+  entityId?: string;
+  scanValue?: string;
+  stationType: string;
+  actionType: string;
+  previousStatus?: string;
+  nextStatus?: string;
+  result: "ACCEPTED" | "REJECTED" | "NOOP";
+  resultReason?: string;
+  metadataJson?: Record<string, unknown>;
+  scannedByUserId?: string;
+  manufacturingPartId?: string;
+  manufacturingBatchId?: string;
+  createdAt: string;
+}
+
+export interface WorkflowStationRuleRecord {
+  id: string;
+  stationType: string;
+  entityType: string;
+  fromStatus: string;
+  actionType: string;
+  toStatus: string;
+  isActive: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ManagedContainerRecord {
+  id: string;
+  containerCode: string;
+  displayName: string;
+  description?: string;
+  containerType: string;
+  barcodeValue: string;
+  qrValue: string;
+  capacityNotes?: string;
+  status: string;
+  currentLocationId?: string;
+  currentLocationCode?: string;
+  currentLocationName?: string;
+  manufacturingBatchId?: string;
+  batchId?: string;
+  isActive: boolean;
+  activePartCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ActiveContainerSessionRecord {
+  id: string;
+  containerId: string;
+  stationType?: string;
+  startedByUserId?: string;
+  endedByUserId?: string;
+  startedAt: string;
+  endedAt?: string;
+  isActive: boolean;
+  metadataJson?: Record<string, unknown>;
+  container?: ManagedContainerRecord;
+}
+
+export async function getCanonicalSalesOrders() {
+  return readJson<{ ok: true; orders: CanonicalSalesOrderSummary[] }>("/order-intake/orders");
+}
+
+export async function getCanonicalSalesOrder(orderId: string) {
+  return readJson<{ ok: true; order: CanonicalSalesOrderSummary }>(
+    `/order-intake/orders/${encodeURIComponent(orderId)}`
+  );
+}
+
+export async function getCanonicalShelfJobs() {
+  return readJson<{ ok: true; shelfJobs: CanonicalShelfJobSummary[] }>("/shelf-jobs");
+}
+
+export async function getCanonicalShelfJob(shelfJobId: string) {
+  return readJson<{ ok: true; shelfJob: CanonicalShelfJobSummary }>(
+    `/shelf-jobs/${encodeURIComponent(shelfJobId)}`
+  );
+}
+
+export async function getCanonicalManufacturingPackets() {
+  return readJson<{ ok: true; packets: CanonicalManufacturingPacketSummary[] }>("/manufacturing-packets");
+}
+
+export async function getCanonicalManufacturingParts(input?: {
+  packetId?: string;
+  batchId?: string;
+  status?: string;
+}) {
+  const params = new URLSearchParams();
+  if (input?.packetId) params.set("packetId", input.packetId);
+  if (input?.batchId) params.set("batchId", input.batchId);
+  if (input?.status) params.set("status", input.status);
+  const query = params.toString();
+
+  return readJson<{ ok: true; parts: CanonicalManufacturingPartSummary[] }>(
+    `/manufacturing-parts${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getCanonicalManufacturingBatches() {
+  return readJson<{ ok: true; batches: CanonicalManufacturingBatchSummary[] }>("/manufacturing-batches");
+}
+
+export async function getShelfJobEstimate(shelfJobId: string) {
+  return readJson<{ ok: true; estimate: CostEstimateRecord }>(
+    `/costing/shelf-jobs/${encodeURIComponent(shelfJobId)}/estimate`
+  );
+}
+
+export async function recomputeShelfJobEstimate(shelfJobId: string) {
+  return sendJson<{ ok: true; estimate: CostEstimateRecord }>(
+    `/costing/shelf-jobs/${encodeURIComponent(shelfJobId)}/estimate`,
+    { method: "POST" }
+  );
+}
+
+export async function getSalesOrderEstimate(orderId: string) {
+  return readJson<{ ok: true; estimate: CostEstimateRecord }>(
+    `/costing/orders/${encodeURIComponent(orderId)}/estimate`
+  );
+}
+
+export async function recomputeSalesOrderEstimate(orderId: string) {
+  return sendJson<{ ok: true; estimate: CostEstimateRecord }>(
+    `/costing/orders/${encodeURIComponent(orderId)}/estimate`,
+    { method: "POST" }
+  );
+}
+
+export async function getMachineStageCandidates() {
+  return readJson<{ ok: true; candidates: MachineStageCandidateRecord[] }>("/machine-stage-candidates");
+}
+
+export async function getScanEvents(input?: {
+  result?: "ACCEPTED" | "REJECTED" | "NOOP";
+  stationType?: string;
+  entityType?: string;
+}) {
+  const params = new URLSearchParams();
+  if (input?.result) params.set("result", input.result);
+  if (input?.stationType) params.set("stationType", input.stationType);
+  if (input?.entityType) params.set("entityType", input.entityType);
+  const query = params.toString();
+
+  return readJson<{ ok: true; events: ScanEventRecord[] }>(`/scan/events${query ? `?${query}` : ""}`);
+}
+
+export async function getWorkflowStationRules() {
+  return readJson<{ ok: true; rules: WorkflowStationRuleRecord[] }>("/workflow/station-rules");
+}
+
+export async function getManagedContainers() {
+  return readJson<{ ok: true; containers: ManagedContainerRecord[] }>("/containers");
+}
+
+export async function getActiveContainerSessions() {
+  return readJson<{ ok: true; sessions: ActiveContainerSessionRecord[] }>("/containers/active-container-sessions");
+}

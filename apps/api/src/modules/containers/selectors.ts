@@ -9,7 +9,7 @@ export function labelCodeFor(baseLabelCode: string, instanceNumber: number) {
 
 export function mapContainerSummary(input: {
   id: string;
-  batchId: string;
+  batchId: string | null;
   code: string;
   label: string;
   type: ContainerType;
@@ -25,7 +25,7 @@ export function mapContainerSummary(input: {
 }): ContainerSummary {
   return {
     id: input.id,
-    batchId: input.batchId,
+    batchId: input.batchId ?? undefined,
     code: input.code,
     label: input.label,
     type: input.type,

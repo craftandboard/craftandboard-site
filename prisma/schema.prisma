@@ -133,34 +133,47 @@ enum OrganizationMemberRole {
 enum ContainerType {
   CONTAINER
   BIN
+  CART
+  TOTE
+  PALLET
+  RACK_SLOT
+  STAGING_AREA
 }
 
 enum ContainerStatus {
   OPEN
   SORTING
   COMPLETE
+  AVAILABLE
+  IN_USE
   HOLD
   CLOSED
+  RETIRED
 }
 
 enum RemnantStatus {
   AVAILABLE
   RESERVED
+  ALLOCATED
   PARTIAL
   CONSUMED
   HOLD
+  SCRAP
   SCRAPPED
 }
 
 enum RemnantSourceType {
+  CNC_LEFTOVER
   FULL_SHEET_LEFTOVER
   MANUAL
+  MANUAL_ENTRY
   IMPORTED
 }
 
 enum RemnantUsageActionType {
   CREATED
   RESERVED
+  ALLOCATED
   CONSUMED
   PARTIAL_CONSUME
   RELEASED
@@ -169,9 +182,53 @@ enum RemnantUsageActionType {
   UPDATED
 }
 
+enum RemnantGrainDirection {
+  NONE
+  LENGTH
+  WIDTH
+  UNKNOWN
+}
+
+enum RemnantEdgeCondition {
+  RAW
+  ONE_CLEAN_EDGE
+  TWO_CLEAN_EDGES
+  MIXED
+  UNKNOWN
+}
+
+enum RemnantQualityGrade {
+  A
+  B
+  C
+  UNKNOWN
+}
+
+enum RemnantAllocationType {
+  RESERVE
+  ALLOCATE
+}
+
+enum RemnantAllocationTargetType {
+  SHELF_JOB
+  MANUFACTURING_BATCH
+  COST_SCENARIO
+  MANUAL
+}
+
+enum RemnantAllocationStatus {
+  ACTIVE
+  RELEASED
+  CONSUMED
+  CANCELLED
+}
+
 enum MachineType {
   CNC
   EDGEBANDER
+  SAW
+  DRILL
+  PLC
   LABEL_PRINTER
   SCANNER_STATION
   OTHER
@@ -182,6 +239,27 @@ enum MachineStatus {
   INACTIVE
   HOLD
   MAINTENANCE
+}
+
+enum MachineSourceType {
+  WEBHOOK
+  POLL_IMPORT
+  MANUAL_UPLOAD
+  LOCAL_AGENT
+  PLC_BRIDGE
+}
+
+enum MachineEventIngestType {
+  SINGLE_EVENT
+  EVENT_BATCH
+  FILE_IMPORT
+}
+
+enum MachineEventIngestRunStatus {
+  RECEIVED
+  PROCESSED
+  PARTIAL
+  FAILED
 }
 
 enum MachineEventSourceType {
@@ -195,10 +273,46 @@ enum MachineEventSourceType {
 
 enum MachineEventProcessingStatus {
   RECEIVED
+  RAW
   PARSED
+  NORMALIZED
   LINKED
+  SIGNAL_EMITTED
   UNMATCHED
+  DUPLICATE
+  FAILED
   ERROR
+}
+
+enum MachineTelemetryEntityType {
+  MANUFACTURING_BATCH
+  MANUFACTURING_PART
+  REMNANT
+  MACHINE_SOURCE
+  UNKNOWN
+}
+
+enum MachineEventLinkConfidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum MachineEventLinkMethod {
+  EXTERNAL_ID_MATCH
+  PART_NUMBER_MATCH
+  BATCH_NUMBER_MATCH
+  PROGRAM_NAME_MATCH
+  REMNANT_CODE_MATCH
+  MANUAL
+  HEURISTIC
+}
+
+enum MachineStageCandidateStatus {
+  NEW
+  REVIEWED
+  APPLIED
+  REJECTED
 }
 
 enum StageCandidateTargetType {
@@ -233,6 +347,135 @@ enum StageCandidateAppliedMode {
   AUTO
 }
 
+enum CostScenarioSourceType {
+  MANUAL
+  CONFIGURATOR
+  ORDER
+  BATCH
+  FORECAST
+}
+
+enum PricingRoundingMode {
+  NONE
+  NEAREST
+  UP
+}
+
+enum SalesOrderSourceType {
+  MANUAL
+  AMAZON
+  CSV
+  CONFIGURATOR
+}
+
+enum SalesOrderStatus {
+  DRAFT
+  READY
+  HOLD
+  ERROR
+  CONVERTED
+}
+
+enum SalesOrderItemNormalizationStatus {
+  PENDING
+  NORMALIZED
+  HOLD
+  ERROR
+}
+
+enum SalesOrderItemPricingStatus {
+  PENDING
+  PRICED
+  HOLD
+  ERROR
+}
+
+enum ShelfJobStatus {
+  READY
+  HOLD
+  ERROR
+  CONVERTED_TO_MANUFACTURING
+}
+
+enum ManufacturingPacketSourceType {
+  SALES_ORDER
+  SHELF_JOB
+}
+
+enum ManufacturingPartStatus {
+  READY_FOR_BATCH
+  BATCHED
+  CUT_PENDING
+  CUT_IN_PROGRESS
+  CUT_COMPLETE
+  EDGEBAND_PENDING
+  EDGEBAND_IN_PROGRESS
+  EDGEBAND_COMPLETE
+  PACKAGING_PENDING
+  PACKAGING_IN_PROGRESS
+  PACKAGED
+  HOLD
+  ERROR
+}
+
+enum ManufacturingPartType {
+  SHELF
+}
+
+enum ManufacturingBatchType {
+  CUT
+  EDGEBAND
+  PACKAGING
+}
+
+enum ManufacturingBatchStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETE
+  HOLD
+}
+
+enum ScanEntityType {
+  MANUFACTURING_PART
+  MANUFACTURING_BATCH
+  CONTAINER
+  CONTAINER_LOCATION
+  REMNANT
+}
+
+enum ScanWorkflowStationType {
+  CUT
+  EDGEBAND
+  PACKAGING
+  QC
+  SHIPPING
+  STAGING
+  CONTAINER
+  UNKNOWN
+}
+
+enum ScanActionType {
+  LOOKUP
+  CHECK_IN
+  CHECK_OUT
+  MARK_STAGE_COMPLETE
+  MOVE
+  ASSIGN_CONTAINER
+  REPRINT_LABEL
+}
+
+enum ScanResult {
+  ACCEPTED
+  REJECTED
+  NOOP
+}
+
+enum LabelRenderFormat {
+  JSON
+  HTML
+  PDF
+}
+
 model Organization {
   id        String    @id @default(cuid())
   name      String
@@ -260,10 +503,38 @@ model Organization {
   partContainerAssignments PartContainerAssignment[]
   remnants Remnant[]
   remnantUsages RemnantUsage[]
+  remnantMovements RemnantMovement[]
+  remnantAllocations RemnantAllocation[]
   machines  Machine[]
+  machineEventIngestRuns MachineEventIngestRun[]
   machineEvents MachineEvent[]
+  machineEventLinks MachineEventLink[]
+  machineStageCandidates MachineStageCandidate[]
   stageCandidateSignals StageCandidateSignal[]
   trustedAutoApplyRules TrustedAutoApplyRule[]
+  costProfiles CostProfile[]
+  costRates CostRate[]
+  costScenarios CostScenario[]
+  shelfProducts ShelfProduct[]
+  productionAssumptionProfiles ProductionAssumptionProfile[]
+  packagingProfiles PackagingProfile[]
+  pricingPolicies PricingPolicy[]
+  pricingScenarios PricingScenario[]
+  salesOrders SalesOrder[]
+  salesOrderItems SalesOrderItem[]
+  shelfJobs ShelfJob[]
+  manufacturingPackets ManufacturingPacket[]
+  manufacturingParts ManufacturingPart[]
+  manufacturingBatches ManufacturingBatch[]
+  manufacturingBatchParts ManufacturingBatchPart[]
+  labelTemplateVersions LabelTemplateVersion[]
+  packetExpansionRuns PacketExpansionRun[]
+  labelRenderJobs LabelRenderJob[]
+  workflowStationRules WorkflowStationRule[]
+  containerLocations ContainerLocation[]
+  containerAssignments ContainerAssignment[]
+  containerMoveEvents ContainerMoveEvent[]
+  activeContainerSessions ActiveContainerSession[]
 }
 
 model User {
@@ -280,6 +551,20 @@ model User {
   sessions       Session[]
   activationTokens ActivationToken[]
   passwordResetTokens PasswordResetToken[]
+  costScenarios  CostScenario[]
+  pricingScenarios PricingScenario[]
+  manufacturingPackets ManufacturingPacket[]
+  packetExpansionRuns PacketExpansionRun[]
+  scanEvents           ScanEvent[]             @relation("ScanEventScannedByUser")
+  labelRenderJobs      LabelRenderJob[]
+  assignedContainerAssignments ContainerAssignment[] @relation("ContainerAssignmentAssignedByUser")
+  unassignedContainerAssignments ContainerAssignment[] @relation("ContainerAssignmentUnassignedByUser")
+  containerMoveEvents  ContainerMoveEvent[]    @relation("ContainerMoveEventMovedByUser")
+  activeContainerSessionsStarted ActiveContainerSession[] @relation("ActiveContainerSessionStartedByUser")
+  activeContainerSessionsEnded   ActiveContainerSession[] @relation("ActiveContainerSessionEndedByUser")
+  remnantMoves        RemnantMovement[]        @relation("RemnantMovementMovedByUser")
+  createdRemnantAllocations RemnantAllocation[] @relation("RemnantAllocationCreatedByUser")
+  releasedRemnantAllocations RemnantAllocation[] @relation("RemnantAllocationReleasedByUser")
 }
 
 model OrganizationMember {
@@ -502,25 +787,45 @@ model Batch {
 model Container {
   id                 String            @id @default(cuid())
   organizationId     String
-  batchId            String
+  batchId            String?
+  manufacturingBatchId String?
   orderId            String?
   manufacturingJobId String?
   code               String
+  containerCode      String?
   label              String
+  displayName        String?
+  description        String?
   type               ContainerType
   status             ContainerStatus   @default(OPEN)
+  barcodeValue       String?
+  qrValue            String?
+  capacityNotes      String?
+  currentLocationId  String?
+  isActive           Boolean           @default(true)
   notes              String?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   organization       Organization      @relation(fields: [organizationId], references: [id])
-  batch              Batch             @relation(fields: [batchId], references: [id])
+  batch              Batch?            @relation(fields: [batchId], references: [id])
+  manufacturingBatch ManufacturingBatch? @relation(fields: [manufacturingBatchId], references: [id])
   order              Order?            @relation(fields: [orderId], references: [id])
   manufacturingJob   ManufacturingJob? @relation(fields: [manufacturingJobId], references: [id])
   currentParts       Part[]            @relation("CurrentContainerParts")
+  currentManufacturingParts ManufacturingPart[] @relation("CurrentContainerManufacturingParts")
+  currentRemnants    Remnant[]         @relation("CurrentContainerRemnants")
   assignments        PartContainerAssignment[]
+  manufacturingAssignments ContainerAssignment[]
+  currentLocation    ContainerLocation? @relation(fields: [currentLocationId], references: [id])
+  moveEvents         ContainerMoveEvent[]
+  activeSessions     ActiveContainerSession[]
+  remnantMovementsFrom RemnantMovement[] @relation("RemnantMovementFromContainer")
+  remnantMovementsTo   RemnantMovement[] @relation("RemnantMovementToContainer")
 
   @@unique([organizationId, code])
   @@index([organizationId, batchId, status])
+  @@index([organizationId, manufacturingBatchId, status])
+  @@index([organizationId, currentLocationId])
 }
 
 model PartContainerAssignment {
@@ -544,30 +849,56 @@ model Remnant {
   id              String            @id @default(cuid())
   organizationId  String
   code            String
+  remnantCode     String?
   materialKey     String
   materialCode    MaterialCode
   materialLabel   String
+  materialName    String?
   thicknessIn     Decimal           @db.Decimal(8, 3)
   edgeBandPattern EdgeBandPattern   @default(ALL_FOUR)
   lengthIn        Decimal           @db.Decimal(8, 3)
   widthIn         Decimal           @db.Decimal(8, 3)
   areaSqIn        Decimal           @db.Decimal(10, 3)
   usableAreaSqIn  Decimal?          @db.Decimal(10, 3)
+  sourceReferenceId String?
   sourceBatchId   String?
+  sourcePacketId  String?
+  sourcePartId    String?
   sourceType      RemnantSourceType @default(MANUAL)
+  grainDirection  RemnantGrainDirection?
+  edgeCondition   RemnantEdgeCondition?
   status          RemnantStatus     @default(AVAILABLE)
+  qualityGrade    RemnantQualityGrade?
+  barcodeValue    String?
+  qrValue         String?
+  currentContainerId String?
+  currentLocationId  String?
   locationLabel   String?
   notes           String?
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   organization    Organization      @relation(fields: [organizationId], references: [id])
   sourceBatch     Batch?            @relation("SourceBatchRemnants", fields: [sourceBatchId], references: [id])
+  sourcePacket    ManufacturingPacket? @relation(fields: [sourcePacketId], references: [id])
+  sourcePart      ManufacturingPart? @relation(fields: [sourcePartId], references: [id])
+  currentContainer Container?        @relation("CurrentContainerRemnants", fields: [currentContainerId], references: [id])
+  currentLocation ContainerLocation? @relation("CurrentLocationRemnants", fields: [currentLocationId], references: [id])
   usages          RemnantUsage[]
+  movements       RemnantMovement[]
+  allocations     RemnantAllocation[]
   artifacts       Artifact[]
+  labelRenderJobs LabelRenderJob[]
+  linkedMachineEvents MachineEvent[]
 
   @@unique([organizationId, code])
+  @@unique([organizationId, remnantCode])
+  @@unique([organizationId, barcodeValue])
+  @@unique([organizationId, qrValue])
   @@index([organizationId, materialKey, status])
+  @@index([organizationId, materialCode, thicknessIn, status])
   @@index([organizationId, locationLabel])
+  @@index([organizationId, currentContainerId])
+  @@index([organizationId, currentLocationId])
 }
 
 model RemnantUsage {
@@ -593,6 +924,56 @@ model RemnantUsage {
   @@index([remnantId, createdAt])
   @@index([batchId, createdAt])
   @@index([partId, createdAt])
+}
+
+model RemnantMovement {
+  id               String             @id @default(cuid())
+  organizationId   String
+  remnantId        String
+  fromContainerId  String?
+  toContainerId    String?
+  fromLocationId   String?
+  toLocationId     String?
+  movedByUserId    String?
+  reason           String?
+  metadataJson     Json?
+  createdAt        DateTime           @default(now())
+  organization     Organization       @relation(fields: [organizationId], references: [id])
+  remnant          Remnant            @relation(fields: [remnantId], references: [id])
+  fromContainer    Container?         @relation("RemnantMovementFromContainer", fields: [fromContainerId], references: [id])
+  toContainer      Container?         @relation("RemnantMovementToContainer", fields: [toContainerId], references: [id])
+  fromLocation     ContainerLocation? @relation("RemnantMovementFromLocation", fields: [fromLocationId], references: [id])
+  toLocation       ContainerLocation? @relation("RemnantMovementToLocation", fields: [toLocationId], references: [id])
+  movedByUser      User?              @relation("RemnantMovementMovedByUser", fields: [movedByUserId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, remnantId, createdAt])
+}
+
+model RemnantAllocation {
+  id                  String                       @id @default(cuid())
+  organizationId      String
+  remnantId           String
+  allocationType      RemnantAllocationType
+  targetType          RemnantAllocationTargetType
+  targetId            String
+  reservedAreaSqIn    Decimal?                     @db.Decimal(10, 3)
+  reservedLengthIn    Decimal?                     @db.Decimal(8, 3)
+  reservedWidthIn     Decimal?                     @db.Decimal(8, 3)
+  status              RemnantAllocationStatus      @default(ACTIVE)
+  notes               String?
+  createdByUserId     String?
+  releasedByUserId    String?
+  createdAt           DateTime                     @default(now())
+  releasedAt          DateTime?
+  organization        Organization                 @relation(fields: [organizationId], references: [id])
+  remnant             Remnant                      @relation(fields: [remnantId], references: [id])
+  createdByUser       User?                        @relation("RemnantAllocationCreatedByUser", fields: [createdByUserId], references: [id])
+  releasedByUser      User?                        @relation("RemnantAllocationReleasedByUser", fields: [releasedByUserId], references: [id])
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, remnantId, status])
+  @@index([organizationId, targetType, targetId, status])
 }
 
 model ProductionBundle {
@@ -736,15 +1117,37 @@ model Station {
 }
 
 model ScanEvent {
-  id        String   @id @default(cuid())
-  organizationId String?
-  stationId String
-  code      String
-  createdAt DateTime @default(now())
-  organization Organization? @relation(fields: [organizationId], references: [id])
-  station   Station  @relation(fields: [stationId], references: [id])
+  id                    String                 @id @default(cuid())
+  organizationId        String?
+  stationId             String?
+  entityType            ScanEntityType?
+  entityId              String?
+  scanValue             String?
+  code                  String?
+  stationType           ScanWorkflowStationType @default(UNKNOWN)
+  actionType            ScanActionType         @default(LOOKUP)
+  previousStatus        String?
+  nextStatus            String?
+  result                ScanResult             @default(NOOP)
+  resultReason          String?
+  metadataJson          Json?
+  scannedByUserId       String?
+  manufacturingPartId   String?
+  manufacturingBatchId  String?
+  createdAt             DateTime               @default(now())
+  organization          Organization?          @relation(fields: [organizationId], references: [id])
+  station               Station?               @relation(fields: [stationId], references: [id])
+  scannedByUser         User?                  @relation("ScanEventScannedByUser", fields: [scannedByUserId], references: [id])
+  manufacturingPart     ManufacturingPart?     @relation(fields: [manufacturingPartId], references: [id])
+  manufacturingBatch    ManufacturingBatch?    @relation(fields: [manufacturingBatchId], references: [id])
 
   @@index([organizationId])
+  @@index([organizationId, entityType, entityId, createdAt])
+  @@index([organizationId, stationType, createdAt])
+  @@index([organizationId, result, createdAt])
+  @@index([manufacturingPartId])
+  @@index([manufacturingBatchId])
+  @@index([scannedByUserId])
 }
 
 model Shipment {
@@ -801,54 +1204,155 @@ model Machine {
   code           String
   name           String
   type           MachineType
+  sourceType     MachineSourceType @default(WEBHOOK)
   status         MachineStatus @default(ACTIVE)
+  currentLocationId String?
   locationLabel  String?
   adapterType    String?
+  metadataJson   Json?
+  isActive       Boolean       @default(true)
   notes          String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   organization   Organization  @relation(fields: [organizationId], references: [id])
+  currentLocation ContainerLocation? @relation(fields: [currentLocationId], references: [id])
+  ingestRuns     MachineEventIngestRun[]
   events         MachineEvent[]
+  eventLinks     MachineEventLink[]
+  stageCandidates MachineStageCandidate[]
   stageCandidateSignals StageCandidateSignal[]
   trustedAutoApplyRules TrustedAutoApplyRule[]
 
   @@unique([organizationId, code])
   @@index([organizationId, type, status])
+  @@index([organizationId, sourceType, status])
+  @@index([organizationId, currentLocationId])
+}
+
+model MachineEventIngestRun {
+  id               String                      @id @default(cuid())
+  organizationId   String
+  machineSourceId  String?
+  ingestType       MachineEventIngestType
+  sourceReference  String?
+  rawEnvelopeJson  Json
+  receivedAt       DateTime                    @default(now())
+  processedAt      DateTime?
+  status           MachineEventIngestRunStatus @default(RECEIVED)
+  createdAt        DateTime                    @default(now())
+  organization     Organization                @relation(fields: [organizationId], references: [id])
+  machineSource    Machine?                    @relation(fields: [machineSourceId], references: [id])
+  machineEvents    MachineEvent[]
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status, createdAt])
+  @@index([machineSourceId])
 }
 
 model MachineEvent {
   id                       String                       @id @default(cuid())
   organizationId           String
   machineId                String
+  ingestRunId              String?
   eventType                String
   eventTs                  DateTime
   sourceType               MachineEventSourceType
   sourceEventId            String?
+  externalEventId          String?
+  rawEnvelopeJson          Json?
   payloadJson              Json
+  normalizedPayloadJson    Json?
   normalizedBatchRef       String?
   normalizedJobRef         String?
   normalizedPartRef        String?
+  normalizedRemnantRef     String?
   sheetRef                 String?
+  programName              String?
+  operatorName             String?
+  machineState             String?
+  entityType               MachineTelemetryEntityType?
+  entityId                 String?
+  eventHash                String?
+  dedupeKey                String?
   severity                 String?
   processingStatus         MachineEventProcessingStatus @default(RECEIVED)
   linkedBatchId            String?
   linkedManufacturingJobId String?
   linkedPartId             String?
+  linkedManufacturingBatchId String?
+  linkedManufacturingPartId String?
+  linkedRemnantId          String?
   notes                    String?
   createdAt                DateTime                     @default(now())
+  updatedAt                DateTime                     @updatedAt
   organization             Organization                 @relation(fields: [organizationId], references: [id])
   machine                  Machine                      @relation(fields: [machineId], references: [id])
+  ingestRun                MachineEventIngestRun?       @relation(fields: [ingestRunId], references: [id])
   linkedBatch              Batch?                       @relation(fields: [linkedBatchId], references: [id])
   linkedManufacturingJob   ManufacturingJob?            @relation(fields: [linkedManufacturingJobId], references: [id])
   linkedPart               Part?                        @relation(fields: [linkedPartId], references: [id])
+  linkedManufacturingBatch ManufacturingBatch?          @relation(fields: [linkedManufacturingBatchId], references: [id])
+  linkedManufacturingPart  ManufacturingPart?           @relation(fields: [linkedManufacturingPartId], references: [id])
+  linkedRemnant            Remnant?                     @relation(fields: [linkedRemnantId], references: [id])
+  links                    MachineEventLink[]
+  machineStageCandidates   MachineStageCandidate[]
   stageCandidateSignals    StageCandidateSignal[]
 
   @@index([organizationId, machineId, createdAt])
   @@index([organizationId, processingStatus, createdAt])
   @@index([organizationId, eventType, createdAt])
+  @@index([organizationId, eventTs])
+  @@index([organizationId, dedupeKey])
+  @@index([organizationId, eventHash])
+  @@index([organizationId, entityType, entityId])
+  @@index([ingestRunId])
   @@index([linkedBatchId])
   @@index([linkedManufacturingJobId])
   @@index([linkedPartId])
+  @@index([linkedManufacturingBatchId])
+  @@index([linkedManufacturingPartId])
+  @@index([linkedRemnantId])
+}
+
+model MachineEventLink {
+  id             String                     @id @default(cuid())
+  organizationId String
+  machineId      String
+  machineEventId String
+  entityType     MachineTelemetryEntityType
+  entityId       String
+  confidence     MachineEventLinkConfidence
+  linkMethod     MachineEventLinkMethod
+  notes          String?
+  createdAt      DateTime                   @default(now())
+  organization   Organization               @relation(fields: [organizationId], references: [id])
+  machine        Machine                    @relation(fields: [machineId], references: [id])
+  machineEvent   MachineEvent               @relation(fields: [machineEventId], references: [id])
+
+  @@index([organizationId, machineEventId, createdAt])
+  @@index([organizationId, entityType, entityId, createdAt])
+}
+
+model MachineStageCandidate {
+  id                  String                      @id @default(cuid())
+  organizationId      String
+  machineEventId      String
+  machineId           String
+  entityType          MachineTelemetryEntityType
+  entityId            String
+  suggestedAction     String
+  confidence          MachineEventLinkConfidence
+  rationale           String
+  status              MachineStageCandidateStatus @default(NEW)
+  emittedAt           DateTime                    @default(now())
+  createdAt           DateTime                    @default(now())
+  organization        Organization                @relation(fields: [organizationId], references: [id])
+  machineEvent        MachineEvent                @relation(fields: [machineEventId], references: [id])
+  machine             Machine                     @relation(fields: [machineId], references: [id])
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, entityType, entityId, createdAt])
+  @@index([machineEventId])
 }
 
 model StageCandidateSignal {
@@ -912,6 +1416,562 @@ model TrustedAutoApplyRule {
 
   @@index([organizationId, enabled, candidateAction])
   @@index([machineId, candidateAction, enabled])
+}
+
+model CostProfile {
+  id             String        @id @default(cuid())
+  organizationId String
+  name           String
+  isDefault      Boolean       @default(false)
+  currency       String
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  rates          CostRate[]
+  scenarios      CostScenario[]
+  pricingScenarios PricingScenario[]
+  shelfJobs      ShelfJob[]
+
+  @@index([organizationId, isDefault])
+}
+
+model CostRate {
+  id             String      @id @default(cuid())
+  organizationId String
+  costProfileId  String
+  key            String
+  valueDecimal   Decimal     @db.Decimal(12, 4)
+  unit           String
+  notes          String?
+  effectiveFrom  DateTime
+  effectiveTo    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  costProfile    CostProfile @relation(fields: [costProfileId], references: [id])
+
+  @@unique([costProfileId, key, effectiveFrom])
+  @@index([organizationId, costProfileId])
+  @@index([costProfileId, key, effectiveTo])
+}
+
+model CostScenario {
+  id              String                 @id @default(cuid())
+  organizationId  String
+  costProfileId   String
+  name            String?
+  sourceType      CostScenarioSourceType
+  sourceId        String?
+  inputJson       Json
+  resultJson      Json
+  createdByUserId String?
+  createdAt       DateTime               @default(now())
+  organization    Organization           @relation(fields: [organizationId], references: [id])
+  costProfile     CostProfile            @relation(fields: [costProfileId], references: [id])
+  createdByUser   User?                  @relation(fields: [createdByUserId], references: [id])
+
+  @@index([organizationId, costProfileId, createdAt])
+  @@index([organizationId, sourceType, createdAt])
+  @@index([createdByUserId])
+}
+
+model ShelfProduct {
+  id                    String            @id @default(cuid())
+  organizationId        String
+  name                  String
+  code                  String
+  materialType          MaterialCode
+  defaultThicknessIn    Decimal           @db.Decimal(8, 3)
+  defaultEdgeBandPattern EdgeBandPattern
+  packagingProfileId    String?
+  isActive              Boolean           @default(true)
+  notes                 String?
+  createdAt             DateTime          @default(now())
+  updatedAt             DateTime          @updatedAt
+  organization          Organization      @relation(fields: [organizationId], references: [id])
+  packagingProfile      PackagingProfile? @relation(fields: [packagingProfileId], references: [id])
+  pricingScenarios      PricingScenario[]
+  salesOrderItems       SalesOrderItem[]
+  shelfJobs             ShelfJob[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+}
+
+model ProductionAssumptionProfile {
+  id                           String            @id @default(cuid())
+  organizationId               String
+  name                         String
+  isDefault                    Boolean           @default(false)
+  cncLoadMinutesPerRun         Decimal           @db.Decimal(8, 3)
+  cncUnloadMinutesPerRun       Decimal           @db.Decimal(8, 3)
+  cncRunMinutesPerUnit         Decimal           @db.Decimal(8, 3)
+  edgebanderSetupMinutesPerRun Decimal           @db.Decimal(8, 3)
+  edgebanderRunMinutesPerLinearFt Decimal        @db.Decimal(8, 3)
+  handlingMinutesPerUnit       Decimal           @db.Decimal(8, 3)
+  packagingMinutesPerUnit      Decimal           @db.Decimal(8, 3)
+  qcMinutesPerUnit             Decimal?          @db.Decimal(8, 3)
+  notes                        String?
+  createdAt                    DateTime          @default(now())
+  updatedAt                    DateTime          @updatedAt
+  organization                 Organization      @relation(fields: [organizationId], references: [id])
+  pricingScenarios             PricingScenario[]
+  shelfJobs                    ShelfJob[]
+
+  @@index([organizationId, isDefault])
+  @@unique([organizationId, name])
+}
+
+model PackagingProfile {
+  id                        String          @id @default(cuid())
+  organizationId            String
+  name                      String
+  boxCostCentsPerUnit       Int
+  bubbleWrapCostCentsPerUnit Int
+  shrinkWrapCostCentsPerUnit Int
+  tapeCostCentsPerUnit      Int
+  labelCostCentsPerUnit     Int
+  insertFlyerCostCentsPerUnit Int
+  otherPackagingCostCentsPerUnit Int
+  notes                     String?
+  isActive                  Boolean         @default(true)
+  createdAt                 DateTime        @default(now())
+  updatedAt                 DateTime        @updatedAt
+  organization              Organization    @relation(fields: [organizationId], references: [id])
+  shelfProducts             ShelfProduct[]
+  pricingScenarios          PricingScenario[]
+  salesOrderItems           SalesOrderItem[]
+  shelfJobs                 ShelfJob[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+}
+
+model PricingPolicy {
+  id                          String              @id @default(cuid())
+  organizationId              String
+  name                        String
+  isDefault                   Boolean             @default(false)
+  manufacturingMarkupPercent  Decimal             @db.Decimal(8, 3)
+  minimumChargeCentsPerUnit   Int?
+  minimumRunChargeCents       Int?
+  roundingMode                PricingRoundingMode @default(NONE)
+  roundToCents                Int?
+  notes                       String?
+  createdAt                   DateTime            @default(now())
+  updatedAt                   DateTime            @updatedAt
+  organization                Organization        @relation(fields: [organizationId], references: [id])
+  pricingScenarios            PricingScenario[]
+  shelfJobs                   ShelfJob[]
+
+  @@index([organizationId, isDefault])
+  @@unique([organizationId, name])
+}
+
+model PricingScenario {
+  id                           String                       @id @default(cuid())
+  organizationId               String
+  shelfProductId               String?
+  costProfileId                String
+  productionAssumptionProfileId String
+  packagingProfileId           String?
+  pricingPolicyId              String
+  inputJson                    Json
+  resultJson                   Json
+  createdByUserId              String?
+  createdAt                    DateTime                     @default(now())
+  organization                 Organization                 @relation(fields: [organizationId], references: [id])
+  shelfProduct                 ShelfProduct?                @relation(fields: [shelfProductId], references: [id])
+  costProfile                  CostProfile                  @relation(fields: [costProfileId], references: [id])
+  productionAssumptionProfile  ProductionAssumptionProfile  @relation(fields: [productionAssumptionProfileId], references: [id])
+  packagingProfile             PackagingProfile?            @relation(fields: [packagingProfileId], references: [id])
+  pricingPolicy                PricingPolicy                @relation(fields: [pricingPolicyId], references: [id])
+  createdByUser                User?                        @relation(fields: [createdByUserId], references: [id])
+  shelfJobs                    ShelfJob[]
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, pricingPolicyId, createdAt])
+  @@index([createdByUserId])
+}
+
+model SalesOrder {
+  id                String              @id @default(cuid())
+  organizationId    String
+  sourceType        SalesOrderSourceType
+  sourceOrderId     String?
+  sourceStatus      String?
+  customerName      String?
+  customerEmail     String?
+  shipToName        String?
+  shipToAddressJson Json?
+  orderedAt         DateTime?
+  currency          String
+  status            SalesOrderStatus    @default(DRAFT)
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+  items             SalesOrderItem[]
+  shelfJobs         ShelfJob[]
+  manufacturingParts ManufacturingPart[]
+
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, sourceType, createdAt])
+  @@index([organizationId, sourceOrderId])
+}
+
+model SalesOrderItem {
+  id                    String                            @id @default(cuid())
+  organizationId        String
+  salesOrderId          String
+  sourceLineId          String?
+  shelfProductId        String?
+  sku                   String?
+  title                 String
+  quantity              Int
+  lengthIn              Decimal?                          @db.Decimal(8, 3)
+  depthIn               Decimal?                          @db.Decimal(8, 3)
+  thicknessIn           Decimal?                          @db.Decimal(8, 3)
+  materialType          MaterialCode?
+  edgeBandPattern       EdgeBandPattern?
+  requiresPackaging     Boolean                           @default(true)
+  packagingProfileId    String?
+  customizationJson     Json?
+  normalizedSpecJson    Json?
+  normalizationStatus   SalesOrderItemNormalizationStatus @default(PENDING)
+  normalizationErrorsJson Json?
+  pricingStatus         SalesOrderItemPricingStatus       @default(PENDING)
+  pricingSnapshotJson   Json?
+  notes                 String?
+  createdAt             DateTime                          @default(now())
+  updatedAt             DateTime                          @updatedAt
+  organization          Organization                      @relation(fields: [organizationId], references: [id])
+  salesOrder            SalesOrder                        @relation(fields: [salesOrderId], references: [id])
+  shelfProduct          ShelfProduct?                     @relation(fields: [shelfProductId], references: [id])
+  packagingProfile      PackagingProfile?                 @relation(fields: [packagingProfileId], references: [id])
+  shelfJobs             ShelfJob[]
+  manufacturingParts    ManufacturingPart[]
+
+  @@index([organizationId, salesOrderId, createdAt])
+  @@index([organizationId, normalizationStatus, pricingStatus])
+  @@index([organizationId, sourceLineId])
+}
+
+model ShelfJob {
+  id                           String         @id @default(cuid())
+  organizationId               String
+  salesOrderId                 String
+  salesOrderItemId             String         @unique
+  manufacturingPacketId        String?
+  shelfProductId               String?
+  costProfileId                String
+  productionAssumptionProfileId String
+  packagingProfileId           String?
+  pricingPolicyId              String
+  pricingScenarioId            String?
+  normalizedSpecJson           Json
+  quantity                     Int
+  jobStatus                    ShelfJobStatus @default(READY)
+  createdAt                    DateTime       @default(now())
+  updatedAt                    DateTime       @updatedAt
+  organization                 Organization   @relation(fields: [organizationId], references: [id])
+  salesOrder                   SalesOrder     @relation(fields: [salesOrderId], references: [id])
+  salesOrderItem               SalesOrderItem @relation(fields: [salesOrderItemId], references: [id])
+  manufacturingPacket          ManufacturingPacket? @relation(fields: [manufacturingPacketId], references: [id])
+  shelfProduct                 ShelfProduct?  @relation(fields: [shelfProductId], references: [id])
+  costProfile                  CostProfile    @relation(fields: [costProfileId], references: [id])
+  productionAssumptionProfile  ProductionAssumptionProfile @relation(fields: [productionAssumptionProfileId], references: [id])
+  packagingProfile             PackagingProfile? @relation(fields: [packagingProfileId], references: [id])
+  pricingPolicy                PricingPolicy  @relation(fields: [pricingPolicyId], references: [id])
+  pricingScenario              PricingScenario? @relation(fields: [pricingScenarioId], references: [id])
+  manufacturingParts           ManufacturingPart[]
+
+  @@index([organizationId, jobStatus, createdAt])
+  @@index([organizationId, salesOrderId])
+  @@index([organizationId, manufacturingPacketId])
+}
+
+model ManufacturingPacket {
+  id              String                       @id @default(cuid())
+  organizationId  String
+  packetNumber    String
+  sourceType      ManufacturingPacketSourceType
+  sourceIdsJson   Json
+  summaryJson     Json
+  createdByUserId String?
+  createdAt       DateTime                     @default(now())
+  organization    Organization                 @relation(fields: [organizationId], references: [id])
+  createdByUser   User?                        @relation(fields: [createdByUserId], references: [id])
+  shelfJobs       ShelfJob[]
+  parts           ManufacturingPart[]
+  sourceRemnants  Remnant[]
+  expansionRun    PacketExpansionRun?
+
+  @@unique([organizationId, packetNumber])
+  @@index([organizationId, createdAt])
+  @@index([createdByUserId])
+}
+
+model ManufacturingPart {
+  id                    String                   @id @default(cuid())
+  organizationId        String
+  manufacturingPacketId String
+  shelfJobId            String
+  salesOrderId          String
+  salesOrderItemId      String
+  batchId               String?
+  currentContainerId    String?
+  partNumber            String
+  serialNumber          String?
+  unitIndex             Int
+  quantity              Int                      @default(1)
+  partType              ManufacturingPartType    @default(SHELF)
+  materialType          MaterialCode
+  thicknessIn           Decimal                  @db.Decimal(8, 3)
+  lengthIn              Decimal                  @db.Decimal(8, 3)
+  depthIn               Decimal                  @db.Decimal(8, 3)
+  edgeBandPattern       EdgeBandPattern
+  requiresPackaging     Boolean                  @default(true)
+  labelDataJson         Json
+  status                ManufacturingPartStatus  @default(READY_FOR_BATCH)
+  statusReason          String?
+  sortGroup             String?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  organization          Organization             @relation(fields: [organizationId], references: [id])
+  manufacturingPacket   ManufacturingPacket      @relation(fields: [manufacturingPacketId], references: [id])
+  shelfJob              ShelfJob                 @relation(fields: [shelfJobId], references: [id])
+  salesOrder            SalesOrder               @relation(fields: [salesOrderId], references: [id])
+  salesOrderItem        SalesOrderItem           @relation(fields: [salesOrderItemId], references: [id])
+  batch                 ManufacturingBatch?      @relation(fields: [batchId], references: [id])
+  currentContainer      Container?               @relation("CurrentContainerManufacturingParts", fields: [currentContainerId], references: [id])
+  batchLinks            ManufacturingBatchPart[]
+  scanEvents            ScanEvent[]
+  labelRenderJobs       LabelRenderJob[]
+  containerAssignments  ContainerAssignment[]
+  sourceRemnants        Remnant[]
+  linkedMachineEvents   MachineEvent[]
+
+  @@unique([organizationId, partNumber])
+  @@index([organizationId, status, createdAt])
+  @@index([organizationId, manufacturingPacketId])
+  @@index([organizationId, shelfJobId])
+  @@index([organizationId, salesOrderId])
+  @@index([organizationId, salesOrderItemId])
+  @@index([organizationId, batchId])
+  @@index([organizationId, currentContainerId])
+}
+
+model ManufacturingBatch {
+  id             String                   @id @default(cuid())
+  organizationId String
+  batchNumber    String
+  batchType      ManufacturingBatchType
+  materialType   MaterialCode?
+  thicknessIn    Decimal?                 @db.Decimal(8, 3)
+  status         ManufacturingBatchStatus @default(OPEN)
+  notes          String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  organization   Organization             @relation(fields: [organizationId], references: [id])
+  parts          ManufacturingPart[]
+  batchParts     ManufacturingBatchPart[]
+  scanEvents     ScanEvent[]
+  labelRenderJobs LabelRenderJob[]
+  containers     Container[]
+  linkedMachineEvents MachineEvent[]
+
+  @@unique([organizationId, batchNumber])
+  @@index([organizationId, batchType, status, createdAt])
+}
+
+model ManufacturingBatchPart {
+  id                  String             @id @default(cuid())
+  organizationId      String
+  batchId             String
+  manufacturingPartId String
+  sequence            Int?
+  createdAt           DateTime           @default(now())
+  organization        Organization       @relation(fields: [organizationId], references: [id])
+  batch               ManufacturingBatch @relation(fields: [batchId], references: [id])
+  manufacturingPart   ManufacturingPart  @relation(fields: [manufacturingPartId], references: [id])
+
+  @@unique([batchId, manufacturingPartId])
+  @@index([organizationId, batchId, createdAt])
+  @@index([organizationId, manufacturingPartId])
+}
+
+model LabelTemplateVersion {
+  id             String       @id @default(cuid())
+  organizationId String
+  name           String
+  code           String
+  version        Int
+  isDefault      Boolean      @default(false)
+  templateJson   Json
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  labelRenderJobs LabelRenderJob[]
+
+  @@unique([organizationId, code, version])
+  @@index([organizationId, isDefault, createdAt])
+}
+
+model PacketExpansionRun {
+  id                    String               @id @default(cuid())
+  organizationId        String
+  manufacturingPacketId String               @unique
+  sourceJobCount        Int
+  createdPartCount      Int
+  resultJson            Json
+  createdByUserId       String?
+  createdAt             DateTime             @default(now())
+  organization          Organization         @relation(fields: [organizationId], references: [id])
+  manufacturingPacket   ManufacturingPacket  @relation(fields: [manufacturingPacketId], references: [id])
+  createdByUser         User?                @relation(fields: [createdByUserId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([createdByUserId])
+}
+
+model ContainerLocation {
+  id             String       @id @default(cuid())
+  organizationId String
+  code           String
+  name           String
+  zone           String?
+  notes          String?
+  isActive       Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  containers     Container[]
+  moveEventsFrom ContainerMoveEvent[] @relation("ContainerMoveEventFromLocation")
+  moveEventsTo   ContainerMoveEvent[] @relation("ContainerMoveEventToLocation")
+  currentRemnants Remnant[] @relation("CurrentLocationRemnants")
+  remnantMovementsFrom RemnantMovement[] @relation("RemnantMovementFromLocation")
+  remnantMovementsTo   RemnantMovement[] @relation("RemnantMovementToLocation")
+  machines       Machine[]
+
+  @@unique([organizationId, code])
+  @@index([organizationId, isActive])
+}
+
+model ContainerAssignment {
+  id                   String            @id @default(cuid())
+  organizationId       String
+  containerId          String
+  manufacturingPartId  String
+  assignedAt           DateTime          @default(now())
+  unassignedAt         DateTime?
+  assignedByUserId     String?
+  unassignedByUserId   String?
+  assignmentReason     String?
+  metadataJson         Json?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  organization         Organization      @relation(fields: [organizationId], references: [id])
+  container            Container         @relation(fields: [containerId], references: [id])
+  manufacturingPart    ManufacturingPart @relation(fields: [manufacturingPartId], references: [id])
+  assignedByUser       User?             @relation("ContainerAssignmentAssignedByUser", fields: [assignedByUserId], references: [id])
+  unassignedByUser     User?             @relation("ContainerAssignmentUnassignedByUser", fields: [unassignedByUserId], references: [id])
+
+  @@index([organizationId, assignedAt])
+  @@index([organizationId, containerId, unassignedAt])
+  @@index([organizationId, manufacturingPartId, unassignedAt])
+}
+
+model ContainerMoveEvent {
+  id             String             @id @default(cuid())
+  organizationId String
+  containerId    String
+  fromLocationId String?
+  toLocationId   String?
+  movedByUserId  String?
+  moveReason     String?
+  metadataJson   Json?
+  createdAt      DateTime           @default(now())
+  organization   Organization       @relation(fields: [organizationId], references: [id])
+  container      Container          @relation(fields: [containerId], references: [id])
+  fromLocation   ContainerLocation? @relation("ContainerMoveEventFromLocation", fields: [fromLocationId], references: [id])
+  toLocation     ContainerLocation? @relation("ContainerMoveEventToLocation", fields: [toLocationId], references: [id])
+  movedByUser    User?              @relation("ContainerMoveEventMovedByUser", fields: [movedByUserId], references: [id])
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, containerId, createdAt])
+}
+
+model ActiveContainerSession {
+  id              String                  @id @default(cuid())
+  organizationId  String
+  containerId     String
+  stationType     ScanWorkflowStationType?
+  startedByUserId String?
+  endedByUserId   String?
+  startedAt       DateTime                @default(now())
+  endedAt         DateTime?
+  isActive        Boolean                 @default(true)
+  metadataJson    Json?
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
+  organization    Organization            @relation(fields: [organizationId], references: [id])
+  container       Container               @relation(fields: [containerId], references: [id])
+  startedByUser   User?                   @relation("ActiveContainerSessionStartedByUser", fields: [startedByUserId], references: [id])
+  endedByUser     User?                   @relation("ActiveContainerSessionEndedByUser", fields: [endedByUserId], references: [id])
+
+  @@index([organizationId, isActive, startedAt])
+  @@index([organizationId, startedByUserId, isActive])
+  @@index([organizationId, containerId, isActive])
+}
+
+model LabelRenderJob {
+  id                   String            @id @default(cuid())
+  organizationId       String
+  entityType           ScanEntityType
+  entityId             String
+  manufacturingPartId  String?
+  manufacturingBatchId String?
+  remnantId            String?
+  templateId           String?
+  renderFormat         LabelRenderFormat
+  payloadJson          Json
+  outputHtml           String?
+  outputPath           String?
+  createdByUserId      String?
+  createdAt            DateTime          @default(now())
+  organization         Organization      @relation(fields: [organizationId], references: [id])
+  manufacturingPart    ManufacturingPart? @relation(fields: [manufacturingPartId], references: [id])
+  manufacturingBatch   ManufacturingBatch? @relation(fields: [manufacturingBatchId], references: [id])
+  remnant             Remnant?          @relation(fields: [remnantId], references: [id])
+  template             LabelTemplateVersion? @relation(fields: [templateId], references: [id])
+  createdByUser        User?             @relation(fields: [createdByUserId], references: [id])
+
+  @@index([organizationId, entityType, entityId, createdAt])
+  @@index([manufacturingPartId])
+  @@index([manufacturingBatchId])
+  @@index([remnantId])
+  @@index([templateId])
+  @@index([createdByUserId])
+}
+
+model WorkflowStationRule {
+  id             String                   @id @default(cuid())
+  organizationId String
+  stationType    ScanWorkflowStationType
+  entityType     ScanEntityType
+  fromStatus     String
+  actionType     ScanActionType
+  toStatus       String
+  isActive       Boolean                  @default(true)
+  notes          String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  organization   Organization             @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, stationType, entityType, isActive])
+  @@unique([organizationId, stationType, entityType, fromStatus, actionType, toStatus])
 }
 
 model MachineProfile {

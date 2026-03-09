@@ -73,10 +73,18 @@ export type ArtifactJobType =
 
 export type ArtifactJobStatus = "queued" | "active" | "completed" | "failed" | "unknown";
 
-export type ContainerType = "CONTAINER" | "BIN";
-export type ContainerStatus = "OPEN" | "SORTING" | "COMPLETE" | "HOLD" | "CLOSED";
-export type RemnantStatus = "AVAILABLE" | "RESERVED" | "PARTIAL" | "CONSUMED" | "HOLD" | "SCRAPPED";
-export type RemnantSourceType = "FULL_SHEET_LEFTOVER" | "MANUAL" | "IMPORTED";
+export type ContainerType = "CONTAINER" | "BIN" | "CART" | "TOTE" | "PALLET" | "RACK_SLOT" | "STAGING_AREA";
+export type ContainerStatus =
+  | "OPEN"
+  | "SORTING"
+  | "COMPLETE"
+  | "HOLD"
+  | "CLOSED"
+  | "AVAILABLE"
+  | "IN_USE"
+  | "RETIRED";
+export type RemnantStatus = "AVAILABLE" | "RESERVED" | "ALLOCATED" | "PARTIAL" | "CONSUMED" | "HOLD" | "SCRAP" | "SCRAPPED";
+export type RemnantSourceType = "CNC_LEFTOVER" | "FULL_SHEET_LEFTOVER" | "MANUAL" | "MANUAL_ENTRY" | "IMPORTED";
 export type DerivedEdgeBandPattern =
   | "NONE"
   | "ONE_LONG_EDGE"
@@ -279,7 +287,7 @@ export interface CreatedBatchSummary {
 
 export interface ContainerSummary {
   id: string;
-  batchId: string;
+  batchId?: string;
   code: string;
   label: string;
   type: ContainerType;
@@ -408,18 +416,34 @@ export interface CreateForecastBatchResponse {
 export interface RemnantSummary {
   id: string;
   code: string;
+  remnantCode: string;
   materialKey: string;
   materialCode: MaterialCode;
   materialLabel: string;
+  materialName?: string;
   thicknessIn: number;
   edgeBandPattern: EdgeBandPattern;
   lengthIn: number;
   widthIn: number;
   areaSqIn: number;
   usableAreaSqIn: number;
+  sourceReferenceId?: string;
   sourceBatchId?: string;
+  sourcePacketId?: string;
+  sourcePartId?: string;
   sourceType: RemnantSourceType;
   status: RemnantStatus;
+  grainDirection?: "NONE" | "LENGTH" | "WIDTH" | "UNKNOWN";
+  edgeCondition?: "RAW" | "ONE_CLEAN_EDGE" | "TWO_CLEAN_EDGES" | "MIXED" | "UNKNOWN";
+  qualityGrade?: "A" | "B" | "C" | "UNKNOWN";
+  barcodeValue: string;
+  qrValue: string;
+  currentContainerId?: string;
+  currentContainerCode?: string;
+  currentContainerName?: string;
+  currentLocationId?: string;
+  currentLocationCode?: string;
+  currentLocationName?: string;
   locationLabel?: string;
   notes?: string;
   createdAt: string;
@@ -431,6 +455,7 @@ export interface RemnantUsageRow {
   actionType:
     | "CREATED"
     | "RESERVED"
+    | "ALLOCATED"
     | "CONSUMED"
     | "PARTIAL_CONSUME"
     | "RELEASED"
@@ -448,8 +473,44 @@ export interface RemnantUsageRow {
   createdAt: string;
 }
 
+export interface RemnantAllocationRow {
+  id: string;
+  remnantId: string;
+  allocationType: "RESERVE" | "ALLOCATE";
+  targetType: "SHELF_JOB" | "MANUFACTURING_BATCH" | "COST_SCENARIO" | "MANUAL";
+  targetId: string;
+  reservedAreaSqIn?: number;
+  reservedLengthIn?: number;
+  reservedWidthIn?: number;
+  status: "ACTIVE" | "RELEASED" | "CONSUMED" | "CANCELLED";
+  notes?: string;
+  createdByUserId?: string;
+  releasedByUserId?: string;
+  createdAt: string;
+  releasedAt?: string;
+}
+
+export interface RemnantMovementRow {
+  id: string;
+  remnantId: string;
+  fromContainerId?: string;
+  toContainerId?: string;
+  fromLocationId?: string;
+  toLocationId?: string;
+  fromContainerCode?: string;
+  toContainerCode?: string;
+  fromLocationCode?: string;
+  toLocationCode?: string;
+  movedByUserId?: string;
+  reason?: string;
+  metadataJson?: Record<string, unknown>;
+  createdAt: string;
+}
+
 export interface RemnantDetail extends RemnantSummary {
   history: RemnantUsageRow[];
+  allocations: RemnantAllocationRow[];
+  movements: RemnantMovementRow[];
 }
 
 export interface RemnantListResponse {

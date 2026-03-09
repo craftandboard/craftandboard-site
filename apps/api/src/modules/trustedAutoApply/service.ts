@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import type { MachineType } from "../machines/contracts.js";
 import { TRUSTED_AUTO_APPLY_ACTIONS, type TrustedAutoApplyAction } from "./contracts.js";
 
 const ruleInclude = {
@@ -56,7 +57,7 @@ export async function listTrustedAutoApplyRules(organizationId: string) {
 export async function createTrustedAutoApplyRule(
   input: {
     machineId?: string;
-    machineType?: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+    machineType?: MachineType;
     candidateAction: TrustedAutoApplyAction;
     enabled?: boolean;
     notes?: string;

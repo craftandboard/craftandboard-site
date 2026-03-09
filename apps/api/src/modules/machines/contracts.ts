@@ -1,6 +1,9 @@
 export const MACHINE_TYPES = [
   "CNC",
   "EDGEBANDER",
+  "SAW",
+  "DRILL",
+  "PLC",
   "LABEL_PRINTER",
   "SCANNER_STATION",
   "OTHER"

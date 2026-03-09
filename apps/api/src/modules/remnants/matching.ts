@@ -34,11 +34,17 @@ export async function getForecastRemnantCandidates(input: {
     where: {
       organizationId,
       materialKey,
-      status: {
-        in: ["AVAILABLE", "PARTIAL"]
+      status: "AVAILABLE",
+      allocations: {
+        none: {
+          status: "ACTIVE"
+        }
       }
     },
-    orderBy: [{ usableAreaSqIn: "desc" }, { createdAt: "asc" }]
+    include: {
+      currentLocation: true
+    },
+    orderBy: [{ usableAreaSqIn: "asc" }, { createdAt: "asc" }]
   });
 
   const totalCandidateAreaSqIn = Number(
@@ -56,9 +62,9 @@ export async function getForecastRemnantCandidates(input: {
     candidateRemnantsPreview: remnants.slice(0, 3).map(
       (remnant): MaterialForecastRemnantCandidatePreview => ({
         id: remnant.id,
-        code: remnant.code,
-        label: `${remnant.code} · ${toNumber(remnant.lengthIn).toFixed(2)}" × ${toNumber(remnant.widthIn).toFixed(2)}"`,
-        locationLabel: remnant.locationLabel ?? undefined,
+        code: remnant.remnantCode ?? remnant.code,
+        label: `${remnant.remnantCode ?? remnant.code} · ${toNumber(remnant.lengthIn).toFixed(2)}" × ${toNumber(remnant.widthIn).toFixed(2)}"`,
+        locationLabel: remnant.locationLabel ?? remnant.currentLocation?.name ?? undefined,
         status: remnant.status,
         lengthIn: toNumber(remnant.lengthIn),
         widthIn: toNumber(remnant.widthIn),

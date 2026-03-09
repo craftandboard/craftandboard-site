@@ -63,11 +63,106 @@ const materialForecastMocks = vi.hoisted(() => ({
   getMaterialForecast: vi.fn()
 }));
 
+const costingMocks = vi.hoisted(() => ({
+  calculateCost: vi.fn(),
+  createCostProfile: vi.fn(),
+  createCostScenarioSnapshot: vi.fn(),
+  getCostProfileRates: vi.fn(),
+  getCostProfiles: vi.fn(),
+  updateCostProfile: vi.fn(),
+  upsertCostRates: vi.fn()
+}));
+
+const pricingMocks = vi.hoisted(() => ({
+  calculatePricing: vi.fn(),
+  createPackagingProfileRecord: vi.fn(),
+  createPricingPolicyRecord: vi.fn(),
+  createPricingScenarioSnapshot: vi.fn(),
+  createProductionAssumptionProfileRecord: vi.fn(),
+  createShelfProductRecord: vi.fn(),
+  getPackagingProfiles: vi.fn(),
+  getPricingPolicies: vi.fn(),
+  getProductionAssumptionProfiles: vi.fn(),
+  getShelfProducts: vi.fn(),
+  updatePackagingProfileRecord: vi.fn(),
+  updatePricingPolicyRecord: vi.fn(),
+  updateProductionAssumptionProfileRecord: vi.fn(),
+  updateShelfProductRecord: vi.fn()
+}));
+
+const orderIntakeMocks = vi.hoisted(() => ({
+  addSalesOrderItemsRecord: vi.fn(),
+  convertShelfJobsToManufacturingPacket: vi.fn(),
+  createSalesOrderRecord: vi.fn(),
+  createShelfJobsFromSalesOrder: vi.fn(),
+  getManufacturingPacket: vi.fn(),
+  getManufacturingPackets: vi.fn(),
+  getSalesOrder: vi.fn(),
+  getSalesOrders: vi.fn(),
+  getShelfJob: vi.fn(),
+  getShelfJobs: vi.fn(),
+  normalizeSalesOrder: vi.fn(),
+  priceSalesOrder: vi.fn()
+}));
+
+const manufacturingExpansionMocks = vi.hoisted(() => ({
+  addManufacturingPartsToBatch: vi.fn(),
+  createLabelTemplateRecord: vi.fn(),
+  createManufacturingBatchRecord: vi.fn(),
+  expandManufacturingPacket: vi.fn(),
+  getLabelTemplates: vi.fn(),
+  getManufacturingBatch: vi.fn(),
+  getManufacturingBatches: vi.fn(),
+  getManufacturingPacketParts: vi.fn(),
+  getManufacturingPart: vi.fn(),
+  getManufacturingPartLabel: vi.fn(),
+  getManufacturingPartsView: vi.fn(),
+  updateLabelTemplateRecord: vi.fn()
+}));
+
+const manufacturingLabelMocks = vi.hoisted(() => ({
+  getManufacturingPartLabelHtml: vi.fn(),
+  getManufacturingPartLabelPayload: vi.fn(),
+  reprintManufacturingPartLabel: vi.fn()
+}));
+
+const scanningMocks = vi.hoisted(() => ({
+  createWorkflowStationRuleRecord: vi.fn(),
+  getScanEventView: vi.fn(),
+  getScanEventsView: vi.fn(),
+  getWorkflowStationRulesView: vi.fn(),
+  lookupScan: vi.fn(),
+  scanManufacturingPart: vi.fn(),
+  updateWorkflowStationRuleRecord: vi.fn()
+}));
+
 const containerMocks = vi.hoisted(() => ({
   assignPartToContainer: vi.fn(),
   createContainer: vi.fn(),
   getBatchSortingView: vi.fn(),
   removePartFromContainer: vi.fn()
+}));
+
+const containerWorkflowMocks = vi.hoisted(() => ({
+  activateContainerSessionRecord: vi.fn(),
+  assignManufacturingPartToActiveContainer: vi.fn(),
+  assignManufacturingPartToContainer: vi.fn(),
+  createContainerLocationRecord: vi.fn(),
+  createManagedContainer: vi.fn(),
+  deactivateContainerSessionRecord: vi.fn(),
+  getContainerAssignmentView: vi.fn(),
+  getContainerPartsView: vi.fn(),
+  getManagedContainer: vi.fn(),
+  listActiveContainerSessionsView: vi.fn(),
+  listContainerAssignmentsView: vi.fn(),
+  listContainerLocations: vi.fn(),
+  listManagedContainers: vi.fn(),
+  moveContainerToLocation: vi.fn(),
+  scanContainerForActivation: vi.fn(),
+  scanLocationForContainerMove: vi.fn(),
+  unassignManufacturingPartFromContainer: vi.fn(),
+  updateContainerLocationRecord: vi.fn(),
+  updateManagedContainer: vi.fn()
 }));
 
 const amazonImportMocks = vi.hoisted(() => ({
@@ -144,6 +239,23 @@ const machineMocks = vi.hoisted(() => ({
   updateMachine: vi.fn()
 }));
 
+const machineTelemetryMocks = vi.hoisted(() => ({
+  createMachineSource: vi.fn(),
+  getMachineEvent: vi.fn(),
+  getMachineEventIngestRun: vi.fn(),
+  getMachineEventLinks: vi.fn(),
+  getMachineSource: vi.fn(),
+  getMachineStageCandidate: vi.fn(),
+  ingestMachineEvent: vi.fn(),
+  ingestMachineEventBatch: vi.fn(),
+  listMachineEventIngestRuns: vi.fn(),
+  listMachineEvents: vi.fn(),
+  listMachineSources: vi.fn(),
+  listMachineStageCandidates: vi.fn(),
+  reprocessMachineEvent: vi.fn(),
+  updateMachineSource: vi.fn()
+}));
+
 const stageSignalMocks = vi.hoisted(() => ({
   applyStageCandidateSignal: vi.fn(),
   getStageCandidateSignal: vi.fn(),
@@ -207,7 +319,14 @@ vi.mock('../modules/manufacturingLifecycle/service.js', () => lifecycleMocks);
 vi.mock('../modules/configurator/service.js', () => configuratorMocks);
 vi.mock('../modules/batches/service.js', () => batchMocks);
 vi.mock('../modules/materialForecast/service.js', () => materialForecastMocks);
+vi.mock('../modules/costing/service.js', () => costingMocks);
+vi.mock('../modules/pricing/service.js', () => pricingMocks);
+vi.mock('../modules/orderIntake/service.js', () => orderIntakeMocks);
+vi.mock('../modules/manufacturingExpansion/service.js', () => manufacturingExpansionMocks);
+vi.mock('../modules/labels/service.js', () => manufacturingLabelMocks);
+vi.mock('../modules/scanning/service.js', () => scanningMocks);
 vi.mock('../modules/containers/service.js', () => containerMocks);
+vi.mock('../modules/containers/workflowService.js', () => containerWorkflowMocks);
 vi.mock('../modules/bundlePackets/service.js', () => packetMocks);
 vi.mock('../modules/amazonImport/service.js', () => amazonImportMocks);
 vi.mock('../modules/orders/service.js', () => orderMocks);
@@ -218,6 +337,7 @@ vi.mock('../modules/auth/service.js', () => authMocks);
 vi.mock('../lib/backgroundJobs.js', () => backgroundJobMocks);
 vi.mock('../modules/machineIntegration/service.js', () => machineIntegrationMocks);
 vi.mock('../modules/machines/service.js', () => machineMocks);
+vi.mock('../modules/machineTelemetry/service.js', () => machineTelemetryMocks);
 vi.mock('../modules/machines/simulation.js', () => ({
   simulateMachineEvent: machineMocks.ingestMachineEvent
 }));
@@ -301,6 +421,325 @@ beforeEach(async () => {
       }
     ]
   });
+  orderIntakeMocks.getSalesOrders.mockResolvedValue({
+    ok: true,
+    orders: []
+  });
+  orderIntakeMocks.createSalesOrderRecord.mockResolvedValue({
+    ok: true,
+    order: {
+      id: 'sales_order_1',
+      status: 'DRAFT',
+      sourceType: 'MANUAL',
+      createdAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  orderIntakeMocks.getSalesOrder.mockResolvedValue({
+    ok: true,
+    order: {
+      id: 'sales_order_1',
+      sourceType: 'MANUAL',
+      currency: 'USD',
+      status: 'DRAFT',
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z',
+      items: [],
+      shelfJobs: []
+    }
+  });
+  orderIntakeMocks.addSalesOrderItemsRecord.mockResolvedValue({
+    ok: true,
+    itemsCreated: 2
+  });
+  orderIntakeMocks.normalizeSalesOrder.mockResolvedValue({
+    ok: true,
+    items: [
+      { itemId: 'item_valid', ok: true },
+      { itemId: 'item_invalid', ok: false, errors: ['Valid depthIn is required.'] }
+    ]
+  });
+  orderIntakeMocks.priceSalesOrder.mockResolvedValue({
+    ok: true,
+    items: [
+      { itemId: 'item_valid', ok: true },
+      {
+        itemId: 'item_invalid',
+        ok: false,
+        error: 'Pricing calculation requires explicit product dimensions, material, and edge band pattern.'
+      }
+    ]
+  });
+  orderIntakeMocks.createShelfJobsFromSalesOrder.mockResolvedValue({
+    ok: true,
+    shelfJobIds: ['shelf_job_1']
+  });
+  orderIntakeMocks.getShelfJobs.mockResolvedValue({
+    ok: true,
+    shelfJobs: []
+  });
+  orderIntakeMocks.getShelfJob.mockResolvedValue({
+    ok: true,
+    shelfJob: {
+      id: 'shelf_job_1',
+      salesOrderId: 'sales_order_1',
+      salesOrderItemId: 'item_valid',
+      quantity: 2,
+      jobStatus: 'READY',
+      normalizedSpecJson: {},
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  orderIntakeMocks.convertShelfJobsToManufacturingPacket.mockResolvedValue({
+    ok: true,
+    packet: {
+      id: 'packet_1',
+      packetNumber: 'MP-20260308-001',
+      sourceType: 'SHELF_JOB',
+      sourceIdsJson: ['shelf_job_1'],
+      summaryJson: { jobCount: 1 },
+      createdAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  orderIntakeMocks.getManufacturingPackets.mockResolvedValue({
+    ok: true,
+    packets: []
+  });
+  orderIntakeMocks.getManufacturingPacket.mockResolvedValue({
+    ok: true,
+    packet: {
+      id: 'packet_1',
+      packetNumber: 'MP-20260308-001',
+      sourceType: 'SHELF_JOB',
+      sourceIdsJson: ['shelf_job_1'],
+      summaryJson: { jobCount: 1 },
+      createdAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  manufacturingExpansionMocks.expandManufacturingPacket.mockResolvedValue({
+    ok: true,
+    action: 'expand-manufacturing-packet',
+    packet: {
+      id: 'packet_1',
+      packetNumber: 'MP-20260308-001'
+    },
+    expansionRun: {
+      id: 'run_1',
+      sourceJobCount: 1,
+      createdPartCount: 2,
+      createdAt: '2026-03-08T00:00:00.000Z'
+    },
+    parts: [
+      {
+        id: 'mpart_1',
+        partNumber: 'MP-20260308-001-P0001',
+        unitIndex: 1,
+        status: 'READY_FOR_BATCH'
+      }
+    ]
+  });
+  manufacturingExpansionMocks.getManufacturingPacketParts.mockResolvedValue({
+    ok: true,
+    packet: {
+      id: 'packet_1',
+      packetNumber: 'MP-20260308-001'
+    },
+    parts: []
+  });
+  manufacturingExpansionMocks.getManufacturingPartsView.mockResolvedValue({
+    ok: true,
+    parts: []
+  });
+  manufacturingExpansionMocks.getManufacturingPart.mockResolvedValue({
+    ok: true,
+    part: {
+      id: 'mpart_1',
+      partNumber: 'MP-20260308-001-P0001',
+      status: 'READY_FOR_BATCH'
+    }
+  });
+  manufacturingExpansionMocks.getManufacturingPartLabel.mockResolvedValue({
+    ok: true,
+    label: {
+      partNumber: 'MP-20260308-001-P0001',
+      barcodeValue: 'PART:MP-20260308-001-P0001'
+    }
+  });
+  manufacturingExpansionMocks.createManufacturingBatchRecord.mockResolvedValue({
+    ok: true,
+    action: 'create-manufacturing-batch',
+    batch: {
+      id: 'mb_1',
+      batchNumber: 'CUT-20260308-001',
+      batchType: 'CUT',
+      status: 'OPEN',
+      partCount: 1,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z',
+      parts: []
+    }
+  });
+  manufacturingExpansionMocks.getManufacturingBatches.mockResolvedValue({
+    ok: true,
+    batches: []
+  });
+  manufacturingExpansionMocks.getManufacturingBatch.mockResolvedValue({
+    ok: true,
+    batch: {
+      id: 'mb_1',
+      batchNumber: 'CUT-20260308-001',
+      batchType: 'CUT',
+      status: 'OPEN',
+      partCount: 1,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z',
+      parts: []
+    }
+  });
+  manufacturingExpansionMocks.addManufacturingPartsToBatch.mockResolvedValue({
+    ok: true,
+    action: 'add-parts-to-manufacturing-batch',
+    batch: {
+      id: 'mb_1',
+      batchNumber: 'CUT-20260308-001',
+      batchType: 'CUT',
+      status: 'OPEN',
+      partCount: 2,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z',
+      parts: []
+    }
+  });
+  manufacturingExpansionMocks.getLabelTemplates.mockResolvedValue({
+    ok: true,
+    templates: []
+  });
+  manufacturingExpansionMocks.createLabelTemplateRecord.mockResolvedValue({
+    ok: true,
+    template: {
+      id: 'label_template_1',
+      code: 'SHELF_PART_BACKBONE',
+      version: 1,
+      isDefault: true
+    }
+  });
+  manufacturingExpansionMocks.updateLabelTemplateRecord.mockResolvedValue({
+    ok: true,
+    template: {
+      id: 'label_template_1',
+      code: 'SHELF_PART_BACKBONE',
+      version: 1,
+      isDefault: true
+    }
+  });
+  manufacturingLabelMocks.getManufacturingPartLabelPayload.mockResolvedValue({
+    ok: true,
+    label: {
+      partId: 'mpart_1',
+      partNumber: 'MP-20260308-001-P0001',
+      packetNumber: 'MP-20260308-001',
+      batchNumber: 'CUT-20260308-001',
+      salesOrderId: 'sales_order_1',
+      salesOrderItemId: 'item_1',
+      shelfJobId: 'shelf_job_1',
+      materialType: 'WHITE_MELAMINE',
+      thicknessIn: 0.75,
+      lengthIn: 30,
+      depthIn: 12,
+      edgeBandPattern: 'ALL_FOUR',
+      unitIndex: 1,
+      totalQuantity: 2,
+      requiresPackaging: true,
+      currentStatus: 'READY_FOR_BATCH',
+      barcodeValue: 'PART:MP-20260308-001-P0001',
+      qrValue: 'PART:MP-20260308-001-P0001',
+      humanReadableText: ['Part MP-20260308-001-P0001']
+    }
+  });
+  manufacturingLabelMocks.getManufacturingPartLabelHtml.mockResolvedValue({
+    ok: true,
+    label: {
+      partNumber: 'MP-20260308-001-P0001'
+    },
+    html: '<html><body>MP-20260308-001-P0001</body></html>'
+  });
+  manufacturingLabelMocks.reprintManufacturingPartLabel.mockResolvedValue({
+    ok: true,
+    action: 'reprint-manufacturing-part-label',
+    renderJob: {
+      id: 'render_1'
+    }
+  });
+  scanningMocks.lookupScan.mockResolvedValue({
+    ok: true,
+    entityType: 'MANUFACTURING_PART',
+    stationType: 'CUT',
+    entity: {
+      id: 'mpart_1',
+      partNumber: 'MP-20260308-001-P0001'
+    },
+    allowedActions: [
+      {
+        actionType: 'CHECK_IN',
+        nextStatus: 'CUT_IN_PROGRESS',
+        source: 'default'
+      }
+    ],
+    event: {
+      id: 'scan_1'
+    }
+  });
+  scanningMocks.scanManufacturingPart.mockResolvedValue({
+    ok: true,
+    action: 'scan-manufacturing-part',
+    part: {
+      id: 'mpart_1',
+      status: 'CUT_IN_PROGRESS'
+    },
+    event: {
+      id: 'scan_1',
+      result: 'ACCEPTED'
+    }
+  });
+  scanningMocks.getScanEventsView.mockResolvedValue({
+    ok: true,
+    events: [
+      {
+        id: 'scan_1',
+        scanValue: 'PART:MP-20260308-001-P0001'
+      }
+    ]
+  });
+  scanningMocks.getScanEventView.mockResolvedValue({
+    ok: true,
+    event: {
+      id: 'scan_1',
+      scanValue: 'PART:MP-20260308-001-P0001'
+    }
+  });
+  scanningMocks.getWorkflowStationRulesView.mockResolvedValue({
+    ok: true,
+    rules: [
+      {
+        id: 'rule_1',
+        stationType: 'CUT',
+        entityType: 'MANUFACTURING_PART'
+      }
+    ]
+  });
+  scanningMocks.createWorkflowStationRuleRecord.mockResolvedValue({
+    ok: true,
+    rule: {
+      id: 'rule_1'
+    }
+  });
+  scanningMocks.updateWorkflowStationRuleRecord.mockResolvedValue({
+    ok: true,
+    rule: {
+      id: 'rule_1',
+      isActive: false
+    }
+  });
   machineMocks.listMachines.mockResolvedValue({
     ok: true,
     summary: {
@@ -377,6 +816,154 @@ beforeEach(async () => {
     linkResult: {
       processingStatus: 'LINKED',
       linkedBatchId: 'batch_1'
+    }
+  });
+  machineTelemetryMocks.listMachineSources.mockResolvedValue({
+    ok: true,
+    sources: [
+      {
+        id: 'machine_1',
+        code: 'CNC-PRIMARY',
+        name: 'Primary CNC Router',
+        machineType: 'CNC',
+        sourceType: 'LOCAL_AGENT',
+        status: 'ACTIVE',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    ]
+  });
+  machineTelemetryMocks.createMachineSource.mockResolvedValue({
+    ok: true,
+    source: {
+      id: 'machine_1',
+      code: 'CNC-PRIMARY',
+      name: 'Primary CNC Router',
+      machineType: 'CNC',
+      sourceType: 'LOCAL_AGENT',
+      status: 'ACTIVE',
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  machineTelemetryMocks.getMachineSource.mockResolvedValue({
+    ok: true,
+    source: {
+      id: 'machine_1',
+      code: 'CNC-PRIMARY',
+      name: 'Primary CNC Router',
+      machineType: 'CNC',
+      sourceType: 'LOCAL_AGENT',
+      status: 'ACTIVE',
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  machineTelemetryMocks.updateMachineSource.mockResolvedValue({
+    ok: true,
+    source: {
+      id: 'machine_1',
+      code: 'CNC-PRIMARY',
+      name: 'Updated CNC Router',
+      machineType: 'CNC',
+      sourceType: 'LOCAL_AGENT',
+      status: 'HOLD',
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T01:00:00.000Z'
+    }
+  });
+  machineTelemetryMocks.ingestMachineEvent.mockResolvedValue({
+    ok: true,
+    ingestRun: {
+      id: 'run_1',
+      status: 'PROCESSED'
+    },
+    event: {
+      id: 'evt_telemetry_1',
+      eventType: 'PROGRAM_COMPLETED',
+      processingStatus: 'SIGNAL_EMITTED'
+    },
+    linkResult: {
+      processingStatus: 'LINKED',
+      primaryLink: {
+        entityType: 'MANUFACTURING_BATCH',
+        entityId: 'mb_1',
+        confidence: 'HIGH'
+      },
+      links: []
+    },
+    emittedCandidates: [
+      {
+        id: 'msc_1',
+        suggestedAction: 'MARK_BATCH_CUT_COMPLETE'
+      }
+    ]
+  });
+  machineTelemetryMocks.ingestMachineEventBatch.mockResolvedValue({
+    ok: true,
+    ingestRun: {
+      id: 'run_batch_1',
+      status: 'PROCESSED'
+    },
+    events: []
+  });
+  machineTelemetryMocks.listMachineEvents.mockResolvedValue({
+    ok: true,
+    events: []
+  });
+  machineTelemetryMocks.getMachineEvent.mockResolvedValue({
+    ok: true,
+    event: {
+      id: 'evt_telemetry_1',
+      eventType: 'PROGRAM_COMPLETED',
+      processingStatus: 'SIGNAL_EMITTED'
+    }
+  });
+  machineTelemetryMocks.getMachineEventLinks.mockResolvedValue({
+    ok: true,
+    eventId: 'evt_telemetry_1',
+    links: []
+  });
+  machineTelemetryMocks.listMachineEventIngestRuns.mockResolvedValue({
+    ok: true,
+    ingestRuns: [
+      {
+        id: 'run_1',
+        status: 'PROCESSED'
+      }
+    ]
+  });
+  machineTelemetryMocks.getMachineEventIngestRun.mockResolvedValue({
+    ok: true,
+    ingestRun: {
+      id: 'run_1',
+      status: 'PROCESSED',
+      events: []
+    }
+  });
+  machineTelemetryMocks.reprocessMachineEvent.mockResolvedValue({
+    ok: true,
+    event: {
+      id: 'evt_telemetry_1',
+      processingStatus: 'LINKED'
+    }
+  });
+  machineTelemetryMocks.listMachineStageCandidates.mockResolvedValue({
+    ok: true,
+    candidates: [
+      {
+        id: 'msc_1',
+        suggestedAction: 'MARK_BATCH_CUT_COMPLETE',
+        status: 'NEW'
+      }
+    ]
+  });
+  machineTelemetryMocks.getMachineStageCandidate.mockResolvedValue({
+    ok: true,
+    candidate: {
+      id: 'msc_1',
+      suggestedAction: 'MARK_BATCH_CUT_COMPLETE',
+      status: 'NEW'
     }
   });
   stageSignalMocks.listStageCandidateSignals.mockResolvedValue({
@@ -507,6 +1094,134 @@ beforeEach(async () => {
       currentContainerCode: 'BIN-01',
       currentContainerLabel: 'Bin 01'
     }
+  });
+  containerWorkflowMocks.listManagedContainers.mockResolvedValue({
+    ok: true,
+    containers: [
+      {
+        id: 'managed_container_1',
+        containerCode: 'BIN-CNC-001',
+        displayName: 'CNC Bin 001',
+        containerType: 'BIN',
+        barcodeValue: 'CONTAINER:BIN-CNC-001',
+        qrValue: 'CONTAINER:BIN-CNC-001',
+        status: 'AVAILABLE',
+        isActive: true,
+        activePartCount: 0,
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    ]
+  });
+  containerWorkflowMocks.createManagedContainer.mockResolvedValue({
+    ok: true,
+    container: {
+      id: 'managed_container_1',
+      containerCode: 'BIN-CNC-001',
+      displayName: 'CNC Bin 001',
+      containerType: 'BIN',
+      barcodeValue: 'CONTAINER:BIN-CNC-001',
+      qrValue: 'CONTAINER:BIN-CNC-001',
+      status: 'AVAILABLE',
+      isActive: true,
+      activePartCount: 0,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  containerWorkflowMocks.listContainerLocations.mockResolvedValue({
+    ok: true,
+    locations: [
+      {
+        id: 'location_1',
+        code: 'CNC_OUTFEED',
+        name: 'CNC Outfeed',
+        isActive: true,
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    ]
+  });
+  containerWorkflowMocks.activateContainerSessionRecord.mockResolvedValue({
+    ok: true,
+    action: 'activate-container-session',
+    session: {
+      id: 'session_1',
+      containerId: 'managed_container_1',
+      startedAt: '2026-03-08T00:00:00.000Z',
+      isActive: true
+    },
+    container: {
+      id: 'managed_container_1',
+      containerCode: 'BIN-CNC-001',
+      displayName: 'CNC Bin 001',
+      containerType: 'BIN',
+      barcodeValue: 'CONTAINER:BIN-CNC-001',
+      qrValue: 'CONTAINER:BIN-CNC-001',
+      status: 'IN_USE',
+      isActive: true,
+      activePartCount: 0,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    },
+    event: { id: 'scan_1', result: 'ACCEPTED' }
+  });
+  containerWorkflowMocks.assignManufacturingPartToActiveContainer.mockResolvedValue({
+    ok: true,
+    action: 'assign-part-to-container',
+    container: {
+      id: 'managed_container_1',
+      containerCode: 'BIN-CNC-001',
+      displayName: 'CNC Bin 001',
+      containerType: 'BIN',
+      barcodeValue: 'CONTAINER:BIN-CNC-001',
+      qrValue: 'CONTAINER:BIN-CNC-001',
+      status: 'IN_USE',
+      isActive: true,
+      activePartCount: 1,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    },
+    part: {
+      id: 'mpart_1',
+      partNumber: 'MP-20260308-001-P0001',
+      status: 'CUT_COMPLETE',
+      packetNumber: 'MP-20260308-001',
+      currentContainerId: 'managed_container_1',
+      currentContainerCode: 'BIN-CNC-001',
+      barcodeValue: 'PART:MP-20260308-001-P0001',
+      qrValue: 'PART:MP-20260308-001-P0001'
+    },
+    event: { id: 'scan_2', result: 'ACCEPTED' }
+  });
+  containerWorkflowMocks.moveContainerToLocation.mockResolvedValue({
+    ok: true,
+    action: 'move-container',
+    container: {
+      id: 'managed_container_1',
+      containerCode: 'BIN-CNC-001',
+      displayName: 'CNC Bin 001',
+      containerType: 'BIN',
+      barcodeValue: 'CONTAINER:BIN-CNC-001',
+      qrValue: 'CONTAINER:BIN-CNC-001',
+      status: 'IN_USE',
+      currentLocationId: 'location_2',
+      currentLocationCode: 'EDGEBAND_QUEUE',
+      currentLocationName: 'Edgeband Queue',
+      isActive: true,
+      activePartCount: 1,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    },
+    location: {
+      id: 'location_2',
+      code: 'EDGEBAND_QUEUE',
+      name: 'Edgeband Queue',
+      isActive: true,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    },
+    event: { id: 'scan_3', result: 'ACCEPTED' }
   });
   containerMocks.removePartFromContainer.mockResolvedValue({
     ok: true,
@@ -803,6 +1518,10 @@ async function post(path: string, body?: unknown) {
     headers: body ? { 'Content-Type': 'application/json' } : undefined,
     body: body ? JSON.stringify(body) : undefined
   });
+}
+
+async function get(path: string) {
+  return fetch(`${baseUrl}${path}`);
 }
 
 describe('manufacturing lifecycle routes', () => {
@@ -2112,6 +2831,66 @@ describe('batch routes', () => {
     );
   });
 
+  it('lists managed containers for manufacturing sorting', async () => {
+    const response = await fetch(`${baseUrl}/containers`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.containers[0].containerCode).toBe('BIN-CNC-001');
+  });
+
+  it('activates a managed container session', async () => {
+    const response = await post('/containers/managed_container_1/activate', {
+      stationType: 'CUT'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.action).toBe('activate-container-session');
+    expect(containerWorkflowMocks.activateContainerSessionRecord).toHaveBeenCalledWith({
+      organizationId: 'org_local_craft_board',
+      containerId: 'managed_container_1',
+      stationType: 'CUT',
+      startedByUserId: 'user_demo',
+      metadata: undefined
+    });
+  });
+
+  it('assigns a manufacturing part into the active container by scan value', async () => {
+    const response = await post('/containers/assign-part-to-active', {
+      partScanValue: 'PART:MP-20260308-001-P0001'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.part.partNumber).toBe('MP-20260308-001-P0001');
+    expect(containerWorkflowMocks.assignManufacturingPartToActiveContainer).toHaveBeenCalledWith({
+      organizationId: 'org_local_craft_board',
+      partId: undefined,
+      partScanValue: 'PART:MP-20260308-001-P0001',
+      assignedByUserId: 'user_demo',
+      metadata: undefined
+    });
+  });
+
+  it('moves a managed container to a named location', async () => {
+    const response = await post('/containers/managed_container_1/move', {
+      toLocationCode: 'EDGEBAND_QUEUE'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.location.code).toBe('EDGEBAND_QUEUE');
+    expect(containerWorkflowMocks.moveContainerToLocation).toHaveBeenCalledWith({
+      organizationId: 'org_local_craft_board',
+      containerId: 'managed_container_1',
+      toLocationId: undefined,
+      toLocationCode: 'EDGEBAND_QUEUE',
+      movedByUserId: 'user_demo',
+      metadata: undefined
+    });
+  });
+
   it('allows operators to read batch detail but blocks batch build', async () => {
     const operatorContext = {
       currentUser: {
@@ -2703,6 +3482,12 @@ describe('machine routes', () => {
     expect(machineMocks.getMachineDetail).toHaveBeenCalledWith('machine_1', 'org_local_craft_board');
   });
 
+  it('lists machine sources', async () => {
+    const response = await fetch(`${baseUrl}/machines/sources`);
+    expect(response.status).toBe(200);
+    expect(machineTelemetryMocks.listMachineSources).toHaveBeenCalledWith('org_local_craft_board');
+  });
+
   it('ingests a machine event', async () => {
     const response = await fetch(`${baseUrl}/machine-events/ingest`, {
       method: 'POST',
@@ -2710,18 +3495,18 @@ describe('machine routes', () => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        machineCode: 'CNC-01',
-        eventType: 'RUN_STARTED',
+        machineSourceCode: 'CNC-PRIMARY',
+        eventType: 'RUN_COMPLETED',
         sourceType: 'API',
-        payload: { batchRef: 'BATCH-1' }
+        payload: { batchNumber: 'CUT-20260308-001' }
       })
     });
 
     expect(response.status).toBe(201);
-    expect(machineMocks.ingestMachineEvent).toHaveBeenCalledWith(
+    expect(machineTelemetryMocks.ingestMachineEvent).toHaveBeenCalledWith(
       expect.objectContaining({
-        machineCode: 'CNC-01',
-        eventType: 'RUN_STARTED',
+        machineSourceCode: 'CNC-PRIMARY',
+        eventType: 'RUN_COMPLETED',
         sourceType: 'API'
       }),
       'org_local_craft_board'
@@ -2735,13 +3520,19 @@ describe('machine routes', () => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        machineCode: 'CNC-01',
+        machineSourceCode: 'CNC-PRIMARY',
         eventType: 'FAULT',
         payload: { code: 'E-STOP' }
       })
     });
 
     expect(response.status).toBe(201);
+  });
+
+  it('lists machine-stage candidates', async () => {
+    const response = await fetch(`${baseUrl}/machine-stage-candidates`);
+    expect(response.status).toBe(200);
+    expect(machineTelemetryMocks.listMachineStageCandidates).toHaveBeenCalledWith({}, 'org_local_craft_board');
   });
 });
 
@@ -2855,6 +3646,203 @@ describe('trusted auto-apply routes', () => {
   });
 });
 
+describe('costing routes', () => {
+  it('lists cost profiles', async () => {
+    costingMocks.getCostProfiles.mockResolvedValue({
+      ok: true,
+      profiles: [
+        {
+          id: 'cost_profile_1',
+          name: 'Starter Shelf Cost Profile',
+          isDefault: true,
+          currency: 'USD',
+          createdAt: '2026-03-08T00:00:00.000Z',
+          updatedAt: '2026-03-08T00:00:00.000Z'
+        }
+      ]
+    });
+
+    const response = await fetch(`${baseUrl}/costing/profiles`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.profiles[0].id).toBe('cost_profile_1');
+  });
+
+  it('calculates shelf cost', async () => {
+    costingMocks.calculateCost.mockResolvedValue({
+      ok: true,
+      result: {
+        profile: {
+          id: 'cost_profile_1',
+          name: 'Starter Shelf Cost Profile',
+          currency: 'USD',
+          isDefault: true
+        },
+        input: {
+          costProfileId: 'cost_profile_1',
+          lengthIn: 19.25,
+          depthIn: 12.5,
+          thicknessIn: 0.75,
+          quantity: 2,
+          materialType: 'WHITE_MELAMINE',
+          edgeBandPattern: 'ALL_FOUR',
+          requiresPackaging: true
+        },
+        geometry: {
+          squareInchesPerUnit: 240.625,
+          squareFeetPerUnit: 1.671,
+          totalSquareFeet: 3.342,
+          perimeterInchesPerUnit: 63.5,
+          edgeBandLinearFeetPerUnit: 5.2917,
+          totalEdgeBandLinearFeet: 10.5833
+        },
+        breakdown: {
+          material: { subtotalCents: 1039 },
+          edgeBand: { subtotalCents: 191 },
+          glueConsumables: { subtotalCents: 32 },
+          machine: { subtotalCents: 1854, setupMinutes: 10, cncRunMinutes: 4.679, edgebanderRunMinutes: 3.704 },
+          labor: { subtotalCents: 281 },
+          packaging: { subtotalCents: 330 },
+          shippingAllowance: { subtotalCents: 375 },
+          directSubtotalCents: 4102,
+          overheadAmountCents: 492,
+          growthMarginAmountCents: 827,
+          recommendedManufacturingChargeCents: 4594,
+          recommendedSellPriceCents: 5421,
+          unitManufacturingChargeCents: 2297,
+          unitSellPriceCents: 2711
+        },
+        assumptionsUsed: [],
+        warnings: [],
+        calculatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    });
+
+    const response = await fetch(`${baseUrl}/costing/calculate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        costProfileId: 'cost_profile_1',
+        lengthIn: 19.25,
+        depthIn: 12.5,
+        quantity: 2,
+        materialType: 'WHITE_MELAMINE',
+        edgeBandPattern: 'ALL_FOUR',
+        requiresPackaging: true
+      })
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.result.breakdown.recommendedSellPriceCents).toBe(5421);
+  });
+});
+
+describe('pricing routes', () => {
+  it('lists shelf products', async () => {
+    pricingMocks.getShelfProducts.mockResolvedValue({
+      ok: true,
+      shelfProducts: [
+        {
+          id: 'shelf_product_1',
+          name: '3/4 White Melamine Shelf',
+          code: 'SHELF-WM-075',
+          materialType: 'WHITE_MELAMINE',
+          defaultThicknessIn: 0.75,
+          defaultEdgeBandPattern: 'ALL_FOUR',
+          isActive: true,
+          createdAt: '2026-03-08T00:00:00.000Z',
+          updatedAt: '2026-03-08T00:00:00.000Z'
+        }
+      ]
+    });
+
+    const response = await fetch(`${baseUrl}/pricing/shelf-products`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.shelfProducts[0].code).toBe('SHELF-WM-075');
+  });
+
+  it('calculates shelf pricing', async () => {
+    pricingMocks.calculatePricing.mockResolvedValue({
+      ok: true,
+      result: {
+        product: {
+          id: 'shelf_product_1',
+          name: '3/4 White Melamine Shelf',
+          code: 'SHELF-WM-075'
+        },
+        normalizedInput: {
+          costProfileId: 'cost_profile_1',
+          productionAssumptionProfileId: 'production_profile_1',
+          pricingPolicyId: 'pricing_policy_1',
+          lengthIn: 30,
+          depthIn: 12,
+          thicknessIn: 0.75,
+          quantity: 20,
+          materialType: 'WHITE_MELAMINE',
+          edgeBandPattern: 'ALL_FOUR',
+          requiresPackaging: true
+        },
+        geometry: {
+          totalSquareFeet: 50,
+          totalEdgeBandLinearFeet: 140
+        },
+        costBreakdown: {
+          directSubtotalCents: 85000,
+          overheadAmountCents: 10200,
+          growthMarginAmountCents: 17136,
+          recommendedManufacturingChargeCents: 95200
+        },
+        pricingBreakdown: {
+          directSubtotalCents: 85000,
+          overheadAmountCents: 10200,
+          growthMarginAmountCents: 17136,
+          manufacturingChargeCents: 95200,
+          policyMarkupAmountCents: 11424,
+          minimumAdjustmentAmountCents: 0,
+          finalRunChargeCents: 106625,
+          unitFinalChargeCents: 5331
+        },
+        quantityAnalysis: {
+          quantity: 20,
+          setupCostAllocationCents: 640,
+          unitCostCents: 4760,
+          unitChargeCents: 5331
+        },
+        assumptionsUsed: [],
+        warnings: [],
+        calculatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    });
+
+    const response = await fetch(`${baseUrl}/pricing/calculate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        shelfProductId: 'shelf_product_1',
+        costProfileId: 'cost_profile_1',
+        productionAssumptionProfileId: 'production_profile_1',
+        pricingPolicyId: 'pricing_policy_1',
+        lengthIn: 30,
+        depthIn: 12,
+        quantity: 20,
+        requiresPackaging: true
+      })
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.result.pricingBreakdown.unitFinalChargeCents).toBe(5331);
+  });
+});
+
 describe('part routes', () => {
   it('transitions a part by part id', async () => {
     partsMocks.transitionPartStatusById.mockResolvedValue({
@@ -2932,5 +3920,149 @@ describe('part routes', () => {
       ok: false,
       error: 'Part SHELF-WM-19.25x12.5-P01 cannot move from PENDING to PACKED.'
     });
+  });
+});
+
+describe('order intake routes', () => {
+  it('creates and lists intake sales orders', async () => {
+    const createResponse = await post('/order-intake/orders', {
+      sourceType: 'MANUAL',
+      customerName: 'Hugo',
+      currency: 'USD'
+    });
+    const createPayload = await createResponse.json();
+
+    expect(createResponse.status).toBe(201);
+    expect(createPayload.order.id).toBe('sales_order_1');
+
+    const listResponse = await get('/order-intake/orders');
+    const listPayload = await listResponse.json();
+
+    expect(listResponse.status).toBe(200);
+    expect(listPayload).toEqual({ ok: true, orders: [] });
+  });
+
+  it('normalizes and prices a mixed-validity order', async () => {
+    const normalizeResponse = await post('/order-intake/orders/sales_order_1/normalize', {});
+    const normalizePayload = await normalizeResponse.json();
+
+    expect(normalizeResponse.status).toBe(200);
+    expect(normalizePayload.items).toHaveLength(2);
+    expect(orderIntakeMocks.normalizeSalesOrder).toHaveBeenCalledWith('sales_order_1', 'org_local_craft_board');
+
+    const priceResponse = await post('/order-intake/orders/sales_order_1/price', {});
+    const pricePayload = await priceResponse.json();
+
+    expect(priceResponse.status).toBe(200);
+    expect(pricePayload.items[0]).toEqual({ itemId: 'item_valid', ok: true });
+    expect(pricePayload.items[1].ok).toBe(false);
+  });
+
+  it('creates shelf jobs and converts ready jobs into a packet', async () => {
+    const jobsResponse = await post('/order-intake/orders/sales_order_1/create-shelf-jobs', {});
+    const jobsPayload = await jobsResponse.json();
+
+    expect(jobsResponse.status).toBe(201);
+    expect(jobsPayload).toEqual({ ok: true, shelfJobIds: ['shelf_job_1'] });
+
+    const packetResponse = await post('/shelf-jobs/convert-to-packet', {
+      shelfJobIds: ['shelf_job_1']
+    });
+    const packetPayload = await packetResponse.json();
+
+    expect(packetResponse.status).toBe(201);
+    expect(packetPayload.packet.packetNumber).toBe('MP-20260308-001');
+  });
+});
+
+describe('manufacturing expansion routes', () => {
+  it('expands a manufacturing packet into unit parts', async () => {
+    const response = await post('/manufacturing-packets/packet_1/expand', {});
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.expansionRun.createdPartCount).toBe(2);
+  });
+
+  it('returns the manufacturing part label payload', async () => {
+    const response = await get('/manufacturing-parts/mpart_1/label');
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.label.partNumber).toBe('MP-20260308-001-P0001');
+  });
+
+  it('creates a manufacturing batch for ready parts', async () => {
+    const response = await post('/manufacturing-batches', {
+      batchType: 'CUT',
+      partIds: ['mpart_1']
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.batch.batchNumber).toBe('CUT-20260308-001');
+  });
+});
+
+describe('manufacturing label and scanning routes', () => {
+  it('returns the manufacturing part label payload', async () => {
+    const response = await get('/manufacturing-parts/mpart_1/label-payload');
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.label.partNumber).toBe('MP-20260308-001-P0001');
+  });
+
+  it('returns printable manufacturing part label html', async () => {
+    const response = await get('/manufacturing-parts/mpart_1/label.html');
+    const payload = await response.text();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/html');
+    expect(payload).toContain('MP-20260308-001-P0001');
+  });
+
+  it('reprints a manufacturing part label', async () => {
+    const response = await post('/manufacturing-parts/mpart_1/reprint-label', {});
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.renderJob.id).toBe('render_1');
+  });
+
+  it('looks up a scanned manufacturing part', async () => {
+    const response = await post('/scan/lookup', {
+      scanValue: 'PART:MP-20260308-001-P0001',
+      stationType: 'CUT'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.entityType).toBe('MANUFACTURING_PART');
+    expect(payload.allowedActions[0].actionType).toBe('CHECK_IN');
+  });
+
+  it('applies a manufacturing part scan transition', async () => {
+    const response = await post('/scan/part', {
+      scanValue: 'PART:MP-20260308-001-P0001',
+      stationType: 'CUT',
+      actionType: 'CHECK_IN'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.part.status).toBe('CUT_IN_PROGRESS');
+  });
+
+  it('lists scan events and workflow rules', async () => {
+    const eventsResponse = await get('/scan/events');
+    const eventsPayload = await eventsResponse.json();
+    expect(eventsResponse.status).toBe(200);
+    expect(eventsPayload.events).toHaveLength(1);
+
+    const rulesResponse = await get('/workflow/station-rules');
+    const rulesPayload = await rulesResponse.json();
+    expect(rulesResponse.status).toBe(200);
+    expect(rulesPayload.rules[0].id).toBe('rule_1');
   });
 });

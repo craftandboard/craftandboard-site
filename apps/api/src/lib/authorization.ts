@@ -3,6 +3,14 @@ import type { ApiRequestContext } from "./requestContext.js";
 export type ApiCapability =
   | "org_member_read"
   | "org_member_manage"
+  | "costing_read"
+  | "costing_manage"
+  | "pricing_read"
+  | "pricing_manage"
+  | "order_intake_read"
+  | "order_intake_manage"
+  | "manufacturing_expansion_read"
+  | "manufacturing_expansion_manage"
   | "machine_read"
   | "machine_manage"
   | "stage_signal_read"
@@ -26,6 +34,14 @@ export type ApiCapability =
 const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membership"]["role"]>> = {
   org_member_read: ["OWNER", "ADMIN"],
   org_member_manage: ["OWNER"],
+  costing_read: ["OWNER", "ADMIN"],
+  costing_manage: ["OWNER", "ADMIN"],
+  pricing_read: ["OWNER", "ADMIN"],
+  pricing_manage: ["OWNER", "ADMIN"],
+  order_intake_read: ["OWNER", "ADMIN"],
+  order_intake_manage: ["OWNER", "ADMIN"],
+  manufacturing_expansion_read: ["OWNER", "ADMIN"],
+  manufacturing_expansion_manage: ["OWNER", "ADMIN"],
   machine_read: ["OWNER", "ADMIN", "OPERATOR"],
   machine_manage: ["OWNER", "ADMIN"],
   stage_signal_read: ["OWNER", "ADMIN", "OPERATOR"],
@@ -50,6 +66,14 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
 const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   org_member_read: "organization member access",
   org_member_manage: "organization member management",
+  costing_read: "costing access",
+  costing_manage: "costing management",
+  pricing_read: "pricing access",
+  pricing_manage: "pricing management",
+  order_intake_read: "order intake access",
+  order_intake_manage: "order intake management",
+  manufacturing_expansion_read: "manufacturing expansion access",
+  manufacturing_expansion_manage: "manufacturing expansion management",
   machine_read: "machine diagnostic access",
   machine_manage: "machine management",
   stage_signal_read: "stage candidate signal access",

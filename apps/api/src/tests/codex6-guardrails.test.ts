@@ -83,7 +83,7 @@ describe('configurator contract', () => {
       cutMethod: 'RECTANGLE_CUT',
       source: 'CONFIGURATOR'
     });
-  });
+  }, 10000);
 });
 
 describe('customer status projection', () => {

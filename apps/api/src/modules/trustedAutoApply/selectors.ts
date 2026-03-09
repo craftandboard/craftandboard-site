@@ -1,10 +1,11 @@
 import { prisma } from "../../lib/prisma.js";
+import type { MachineType } from "../machines/contracts.js";
 import type { TrustedAutoApplyAction } from "./contracts.js";
 
 export async function findMatchingTrustedAutoApplyRule(input: {
   organizationId: string;
   machineId: string;
-  machineType: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+  machineType: MachineType;
   candidateAction: TrustedAutoApplyAction;
 }) {
   const machineSpecificRule = await prisma.trustedAutoApplyRule.findFirst({

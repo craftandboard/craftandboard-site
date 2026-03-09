@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import type { MachineStatus, MachineType } from "./contracts.js";
 import { linkMachineEventToContext } from "./linking.js";
 import { normalizeMachineEventInput } from "./normalization.js";
 import { buildMachineEventWhere, resolveMachineByIdOrCode } from "./selectors.js";
@@ -96,8 +97,8 @@ export async function createMachine(
   input: {
     code: string;
     name: string;
-    type: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
-    status?: "ACTIVE" | "INACTIVE" | "HOLD" | "MAINTENANCE";
+    type: MachineType;
+    status?: MachineStatus;
     locationLabel?: string;
     adapterType?: string;
     notes?: string;
@@ -127,7 +128,7 @@ export async function updateMachine(
   machineId: string,
   input: {
     name?: string;
-    status?: "ACTIVE" | "INACTIVE" | "HOLD" | "MAINTENANCE";
+    status?: MachineStatus;
     locationLabel?: string;
     adapterType?: string;
     notes?: string;

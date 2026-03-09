@@ -351,7 +351,7 @@ export async function assignPartToContainer(input: {
 
   const part = await loadPartBySelector({
     organizationId,
-    batchId: container.batchId,
+    batchId: container.batchId ?? undefined,
     partId: input.partId,
     scanCode: input.scanCode
   });
@@ -461,7 +461,7 @@ export async function removePartFromContainer(input: {
   const container = await loadContainer(input.containerId, organizationId);
   const part = await loadPartBySelector({
     organizationId,
-    batchId: container.batchId,
+    batchId: container.batchId ?? undefined,
     partId: input.partId,
     scanCode: input.scanCode
   });

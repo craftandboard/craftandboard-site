@@ -2,6 +2,17 @@
 
 Craft & Board is a local-first monorepo foundation for a manufacturing SaaS platform. This scaffold now includes Seller Central style Amazon fixture ingestion, persisted production bundles, a first-party shelf label system, and a first-pass 4x8 sheet nesting plus Syntec `.NC` generation workflow for shelf manufacturing.
 
+## Transitional Status
+
+This repository is now a transitional execution repo for the FieldMetriq platform direction.
+
+- Canonical platform direction: `FieldMetriq`
+- Craft & Board is tenant 1 / business context on that platform
+- This repo should not be treated as a separate permanent Craft & Board software platform
+
+See:
+- [docs/merge/repo-freeze-notes.md](/Users/brandon/Projects/craft-and-board/docs/merge/repo-freeze-notes.md)
+
 ## What is included
 
 - `apps/web`: Next.js App Router frontend for operations dashboards

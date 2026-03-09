@@ -43,10 +43,10 @@ These belong in the shared platform, with tenant configuration layered on top.
 
 ## Merge Status
 - Pending-work stabilization is complete.
-- This branch establishes the platform merge foundation only.
-- The next branch after this phase is `feat/tenant-org-bootstrap`.
-- This repository is the temporary execution ground while work converges toward the canonical target repo `fieldmetriq-core`.
-- No full migration, schema rewrite, or repo-wide rename should happen in this phase.
+- Deploy wiring is complete.
+- The current repo is now entering the freeze-note phase.
+- The next major milestone is repo cutover planning and later execution toward `fieldmetriq-core`.
+- This repository remains the temporary execution ground while work converges toward the canonical target repo `fieldmetriq-core`.
 
 ## Merge Docs
 - [Current Working Tree Snapshot](/Users/brandon/Projects/craft-and-board/docs/merge/current-working-tree-snapshot.md)
@@ -61,3 +61,6 @@ These belong in the shared platform, with tenant configuration layered on top.
 - [Current To Target Mapping](/Users/brandon/Projects/craft-and-board/docs/merge/current-to-target-mapping.md)
 - [Deployment Topology](/Users/brandon/Projects/craft-and-board/docs/merge/deployment-topology.md)
 - [Env Matrix](/Users/brandon/Projects/craft-and-board/docs/merge/env-matrix.md)
+- [Repo Freeze Notes](/Users/brandon/Projects/craft-and-board/docs/merge/repo-freeze-notes.md)
+- [Repo Cutover Plan](/Users/brandon/Projects/craft-and-board/docs/merge/repo-cutover-plan.md)
+- [Allowed Work After Freeze](/Users/brandon/Projects/craft-and-board/docs/merge/repo-allowed-work-after-freeze.md)

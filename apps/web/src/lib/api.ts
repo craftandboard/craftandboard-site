@@ -205,6 +205,220 @@ interface CreateBatchResponse {
   }>;
 }
 
+export interface MaterialForecastResponse {
+  ok: true;
+  summary: {
+    totalPendingMaterials: number;
+    totalPendingParts: number;
+    estimatedTotalSheets: number;
+    materialsWithRemnantCandidates: number;
+  };
+  materials: Array<{
+    materialKey: string;
+    materialCode: "WHITE_MELAMINE" | "MAPLE_MELAMINE" | "BIRCH_18" | "WALNUT_18" | "MAPLE_18" | "MDF_18";
+    materialDisplayName: string;
+    thicknessIn: number;
+    edgeBandPattern: "ALL_FOUR";
+    pendingPartCount: number;
+    pendingJobCount: number;
+    pendingOrderCount: number;
+    totalAreaSqIn: number;
+    totalAreaSqFt: number;
+    estimatedFullSheetsNeeded: number;
+    candidateRemnantsCount: number;
+    candidateRemnantsAreaSqIn: number;
+    recommendedCoverageAreaSqIn: number;
+    estimatedNewSheetReduction: number;
+    candidateRemnantsPreview: Array<{
+      id: string;
+      code: string;
+      label: string;
+      locationLabel?: string;
+      status: "AVAILABLE" | "RESERVED" | "PARTIAL" | "CONSUMED" | "HOLD" | "SCRAPPED";
+      lengthIn: number;
+      widthIn: number;
+      availableAreaSqIn: number;
+    }>;
+    jobs: Array<{
+      jobId: string;
+      orderId?: string;
+      orderItemId?: string;
+      source: "CONFIGURATOR" | "AMAZON";
+      channel: "AMAZON" | "WEBSITE" | "MANUAL";
+      shipByDate?: string;
+      customerName: string;
+      partCount: number;
+      totalAreaSqIn: number;
+      parts: Array<{
+        partId: string;
+        orderId?: string;
+        orderItemId?: string;
+        jobId?: string;
+        labelCode: string;
+        scanCode: string;
+        widthIn: number;
+        depthIn: number;
+        thicknessIn: number;
+        areaSqIn: number;
+        status: "pending" | "ready_for_batch" | "batched" | "cut" | "edgebanded" | "packed" | "hold" | "error";
+        edgeBandPattern: "ALL_FOUR";
+        source: "CONFIGURATOR" | "AMAZON";
+      }>;
+    }>;
+  }>;
+}
+
+export interface CreateForecastBatchResponse {
+  ok: true;
+  action: "create-forecast-batch";
+  batch: {
+    id: string;
+    batchCode: string;
+    status: "DRAFT";
+    material: "WHITE_MELAMINE" | "MAPLE_MELAMINE" | "BIRCH_18" | "WALNUT_18" | "MAPLE_18" | "MDF_18";
+    partCount: number;
+    jobCount: number;
+  };
+  parts: Array<{
+    id: string;
+    partType: "SHELF";
+    labelCode: string;
+  }>;
+}
+
+export interface RemnantListResponse {
+  ok: true;
+  summary: {
+    totalAvailableRemnants: number;
+    totalAvailableAreaSqIn: number;
+    heldCount: number;
+    scrappedCount: number;
+    topMaterials: Array<{
+      materialKey: string;
+      materialCode: "WHITE_MELAMINE" | "MAPLE_MELAMINE" | "BIRCH_18" | "WALNUT_18" | "MAPLE_18" | "MDF_18";
+      materialLabel: string;
+      remnantCount: number;
+      totalAreaSqIn: number;
+    }>;
+  };
+  remnants: Array<{
+    id: string;
+    code: string;
+    materialKey: string;
+    materialCode: "WHITE_MELAMINE" | "MAPLE_MELAMINE" | "BIRCH_18" | "WALNUT_18" | "MAPLE_18" | "MDF_18";
+    materialLabel: string;
+    thicknessIn: number;
+    edgeBandPattern: "ALL_FOUR";
+    lengthIn: number;
+    widthIn: number;
+    areaSqIn: number;
+    usableAreaSqIn: number;
+    sourceBatchId?: string;
+    sourceType: "FULL_SHEET_LEFTOVER" | "MANUAL" | "IMPORTED";
+    status: "AVAILABLE" | "RESERVED" | "PARTIAL" | "CONSUMED" | "HOLD" | "SCRAPPED";
+    locationLabel?: string;
+    notes?: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
+export interface UpsertRemnantResponse {
+  ok: true;
+  remnant: RemnantListResponse["remnants"][number] & {
+    history: Array<{
+      id: string;
+      actionType: "CREATED" | "RESERVED" | "CONSUMED" | "PARTIAL_CONSUME" | "RELEASED" | "SCRAPPED" | "HOLD" | "UPDATED";
+      usedAreaSqIn?: number;
+      previousLengthIn?: number;
+      previousWidthIn?: number;
+      newLengthIn?: number;
+      newWidthIn?: number;
+      batchId?: string;
+      partId?: string;
+      notes?: string;
+      createdAt: string;
+    }>;
+  };
+}
+
+export interface RemnantLabelArtifactResponse {
+  ok: true;
+  action: "generate-remnant-label";
+  remnantId: string;
+  artifact: {
+    id: string;
+    type: "remnant-label-pdf";
+    uri: string;
+    isCurrent: true;
+    version: number;
+  };
+}
+
+export interface EdgeBandEstimateSummary {
+  assumptions: {
+    perEdgeWasteIn: number;
+    setupAllowanceFtPerEdgeBandMaterialGroup: number;
+  };
+  totals: {
+    rawLinearFt: number;
+    adjustedLinearFt: number;
+    setupAllowanceFt: number;
+    estimatedDemandFt: number;
+  };
+  materials: Array<{
+    edgeBandMaterialKey: string;
+    edgeBandMaterialLabel: string;
+    edgeBandColorLabel: string;
+    rawLinearIn: number;
+    adjustedLinearIn: number;
+    rawLinearFt: number;
+    adjustedLinearFt: number;
+    setupAllowanceFt: number;
+    estimatedDemandFt: number;
+    partCount: number;
+    jobCount: number;
+    orderCount: number;
+    parts: Array<{
+      partId: string;
+      orderId?: string;
+      jobId?: string;
+      labelCode: string;
+      materialCode?: string;
+      derivedPattern: "NONE" | "ONE_LONG_EDGE" | "TWO_LONG_EDGES" | "TWO_SHORT_EDGES" | "ALL_FOUR";
+      rawLinearFt: number;
+      adjustedLinearFt: number;
+      source: "CONFIGURATOR" | "AMAZON";
+      sourceEdgeBandText?: string;
+    }>;
+  }>;
+  unmappedParts: Array<{
+    partId: string;
+    labelCode: string;
+    reason: string;
+  }>;
+  invalidParts: Array<{
+    partId: string;
+    labelCode: string;
+    reason: string;
+  }>;
+}
+
+export interface ForecastEdgeBandEstimateResponse extends EdgeBandEstimateSummary {
+  ok: true;
+  scope: "forecast";
+}
+
+export interface BatchEdgeBandEstimateResponse extends EdgeBandEstimateSummary {
+  ok: true;
+  scope: "batch";
+  batch: {
+    id: string;
+    code: string;
+    materialCode: string | null;
+  };
+}
+
 interface NestBatchResponse {
   ok: true;
   action: "nest-batch";
@@ -330,10 +544,104 @@ export interface StationQueueSuccessResponse {
     batchId: string;
     batchCode: string;
     batchStatus: string;
+    currentContainerId?: string;
+    currentContainerCode?: string;
+    currentContainerLabel?: string;
   }>;
 }
 
 export type StationQueueResponse = StationQueueSuccessResponse | ConfiguratorErrorResponse;
+
+export interface BatchSortingResponse {
+  ok: true;
+  batch: {
+    id: string;
+    code: string;
+    material: string;
+  };
+  summary: {
+    batchId: string;
+    batchCode: string;
+    totalParts: number;
+    assignedParts: number;
+    unassignedParts: number;
+    openContainers: number;
+    completionPct: number;
+  };
+  containers: Array<{
+    id: string;
+    batchId: string;
+    code: string;
+    label: string;
+    type: "CONTAINER" | "BIN";
+    status: "OPEN" | "SORTING" | "COMPLETE" | "HOLD" | "CLOSED";
+    notes?: string;
+    orderId?: string;
+    manufacturingJobId?: string;
+    partCount: number;
+    completionPct: number;
+    mixed: boolean;
+    createdAt: string;
+    updatedAt: string;
+    parts: Array<{
+      partId: string;
+      jobId?: string;
+      orderId?: string;
+      labelCode: string;
+      scanCode: string;
+      material: string;
+      width: number;
+      depth: number;
+      thickness: number;
+      status: string;
+      source: "CONFIGURATOR" | "AMAZON";
+    }>;
+  }>;
+  unassignedParts: Array<{
+    partId: string;
+    jobId?: string;
+    orderId?: string;
+    labelCode: string;
+    scanCode: string;
+    material: string;
+    width: number;
+    depth: number;
+    thickness: number;
+    status: string;
+    source: "CONFIGURATOR" | "AMAZON";
+  }>;
+}
+
+export type ContainerMutationResponse =
+  | {
+      ok: true;
+      container: {
+        id: string;
+        batchId: string;
+        code: string;
+        label: string;
+        type: "CONTAINER" | "BIN";
+        status: "OPEN" | "SORTING" | "COMPLETE" | "HOLD" | "CLOSED";
+        notes?: string;
+        orderId?: string;
+        manufacturingJobId?: string;
+        partCount: number;
+        completionPct: number;
+        mixed: boolean;
+        createdAt: string;
+        updatedAt: string;
+      };
+      action?: "assign-part-to-container" | "remove-part-from-container";
+      part?: {
+        partId: string;
+        labelCode: string;
+        scanCode: string;
+        currentContainerId?: string;
+        currentContainerCode?: string;
+        currentContainerLabel?: string;
+      };
+    }
+  | ConfiguratorErrorResponse;
 
 async function readJson<T>(input: string, init?: RequestInit): Promise<T | null> {
   try {
@@ -776,6 +1084,474 @@ export async function getBatches() {
   }>("/batches");
 }
 
+export async function getMaterialForecast() {
+  return readJson<MaterialForecastResponse>("/material-forecast");
+}
+
+export async function getForecastEdgeBandEstimate() {
+  return readJson<ForecastEdgeBandEstimateResponse>("/edge-banding/forecast");
+}
+
+export async function getBatchEdgeBandEstimate(batchId: string) {
+  return readJson<BatchEdgeBandEstimateResponse>(`/edge-banding/batch/${encodeURIComponent(batchId)}`);
+}
+
+export interface MachineSummary {
+  id: string;
+  code: string;
+  name: string;
+  type: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+  status: "ACTIVE" | "INACTIVE" | "HOLD" | "MAINTENANCE";
+  locationLabel?: string;
+  adapterType?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MachineEventRecord {
+  id: string;
+  machineId: string;
+  machine?: {
+    id: string;
+    code: string;
+    name: string;
+    type: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+  };
+  eventType: string;
+  eventTs: string;
+  sourceType: "MANUAL_SIMULATION" | "API" | "FILE_IMPORT" | "PLC_BRIDGE" | "WEBHOOK" | "OTHER";
+  sourceEventId?: string;
+  payloadJson: unknown;
+  normalizedBatchRef?: string;
+  normalizedJobRef?: string;
+  normalizedPartRef?: string;
+  sheetRef?: string;
+  severity?: string;
+  processingStatus: "RECEIVED" | "PARSED" | "LINKED" | "UNMATCHED" | "ERROR";
+  linkedBatch?: {
+    id: string;
+    code: string;
+  };
+  linkedManufacturingJob?: {
+    id: string;
+    labelCode: string;
+  };
+  linkedPart?: {
+    id: string;
+    scanCode: string;
+    partCode: string;
+  };
+  notes?: string;
+  createdAt: string;
+}
+
+export async function getMachines() {
+  return readJson<{
+    ok: true;
+    summary: {
+      totalMachines: number;
+      activeMachines: number;
+      cncMachines: number;
+      edgebanders: number;
+    };
+    machines: MachineSummary[];
+  }>("/machines");
+}
+
+export async function getMachineDetail(machineId: string) {
+  return readJson<{
+    ok: true;
+    machine: MachineSummary;
+    recentEvents: MachineEventRecord[];
+  }>(`/machines/${encodeURIComponent(machineId)}`);
+}
+
+export async function getMachineEvents(input?: {
+  machineId?: string;
+  eventType?: string;
+  processingStatus?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}) {
+  const params = new URLSearchParams();
+
+  if (input?.machineId) params.set("machineId", input.machineId);
+  if (input?.eventType) params.set("eventType", input.eventType);
+  if (input?.processingStatus) params.set("processingStatus", input.processingStatus);
+  if (input?.dateFrom) params.set("dateFrom", input.dateFrom);
+  if (input?.dateTo) params.set("dateTo", input.dateTo);
+
+  const query = params.toString();
+  return readJson<{
+    ok: true;
+    events: MachineEventRecord[];
+  }>(`/machine-events${query ? `?${query}` : ""}`);
+}
+
+export async function createMachine(input: {
+  code: string;
+  name: string;
+  type: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+  status?: "ACTIVE" | "INACTIVE" | "HOLD" | "MAINTENANCE";
+  locationLabel?: string;
+  adapterType?: string;
+  notes?: string;
+}) {
+  return sendJson<{
+    ok: true;
+    machine: MachineSummary;
+  }>("/machines", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateMachine(machineId: string, input: {
+  name?: string;
+  status?: "ACTIVE" | "INACTIVE" | "HOLD" | "MAINTENANCE";
+  locationLabel?: string;
+  adapterType?: string;
+  notes?: string;
+}) {
+  return sendJson<{
+    ok: true;
+    machine: MachineSummary;
+  }>(`/machines/${encodeURIComponent(machineId)}/update`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function ingestMachineEvent(input: {
+  machineId?: string;
+  machineCode?: string;
+  eventType: "RUN_STARTED" | "RUN_COMPLETED" | "SHEET_STARTED" | "SHEET_COMPLETED" | "PART_SCANNED" | "EDGEBAND_RUN_STARTED" | "EDGEBAND_RUN_COMPLETED" | "MACHINE_HEARTBEAT" | "FAULT" | "STOPPED";
+  eventTs?: string;
+  sourceType: "MANUAL_SIMULATION" | "API" | "FILE_IMPORT" | "PLC_BRIDGE" | "WEBHOOK" | "OTHER";
+  sourceEventId?: string;
+  payload?: unknown;
+  batchRef?: string;
+  jobRef?: string;
+  partRef?: string;
+  scanCode?: string;
+  sheetRef?: string;
+  severity?: string;
+  notes?: string;
+}) {
+  return sendJson<{
+    ok: true;
+    event: MachineEventRecord;
+    linkResult: {
+      processingStatus: "LINKED" | "UNMATCHED" | "PARSED" | "RECEIVED" | "ERROR";
+      linkedBatchId?: string;
+      linkedManufacturingJobId?: string;
+      linkedPartId?: string;
+    };
+  }>("/machine-events/ingest", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function simulateMachineEvent(input: {
+  machineId?: string;
+  machineCode?: string;
+  eventType: "RUN_STARTED" | "RUN_COMPLETED" | "SHEET_STARTED" | "SHEET_COMPLETED" | "PART_SCANNED" | "EDGEBAND_RUN_STARTED" | "EDGEBAND_RUN_COMPLETED" | "MACHINE_HEARTBEAT" | "FAULT" | "STOPPED";
+  eventTs?: string;
+  payload?: unknown;
+  batchRef?: string;
+  jobRef?: string;
+  partRef?: string;
+  scanCode?: string;
+  sheetRef?: string;
+  severity?: string;
+  notes?: string;
+}) {
+  return sendJson<{
+    ok: true;
+    event: MachineEventRecord;
+    linkResult: {
+      processingStatus: "LINKED" | "UNMATCHED" | "PARSED" | "RECEIVED" | "ERROR";
+      linkedBatchId?: string;
+      linkedManufacturingJobId?: string;
+      linkedPartId?: string;
+    };
+  }>("/machine-events/simulate", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export interface StageCandidateSignalRecord {
+  id: string;
+  targetType: "PART" | "BATCH" | "MANUFACTURING_JOB";
+  candidateStage: string;
+  currentStage?: string;
+  recommendedAction:
+    | "MARK_PART_CUT"
+    | "MARK_PART_EDGEBANDED"
+    | "MARK_BATCH_CUT_IN_PROGRESS"
+    | "MARK_BATCH_CUT_COMPLETE"
+    | "MARK_JOB_EDGE_IN_PROGRESS"
+    | "MARK_JOB_EDGE_COMPLETE";
+  confidence: "HIGH" | "MEDIUM";
+  rationale: string;
+  status: "OPEN" | "APPLIED" | "REJECTED" | "SUPERSEDED";
+  appliedMode?: "MANUAL" | "AUTO";
+  rejectionReason?: string;
+  notes?: string;
+  reviewedAt?: string;
+  appliedAt?: string;
+  autoAppliedAt?: string;
+  autoApplyRationale?: string;
+  rejectedAt?: string;
+  createdAt: string;
+  canApply: boolean;
+  sourceMachine?: {
+    id: string;
+    code: string;
+    name: string;
+    type: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+  };
+  sourceMachineEvent?: {
+    id: string;
+    eventType: string;
+    eventTs: string;
+    processingStatus: "RECEIVED" | "PARSED" | "LINKED" | "UNMATCHED" | "ERROR";
+  };
+  targetBatch?: {
+    id: string;
+    code: string;
+    status: string;
+  };
+  targetManufacturingJob?: {
+    id: string;
+    labelCode: string;
+    status: string;
+  };
+  targetPart?: {
+    id: string;
+    scanCode: string;
+    partCode: string;
+    status: string;
+  };
+  autoAppliedByRule?: {
+    id: string;
+    candidateAction:
+      | "MARK_PART_CUT"
+      | "MARK_PART_EDGEBANDED"
+      | "MARK_BATCH_CUT_IN_PROGRESS"
+      | "MARK_BATCH_CUT_COMPLETE"
+      | "MARK_JOB_EDGE_IN_PROGRESS"
+      | "MARK_JOB_EDGE_COMPLETE";
+    machineId?: string;
+    machineType?: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+  };
+}
+
+export interface TrustedAutoApplyRuleRecord {
+  id: string;
+  organizationId: string;
+  machineId?: string;
+  machineType?: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+  candidateAction:
+    | "MARK_PART_CUT"
+    | "MARK_PART_EDGEBANDED"
+    | "MARK_BATCH_CUT_IN_PROGRESS"
+    | "MARK_BATCH_CUT_COMPLETE";
+  enabled: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  machine?: {
+    id: string;
+    code: string;
+    name: string;
+    type: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+    status: "ACTIVE" | "INACTIVE" | "HOLD" | "MAINTENANCE";
+  };
+}
+
+export async function getStageSignals(input?: {
+  status?: "OPEN" | "APPLIED" | "REJECTED" | "SUPERSEDED";
+  targetType?: "PART" | "BATCH" | "MANUFACTURING_JOB";
+  machineId?: string;
+  batchId?: string;
+  recommendedAction?:
+    | "MARK_PART_CUT"
+    | "MARK_PART_EDGEBANDED"
+    | "MARK_BATCH_CUT_IN_PROGRESS"
+    | "MARK_BATCH_CUT_COMPLETE"
+    | "MARK_JOB_EDGE_IN_PROGRESS"
+    | "MARK_JOB_EDGE_COMPLETE";
+}) {
+  const params = new URLSearchParams();
+  if (input?.status) params.set("status", input.status);
+  if (input?.targetType) params.set("targetType", input.targetType);
+  if (input?.machineId) params.set("machineId", input.machineId);
+  if (input?.batchId) params.set("batchId", input.batchId);
+  if (input?.recommendedAction) params.set("recommendedAction", input.recommendedAction);
+
+  return readJson<{
+    ok: true;
+    summary: {
+      openCount: number;
+      appliedCount: number;
+      rejectedCount: number;
+    };
+    candidates: StageCandidateSignalRecord[];
+  }>(`/stage-signals${params.toString() ? `?${params.toString()}` : ""}`);
+}
+
+export async function applyStageSignal(candidateId: string, note?: string) {
+  return sendJson<{
+    ok: true;
+    candidate: StageCandidateSignalRecord;
+    appliedResult: unknown;
+  }>(`/stage-signals/${encodeURIComponent(candidateId)}/apply`, {
+    method: "POST",
+    body: JSON.stringify({
+      note
+    })
+  });
+}
+
+export async function rejectStageSignal(candidateId: string, rejectionReason: string) {
+  return sendJson<{
+    ok: true;
+    candidate: StageCandidateSignalRecord;
+  }>(`/stage-signals/${encodeURIComponent(candidateId)}/reject`, {
+    method: "POST",
+    body: JSON.stringify({
+      rejectionReason
+    })
+  });
+}
+
+export async function getTrustedAutoApplyRules() {
+  return readJson<{
+    ok: true;
+    rules: TrustedAutoApplyRuleRecord[];
+  }>("/trusted-auto-apply/rules");
+}
+
+export async function createTrustedAutoApplyRule(input: {
+  machineId?: string;
+  machineType?: "CNC" | "EDGEBANDER" | "LABEL_PRINTER" | "SCANNER_STATION" | "OTHER";
+  candidateAction:
+    | "MARK_PART_CUT"
+    | "MARK_PART_EDGEBANDED"
+    | "MARK_BATCH_CUT_IN_PROGRESS"
+    | "MARK_BATCH_CUT_COMPLETE";
+  enabled?: boolean;
+  notes?: string;
+}) {
+  return sendJson<{
+    ok: true;
+    rule: TrustedAutoApplyRuleRecord;
+  }>("/trusted-auto-apply/rules", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateTrustedAutoApplyRule(input: {
+  ruleId: string;
+  enabled?: boolean;
+  notes?: string;
+}) {
+  return sendJson<{
+    ok: true;
+    rule: TrustedAutoApplyRuleRecord;
+  }>(`/trusted-auto-apply/rules/${encodeURIComponent(input.ruleId)}/update`, {
+    method: "POST",
+    body: JSON.stringify({
+      enabled: input.enabled,
+      notes: input.notes
+    })
+  });
+}
+
+export async function disableTrustedAutoApplyRule(ruleId: string) {
+  return sendJson<{
+    ok: true;
+    rule: TrustedAutoApplyRuleRecord;
+  }>(`/trusted-auto-apply/rules/${encodeURIComponent(ruleId)}/disable`, {
+    method: "POST"
+  });
+}
+
+export async function getRemnants(input?: {
+  materialCode?: "WHITE_MELAMINE" | "MAPLE_MELAMINE" | "BIRCH_18" | "WALNUT_18" | "MAPLE_18" | "MDF_18";
+  status?: "AVAILABLE" | "RESERVED" | "PARTIAL" | "CONSUMED" | "HOLD" | "SCRAPPED";
+  location?: string;
+  minimumLengthIn?: number;
+  minimumWidthIn?: number;
+}) {
+  const params = new URLSearchParams();
+
+  if (input?.materialCode) params.set("materialCode", input.materialCode);
+  if (input?.status) params.set("status", input.status);
+  if (input?.location) params.set("location", input.location);
+  if (input?.minimumLengthIn) params.set("minimumLengthIn", String(input.minimumLengthIn));
+  if (input?.minimumWidthIn) params.set("minimumWidthIn", String(input.minimumWidthIn));
+
+  const query = params.toString();
+  return readJson<RemnantListResponse>(query ? `/remnants?${query}` : "/remnants");
+}
+
+export async function createRemnant(input: {
+  materialCode: "WHITE_MELAMINE" | "MAPLE_MELAMINE" | "BIRCH_18" | "WALNUT_18" | "MAPLE_18" | "MDF_18";
+  materialLabel?: string;
+  thicknessIn: number;
+  edgeBandPattern?: "ALL_FOUR";
+  lengthIn: number;
+  widthIn: number;
+  usableAreaSqIn?: number;
+  sourceBatchId?: string;
+  sourceType?: "FULL_SHEET_LEFTOVER" | "MANUAL" | "IMPORTED";
+  locationLabel?: string;
+  notes?: string;
+}) {
+  return sendJson<UpsertRemnantResponse>("/remnants", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateRemnant(remnantId: string, input: {
+  status?: "AVAILABLE" | "RESERVED" | "PARTIAL" | "CONSUMED" | "HOLD" | "SCRAPPED";
+  lengthIn?: number;
+  widthIn?: number;
+  usableAreaSqIn?: number;
+  locationLabel?: string;
+  notes?: string;
+}) {
+  return sendJson<UpsertRemnantResponse>(`/remnants/${encodeURIComponent(remnantId)}/update`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function consumeRemnant(remnantId: string, input: {
+  usedAreaSqIn: number;
+  batchId?: string;
+  partId?: string;
+  notes?: string;
+}) {
+  return sendJson<UpsertRemnantResponse>(`/remnants/${encodeURIComponent(remnantId)}/consume`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function generateRemnantLabel(remnantId: string) {
+  return sendJson<RemnantLabelArtifactResponse>(`/remnants/${encodeURIComponent(remnantId)}/label`, {
+    method: "POST"
+  });
+}
+
 export async function generateBatchCncCsv(batchId: string) {
   return sendJson<BatchExportArtifactResponse>("/batches/generate-cnc-csv", {
     method: "POST",
@@ -824,6 +1600,12 @@ export async function getBatchDetail(batchId: string) {
         edgebandedCount: number;
         packedCount: number;
       };
+      sorting: {
+        assignedParts: number;
+        unassignedParts: number;
+        containersOpen: number;
+        completionPct: number;
+      };
     };
     jobs: Array<{
       id: string;
@@ -854,6 +1636,19 @@ export async function getBatchDetail(batchId: string) {
       depth: number;
       thickness: number;
       instanceNumber: number;
+      currentContainerId?: string;
+      currentContainerCode?: string;
+      currentContainerLabel?: string;
+    }>;
+    containers: Array<{
+      id: string;
+      code: string;
+      label: string;
+      type: "CONTAINER" | "BIN";
+      status: "OPEN" | "SORTING" | "COMPLETE" | "HOLD" | "CLOSED";
+      partCount: number;
+      orderId?: string;
+      manufacturingJobId?: string;
     }>;
     sheets: Array<{
       id: string;
@@ -999,6 +1794,10 @@ export async function getBatchDetail(batchId: string) {
       };
     };
   }>(`/batches/${encodeURIComponent(batchId)}`);
+}
+
+export async function getBatchSortingView(batchId: string) {
+  return readJson<BatchSortingResponse>(`/containers/batch/${encodeURIComponent(batchId)}`);
 }
 
 export type BatchStatusTransitionResponse =
@@ -1525,6 +2324,18 @@ export async function createBatch(material: "WHITE_MELAMINE" | "MAPLE_MELAMINE")
   });
 }
 
+export async function createForecastBatch(input: {
+  materialCode: "WHITE_MELAMINE" | "MAPLE_MELAMINE" | "BIRCH_18" | "WALNUT_18" | "MAPLE_18" | "MDF_18";
+  jobIds?: string[];
+  partIds?: string[];
+  batchName?: string;
+}) {
+  return sendJson<CreateForecastBatchResponse>("/material-forecast/create-batch", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export async function nestBatch(batchId: string) {
   return sendJson<NestBatchResponse>("/batches/nest", {
     method: "POST",
@@ -1602,4 +2413,53 @@ export async function transitionPartStatusByScanCode(
 
 export async function getStationQueue(station: "cutting" | "edgebanding" | "packing") {
   return readJson<StationQueueResponse>(`/stations/${encodeURIComponent(station)}`);
+}
+
+export async function createContainer(input: {
+  batchId: string;
+  type: "CONTAINER" | "BIN";
+  code?: string;
+  label?: string;
+  orderId?: string;
+  manufacturingJobId?: string;
+  notes?: string;
+}) {
+  return sendJson<ContainerMutationResponse>("/containers", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function assignPartToContainer(input: {
+  containerId: string;
+  partId?: string;
+  scanCode?: string;
+  allowReassign?: boolean;
+}) {
+  return sendJson<ContainerMutationResponse>("/containers/assign", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function scanPartToContainer(input: {
+  containerId: string;
+  scanCode: string;
+  allowReassign?: boolean;
+}) {
+  return sendJson<ContainerMutationResponse>("/containers/scan", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function removePartFromContainer(input: {
+  containerId: string;
+  partId?: string;
+  scanCode?: string;
+}) {
+  return sendJson<ContainerMutationResponse>("/containers/remove", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
 }

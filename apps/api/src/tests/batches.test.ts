@@ -98,6 +98,7 @@ describe("batch generation", () => {
     prismaMock.manufacturingJob.findMany.mockResolvedValue([
       {
         id: "job_1",
+        materialCode: "WHITE_MELAMINE",
         labelCode: "SHELF-WM-19.25x12.5",
         parts: [
           { id: "part_1", instanceNumber: 1 },
@@ -106,6 +107,7 @@ describe("batch generation", () => {
       },
       {
         id: "job_2",
+        materialCode: "WHITE_MELAMINE",
         labelCode: "SHELF-WM-24x12",
         parts: [
           { id: "part_3", instanceNumber: 1 }
@@ -122,7 +124,7 @@ describe("batch generation", () => {
     });
     expect(txMock.part.updateMany).toHaveBeenCalledWith({
       where: { id: { in: ["part_1", "part_2", "part_3"] } },
-      data: { batchId: "batch_123" }
+      data: { batchId: "batch_123", status: "BATCHED" }
     });
     expect(result.batch.id).toBe("batch_123");
     expect(result.batch.status).toBe("DRAFT");
@@ -150,6 +152,7 @@ describe("batch generation", () => {
       {
         id: "job_amz_1",
         source: "AMAZON",
+        materialCode: "WHITE_MELAMINE",
         labelCode: "SHELF-WM-19.25x12.5",
         parts: [{ id: "part_amz_1", instanceNumber: 1 }]
       }
@@ -803,6 +806,7 @@ describe("batch generation", () => {
         }
       ],
       sheets: [],
+      containers: [],
       artifacts: []
     });
 

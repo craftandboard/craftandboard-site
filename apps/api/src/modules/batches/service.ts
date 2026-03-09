@@ -38,6 +38,135 @@ function labelCodeFor(baseLabelCode: string, instanceNumber: number) {
   return `${baseLabelCode}-P${String(instanceNumber).padStart(2, "0")}`;
 }
 
+async function getNextBatchCode(materialCode: MaterialCode, organizationId = LOCAL_ORG_ID) {
+  const batchDateCode = dateCodeFor(new Date());
+  const batchCodePrefix = `${batchDateCode}-${materialCode}`;
+  const existingCount = await prisma.batch.count({
+    where: {
+      organizationId,
+      code: {
+        startsWith: `${batchCodePrefix}-`
+      }
+    }
+  });
+
+  return `${batchCodePrefix}-${String(existingCount + 1).padStart(2, "0")}`;
+}
+
+export async function createBatchFromSelectedJobs(input: {
+  organizationId?: string;
+  materialCode: MaterialCode;
+  jobIds: string[];
+  batchName?: string;
+}): Promise<{
+  batch: CreatedBatchSummary;
+  parts: CreatedBatchPart[];
+}> {
+  const organizationId = input.organizationId ?? LOCAL_ORG_ID;
+  const jobIds = [...new Set(input.jobIds)].filter(Boolean);
+
+  if (jobIds.length === 0) {
+    throw new Error("No eligible forecast jobs were provided.");
+  }
+
+  const selectedJobs = await prisma.manufacturingJob.findMany({
+    where: {
+      organizationId,
+      id: {
+        in: jobIds
+      },
+      source: {
+        in: ["CONFIGURATOR", "AMAZON"]
+      },
+      status: "DRAFT",
+      batchId: null,
+      materialCode: input.materialCode,
+      parts: {
+        some: {
+          batchId: null
+        }
+      }
+    },
+    include: {
+      parts: {
+        where: {
+          batchId: null
+        },
+        orderBy: [{ instanceNumber: "asc" }]
+      }
+    },
+    orderBy: [{ createdAt: "asc" }, { id: "asc" }]
+  });
+
+  if (selectedJobs.length !== jobIds.length) {
+    throw new Error("One or more selected forecast jobs are no longer eligible for batching.");
+  }
+
+  const uniqueMaterials = [...new Set(selectedJobs.map((job) => job.materialCode))];
+  if (uniqueMaterials.length !== 1 || uniqueMaterials[0] !== input.materialCode) {
+    throw new Error("Selected forecast jobs must all belong to the same material.");
+  }
+
+  const selectedParts = selectedJobs.flatMap((job) =>
+    job.parts.map((part) => ({
+      id: part.id,
+      labelCode: labelCodeFor(job.labelCode, part.instanceNumber)
+    }))
+  );
+
+  if (selectedParts.length === 0) {
+    throw new Error(`No eligible draft parts found for ${input.materialCode}.`);
+  }
+
+  const batchCode = await getNextBatchCode(input.materialCode, organizationId);
+
+  const result = await prisma.$transaction(async (tx) => {
+    const batchSource = selectedJobs.every((job) => job.source === "AMAZON") ? "AMAZON" : "CONFIGURATOR";
+    const batch = await tx.batch.create({
+      data: {
+        organizationId,
+        code: batchCode,
+        name: input.batchName?.trim() || batchCode,
+        status: "DRAFT",
+        materialCode: input.materialCode,
+        source: batchSource
+      }
+    });
+
+    const partIds = selectedParts.map((part) => part.id);
+    await tx.manufacturingJob.updateMany({
+      where: { id: { in: jobIds } },
+      data: { batchId: batch.id }
+    });
+
+    await tx.part.updateMany({
+      where: { id: { in: partIds } },
+      data: {
+        batchId: batch.id,
+        status: "BATCHED"
+      }
+    });
+
+    return { batch };
+  });
+
+  return {
+    batch: {
+      id: result.batch.id,
+      batchCode,
+      status: "DRAFT",
+      material: input.materialCode,
+      partCount: selectedParts.length,
+      jobCount: selectedJobs.length
+    },
+    parts: selectedParts.map((part) => ({
+      id: part.id,
+      partType: "SHELF" as const,
+      labelCode: part.labelCode
+    }))
+  };
+}
+
 function mapBatchStatus(status: string): Batch["status"] {
   return String(status).toLowerCase() as Batch["status"];
 }
@@ -246,6 +375,12 @@ export async function getBatchDetail(batchId: string, organizationId = LOCAL_ORG
       edgebandedCount: number;
       packedCount: number;
     };
+    sorting: {
+      assignedParts: number;
+      unassignedParts: number;
+      containersOpen: number;
+      completionPct: number;
+    };
   };
   jobs: Array<{
     id: string;
@@ -276,6 +411,19 @@ export async function getBatchDetail(batchId: string, organizationId = LOCAL_ORG
     depth: number;
     thickness: number;
     instanceNumber: number;
+    currentContainerId?: string;
+    currentContainerCode?: string;
+    currentContainerLabel?: string;
+  }>;
+  containers: Array<{
+    id: string;
+    code: string;
+    label: string;
+    type: "CONTAINER" | "BIN";
+    status: "OPEN" | "SORTING" | "COMPLETE" | "HOLD" | "CLOSED";
+    partCount: number;
+    orderId?: string;
+    manufacturingJobId?: string;
   }>;
   sheets: Array<{
     id: string;
@@ -435,6 +583,7 @@ export async function getBatchDetail(batchId: string, organizationId = LOCAL_ORG
       parts: {
         include: {
           manufacturingJob: true,
+          currentContainer: true,
           placements: {
             include: {
               sheet: true
@@ -443,6 +592,16 @@ export async function getBatchDetail(batchId: string, organizationId = LOCAL_ORG
           }
         },
         orderBy: [{ createdAt: "asc" }, { instanceNumber: "asc" }]
+      },
+      containers: {
+        include: {
+          currentParts: {
+            select: {
+              id: true
+            }
+          }
+        },
+        orderBy: [{ createdAt: "asc" }]
       },
       sheets: {
         include: {
@@ -515,6 +674,8 @@ export async function getBatchDetail(batchId: string, organizationId = LOCAL_ORG
       packedCount: 0
     }
   );
+  const assignedParts = batch.parts.filter((part) => Boolean(part.currentContainerId)).length;
+  const containersOpen = batch.containers.filter((container) => container.status === "OPEN" || container.status === "SORTING").length;
 
   const cncSheets = batch.sheets.map((sheet) => ({
     sheetIndex: sheet.sheetNumber,
@@ -570,7 +731,13 @@ export async function getBatchDetail(batchId: string, organizationId = LOCAL_ORG
       createdAt: batch.createdAt.toISOString(),
       updatedAt: batch.updatedAt.toISOString(),
       availableNextActions: getAvailableNextActions(mapBatchStatus(batch.status)),
-      progress
+      progress,
+      sorting: {
+        assignedParts,
+        unassignedParts: Math.max(batch.parts.length - assignedParts, 0),
+        containersOpen,
+        completionPct: batch.parts.length === 0 ? 0 : Math.round((assignedParts / batch.parts.length) * 100)
+      }
     },
     jobs: batch.manufacturingJobs.map((job) => ({
       id: job.id,
@@ -600,7 +767,20 @@ export async function getBatchDetail(batchId: string, organizationId = LOCAL_ORG
       width: Number(part.widthIn.toString()),
       depth: Number(part.depthIn.toString()),
       thickness: Number(part.thicknessIn.toString()),
-      instanceNumber: part.instanceNumber
+      instanceNumber: part.instanceNumber,
+      currentContainerId: part.currentContainerId ?? undefined,
+      currentContainerCode: part.currentContainer?.code ?? undefined,
+      currentContainerLabel: part.currentContainer?.label ?? undefined
+    })),
+    containers: batch.containers.map((container) => ({
+      id: container.id,
+      code: container.code,
+      label: container.label,
+      type: container.type as "CONTAINER" | "BIN",
+      status: container.status as "OPEN" | "SORTING" | "COMPLETE" | "HOLD" | "CLOSED",
+      partCount: container.currentParts.length,
+      orderId: container.orderId ?? undefined,
+      manufacturingJobId: container.manufacturingJobId ?? undefined
     })),
     sheets: batch.sheets.map((sheet) => ({
       id: sheet.id,
@@ -834,65 +1014,11 @@ export async function createBatchForMaterial(
   if (eligibleParts.length === 0) {
     throw new Error(`No eligible draft parts found for ${materialCode}.`);
   }
-
-  const batchDateCode = dateCodeFor(new Date());
-  const batchCodePrefix = `${batchDateCode}-${materialCode}`;
-  const existingCount = await prisma.batch.count({
-    where: {
-      organizationId,
-      code: {
-        startsWith: `${batchCodePrefix}-`
-      }
-    }
+  return createBatchFromSelectedJobs({
+    organizationId,
+    materialCode,
+    jobIds: eligibleJobs.map((job) => job.id)
   });
-  const batchCode = `${batchCodePrefix}-${String(existingCount + 1).padStart(2, "0")}`;
-
-  const result = await prisma.$transaction(async (tx) => {
-    const batchSource = eligibleJobs.every((job) => job.source === "AMAZON") ? "AMAZON" : "CONFIGURATOR";
-    const batch = await tx.batch.create({
-      data: {
-        organizationId,
-        code: batchCode,
-        name: batchCode,
-        status: "DRAFT",
-        materialCode,
-        source: batchSource
-      }
-    });
-
-    const jobIds = eligibleJobs.map((job) => job.id);
-    const partIds = eligibleParts.map((part) => part.id);
-
-    await tx.manufacturingJob.updateMany({
-      where: { id: { in: jobIds } },
-      data: { batchId: batch.id }
-    });
-
-    await tx.part.updateMany({
-      where: { id: { in: partIds } },
-      data: { batchId: batch.id }
-    });
-
-    return { batch, jobIds, partIds };
-  });
-
-  return {
-    batch: {
-      id: result.batch.id,
-      batchCode,
-      status: "DRAFT",
-      material: materialCode,
-      partCount: eligibleParts.length,
-      jobCount: eligibleJobs.length
-    },
-    parts: eligibleJobs.flatMap((job) =>
-      job.parts.map((part) => ({
-        id: part.id,
-        partType: "SHELF" as const,
-        labelCode: labelCodeFor(job.labelCode, part.instanceNumber)
-      }))
-    )
-  };
 }
 
 export async function nestBatch(batchId: string, organizationId = LOCAL_ORG_ID): Promise<{

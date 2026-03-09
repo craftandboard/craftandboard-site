@@ -1,4 +1,6 @@
 import { BatchStatusActions } from "../../../components/batch-status-actions";
+import { EdgeBandingDemandTable } from "../../../components/edge-banding-demand-table";
+import { EdgeBandingSummaryCards } from "../../../components/edge-banding-summary-cards";
 import Link from "next/link";
 import { GenerateCncButton } from "../../../components/generate-cnc-button";
 import { GenerateCncCsvButton } from "../../../components/generate-cnc-csv-button";
@@ -11,11 +13,14 @@ import { GenerateTravelerPdfButton } from "../../../components/generate-traveler
 import { NestBatchButton } from "../../../components/nest-batch-button";
 import { PartStatusActions } from "../../../components/part-status-actions";
 import { ScanLabelForm } from "../../../components/scan-label-form";
-import { getBatchDetail } from "../../../lib/api";
+import { getBatchDetail, getBatchEdgeBandEstimate } from "../../../lib/api";
 
 export default async function BatchDetailPage(props: { params: Promise<{ batchId: string }> }) {
   const params = await props.params;
-  const payload = await getBatchDetail(params.batchId);
+  const [payload, edgeBandEstimate] = await Promise.all([
+    getBatchDetail(params.batchId),
+    getBatchEdgeBandEstimate(params.batchId)
+  ]);
 
   if (!payload) {
     return (
@@ -53,6 +58,8 @@ export default async function BatchDetailPage(props: { params: Promise<{ batchId
             <div>Cut: {batch.progress.cutCount}</div>
             <div>Edgebanded: {batch.progress.edgebandedCount}</div>
             <div>Packed: {batch.progress.packedCount}</div>
+            <div>Sorted: {batch.sorting.assignedParts}</div>
+            <div>Unsorted: {batch.sorting.unassignedParts}</div>
           </div>
           <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/30 p-5">
             <p className="text-xs uppercase tracking-[0.25em] text-emerald-300">Workflow Actions</p>
@@ -72,6 +79,14 @@ export default async function BatchDetailPage(props: { params: Promise<{ batchId
             <GenerateLabelPdfButton batchId={batch.id} />
             <GenerateTravelerPdfButton batchId={batch.id} />
           </div>
+          <div className="mt-6">
+            <Link
+              href={`/batches/${batch.id}/sorting`}
+              className="inline-flex rounded-full border border-emerald-300/30 bg-emerald-400/10 px-4 py-2 text-sm font-medium text-emerald-50 transition hover:border-emerald-300/70"
+            >
+              Open Sorting Workspace
+            </Link>
+          </div>
           <div className="mt-6 rounded-3xl border border-white/10 bg-slate-950/30 p-5">
             <p className="text-xs uppercase tracking-[0.25em] text-emerald-300">Scan Label</p>
             <div className="mt-4">
@@ -82,6 +97,23 @@ export default async function BatchDetailPage(props: { params: Promise<{ batchId
       </div>
 
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8">
+        <div className="mb-6 rounded-3xl border border-white/10 bg-slate-950/30 p-5 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.25em] text-emerald-300">Sorting Overview</p>
+          <p className="mt-2">
+            {batch.sorting.assignedParts} assigned · {batch.sorting.unassignedParts} unassigned · {batch.sorting.containersOpen} open containers · {batch.sorting.completionPct}% complete
+          </p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            {payload.containers.length === 0 ? (
+              <span className="text-slate-400">No containers created yet.</span>
+            ) : (
+              payload.containers.map((container) => (
+                <span key={container.id} className="rounded-full border border-white/10 px-3 py-1 text-xs">
+                  {container.code} · {container.partCount} parts · {container.status}
+                </span>
+              ))
+            )}
+          </div>
+        </div>
         <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Jobs And Parts</p>
         <div className="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
           <div className="space-y-4">
@@ -117,6 +149,9 @@ export default async function BatchDetailPage(props: { params: Promise<{ batchId
                   <p className="mt-2 text-sm text-slate-300">
                     {part.material} · {part.edgeBandPattern} · {part.source} · Status {part.status}
                   </p>
+                  <p className="mt-2 text-xs text-sky-200">
+                    Container {part.currentContainerCode ?? "UNASSIGNED"}{part.currentContainerLabel ? ` · ${part.currentContainerLabel}` : ""}
+                  </p>
                   <p className="mt-2 text-xs text-slate-400">
                     Part {part.id} · Job {part.jobId ?? "Unlinked"} · Instance {part.instanceNumber}
                   </p>
@@ -129,6 +164,15 @@ export default async function BatchDetailPage(props: { params: Promise<{ batchId
           </div>
         </div>
       </section>
+
+      {edgeBandEstimate ? (
+        <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8">
+          <EdgeBandingSummaryCards summary={edgeBandEstimate} title="Edge Band Planning" />
+          <div className="mt-6">
+            <EdgeBandingDemandTable summary={edgeBandEstimate} />
+          </div>
+        </section>
+      ) : null}
 
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8">
         <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Nested Sheets</p>

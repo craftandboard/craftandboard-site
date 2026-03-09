@@ -69,6 +69,12 @@ export async function getStationQueue(stationKey: ShopFloorStationKey, organizat
           status: true
         }
       },
+      currentContainer: {
+        select: {
+          code: true,
+          label: true
+        }
+      },
       manufacturingJob: {
         select: {
           labelCode: true
@@ -99,7 +105,10 @@ export async function getStationQueue(stationKey: ShopFloorStationKey, organizat
       depth: Number(part.depthIn),
       batchId: part.batchId ?? "",
       batchCode: part.batch?.code ?? "UNASSIGNED",
-      batchStatus: part.batch?.status?.toLowerCase() ?? "unassigned"
+      batchStatus: part.batch?.status?.toLowerCase() ?? "unassigned",
+      currentContainerId: part.currentContainerId ?? undefined,
+      currentContainerCode: part.currentContainer?.code ?? undefined,
+      currentContainerLabel: part.currentContainer?.label ?? undefined
     }))
   };
 }

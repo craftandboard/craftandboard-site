@@ -25,3 +25,11 @@ export async function writeOrderArtifactPdf(input: {
 }) {
   return filesystemArtifactStorage.writeOrderFile(input);
 }
+
+export async function writeRemnantArtifactPdf(input: {
+  remnantId: string;
+  fileName: string;
+  bytes: Buffer;
+}) {
+  return filesystemArtifactStorage.writeRemnantFile(input);
+}

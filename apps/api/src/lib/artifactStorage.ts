@@ -8,6 +8,7 @@ export const GENERATED_ARTIFACTS_DIR = path.resolve(MODULE_DIR, "../../../genera
 export interface ArtifactStorage {
   writeBatchFile(input: { batchId: string; fileName: string; bytes: Buffer }): Promise<string>;
   writeOrderFile(input: { orderId: string; fileName: string; bytes: Buffer }): Promise<string>;
+  writeRemnantFile(input: { remnantId: string; fileName: string; bytes: Buffer }): Promise<string>;
   resolveGeneratedFilePath(uri: string): string;
   copyToDirectory(input: { sourcePath: string; targetDirectory: string; fileName: string }): Promise<string>;
 }
@@ -31,6 +32,16 @@ export const filesystemArtifactStorage: ArtifactStorage = {
     await writeFile(filePath, input.bytes);
 
     return `/generated-artifacts/orders/${input.orderId}/${input.fileName}`;
+  },
+
+  async writeRemnantFile(input) {
+    const remnantDir = path.join(GENERATED_ARTIFACTS_DIR, "remnants", input.remnantId);
+    await mkdir(remnantDir, { recursive: true });
+
+    const filePath = path.join(remnantDir, input.fileName);
+    await writeFile(filePath, input.bytes);
+
+    return `/generated-artifacts/remnants/${input.remnantId}/${input.fileName}`;
   },
 
   resolveGeneratedFilePath(uri) {

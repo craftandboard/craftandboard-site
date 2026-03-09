@@ -108,7 +108,7 @@ export function StationQueue(props: {
           parts.map((part) => (
             <article
               key={part.partId}
-              className="grid gap-3 rounded-3xl border border-white/10 bg-black/20 p-5 text-sm text-slate-300 md:grid-cols-[1.3fr_1fr_1fr_1fr]"
+              className="grid gap-3 rounded-3xl border border-white/10 bg-black/20 p-5 text-sm text-slate-300 md:grid-cols-[1.3fr_1fr_1fr_1fr_1fr]"
             >
               <div className="space-y-1">
                 <p className="font-medium text-white">{part.labelCode}</p>
@@ -127,6 +127,10 @@ export function StationQueue(props: {
                 <p className="mt-1 text-white">
                   {part.width}&quot; x {part.depth}&quot;
                 </p>
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.25em] text-slate-500">Container</p>
+                <p className="mt-1 text-white">{part.currentContainerCode ?? "UNASSIGNED"}</p>
               </div>
             </article>
           ))

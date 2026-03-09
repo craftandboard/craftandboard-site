@@ -43,6 +43,7 @@ const configuratorMocks = vi.hoisted(() => ({
 
 const batchMocks = vi.hoisted(() => ({
   createBatchForMaterial: vi.fn(),
+  createBatchFromSelectedJobs: vi.fn(),
   generateBatchCncCsv: vi.fn(),
   generateBatchCncJson: vi.fn(),
   generateBatchCncMosaic: vi.fn(),
@@ -55,6 +56,18 @@ const batchMocks = vi.hoisted(() => ({
   listBatches: vi.fn(),
   nestBatch: vi.fn(),
   transitionBatchStatus: vi.fn()
+}));
+
+const materialForecastMocks = vi.hoisted(() => ({
+  createBatchFromForecastSelection: vi.fn(),
+  getMaterialForecast: vi.fn()
+}));
+
+const containerMocks = vi.hoisted(() => ({
+  assignPartToContainer: vi.fn(),
+  createContainer: vi.fn(),
+  getBatchSortingView: vi.fn(),
+  removePartFromContainer: vi.fn()
 }));
 
 const amazonImportMocks = vi.hoisted(() => ({
@@ -122,6 +135,30 @@ const machineIntegrationMocks = vi.hoisted(() => ({
   deliverBatchCncToWatchFolder: vi.fn()
 }));
 
+const machineMocks = vi.hoisted(() => ({
+  createMachine: vi.fn(),
+  getMachineDetail: vi.fn(),
+  ingestMachineEvent: vi.fn(),
+  listMachineEvents: vi.fn(),
+  listMachines: vi.fn(),
+  updateMachine: vi.fn()
+}));
+
+const stageSignalMocks = vi.hoisted(() => ({
+  applyStageCandidateSignal: vi.fn(),
+  getStageCandidateSignal: vi.fn(),
+  listStageCandidateSignals: vi.fn(),
+  rejectStageCandidateSignal: vi.fn(),
+  safeGenerateStageCandidatesForMachineEvent: vi.fn()
+}));
+
+const trustedAutoApplyMocks = vi.hoisted(() => ({
+  createTrustedAutoApplyRule: vi.fn(),
+  disableTrustedAutoApplyRule: vi.fn(),
+  listTrustedAutoApplyRules: vi.fn(),
+  updateTrustedAutoApplyRule: vi.fn()
+}));
+
 const requestContextMocks = vi.hoisted(() => ({
   RequestAuthenticationError: class RequestAuthenticationError extends Error {},
   getRequestContext: vi.fn(() => ({
@@ -169,6 +206,8 @@ vi.mock('../modules/manufacturingJobs/service.js', () => manufacturingJobsMocks)
 vi.mock('../modules/manufacturingLifecycle/service.js', () => lifecycleMocks);
 vi.mock('../modules/configurator/service.js', () => configuratorMocks);
 vi.mock('../modules/batches/service.js', () => batchMocks);
+vi.mock('../modules/materialForecast/service.js', () => materialForecastMocks);
+vi.mock('../modules/containers/service.js', () => containerMocks);
 vi.mock('../modules/bundlePackets/service.js', () => packetMocks);
 vi.mock('../modules/amazonImport/service.js', () => amazonImportMocks);
 vi.mock('../modules/orders/service.js', () => orderMocks);
@@ -178,6 +217,12 @@ vi.mock('../modules/org/service.js', () => orgMemberMocks);
 vi.mock('../modules/auth/service.js', () => authMocks);
 vi.mock('../lib/backgroundJobs.js', () => backgroundJobMocks);
 vi.mock('../modules/machineIntegration/service.js', () => machineIntegrationMocks);
+vi.mock('../modules/machines/service.js', () => machineMocks);
+vi.mock('../modules/machines/simulation.js', () => ({
+  simulateMachineEvent: machineMocks.ingestMachineEvent
+}));
+vi.mock('../modules/stageSignals/service.js', () => stageSignalMocks);
+vi.mock('../modules/trustedAutoApply/service.js', () => trustedAutoApplyMocks);
 vi.mock('../lib/requestContext.js', () => requestContextMocks);
 vi.mock('../modules/customerStatus/service.js', () => ({
   projectCustomerOrderStatus: vi.fn(() => ({
@@ -227,6 +272,264 @@ beforeEach(async () => {
   manufacturingJobsMocks.listBundleCncJobs.mockResolvedValue([]);
   manufacturingJobsMocks.listBundleArtifacts.mockResolvedValue({ bundleCode: 'BUNDLE-1', artifacts: [] });
   batchMocks.listBatches.mockResolvedValue([]);
+  materialForecastMocks.getMaterialForecast.mockResolvedValue({
+    ok: true,
+    summary: {
+      totalPendingMaterials: 1,
+      totalPendingParts: 2,
+      estimatedTotalSheets: 1,
+      materialsWithRemnantCandidates: 0
+    },
+    materials: []
+  });
+  materialForecastMocks.createBatchFromForecastSelection.mockResolvedValue({
+    ok: true,
+    action: 'create-forecast-batch',
+    batch: {
+      id: 'batch_456',
+      batchCode: '20260308-WHITE_MELAMINE-02',
+      status: 'DRAFT',
+      material: 'WHITE_MELAMINE',
+      partCount: 2,
+      jobCount: 1
+    },
+    parts: [
+      {
+        id: 'part_10',
+        partType: 'SHELF',
+        labelCode: 'SHELF-WM-19.25x12.5-P01'
+      }
+    ]
+  });
+  machineMocks.listMachines.mockResolvedValue({
+    ok: true,
+    summary: {
+      totalMachines: 1,
+      activeMachines: 1,
+      cncMachines: 1,
+      edgebanders: 0
+    },
+    machines: [
+      {
+        id: 'machine_1',
+        code: 'CNC-01',
+        name: 'Shop CNC',
+        type: 'CNC',
+        status: 'ACTIVE',
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    ]
+  });
+  machineMocks.getMachineDetail.mockResolvedValue({
+    ok: true,
+    machine: {
+      id: 'machine_1',
+      code: 'CNC-01',
+      name: 'Shop CNC',
+      type: 'CNC',
+      status: 'ACTIVE',
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    },
+    recentEvents: []
+  });
+  machineMocks.listMachineEvents.mockResolvedValue({
+    ok: true,
+    events: []
+  });
+  machineMocks.createMachine.mockResolvedValue({
+    ok: true,
+    machine: {
+      id: 'machine_1',
+      code: 'CNC-01',
+      name: 'Shop CNC',
+      type: 'CNC',
+      status: 'ACTIVE',
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  machineMocks.updateMachine.mockResolvedValue({
+    ok: true,
+    machine: {
+      id: 'machine_1',
+      code: 'CNC-01',
+      name: 'Updated CNC',
+      type: 'CNC',
+      status: 'HOLD',
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T01:00:00.000Z'
+    }
+  });
+  machineMocks.ingestMachineEvent.mockResolvedValue({
+    ok: true,
+    event: {
+      id: 'evt_1',
+      machineId: 'machine_1',
+      eventType: 'RUN_STARTED',
+      eventTs: '2026-03-08T10:00:00.000Z',
+      sourceType: 'API',
+      payloadJson: { batchRef: 'BATCH-1' },
+      processingStatus: 'LINKED',
+      createdAt: '2026-03-08T10:00:00.000Z'
+    },
+    linkResult: {
+      processingStatus: 'LINKED',
+      linkedBatchId: 'batch_1'
+    }
+  });
+  stageSignalMocks.listStageCandidateSignals.mockResolvedValue({
+    ok: true,
+    summary: {
+      openCount: 1,
+      appliedCount: 0,
+      rejectedCount: 0
+    },
+    candidates: [
+      {
+        id: 'sig_1',
+        targetType: 'PART',
+        candidateStage: 'CUT',
+        currentStage: 'READY_FOR_BATCH',
+        recommendedAction: 'MARK_PART_CUT',
+        confidence: 'HIGH',
+        rationale: 'Linked CNC part event indicates the part is likely cut and ready for the next stage.',
+        status: 'OPEN',
+        createdAt: '2026-03-08T10:00:00.000Z',
+        canApply: true
+      }
+    ]
+  });
+  stageSignalMocks.getStageCandidateSignal.mockResolvedValue({
+    ok: true,
+    candidate: {
+      id: 'sig_1',
+      targetType: 'PART',
+      candidateStage: 'CUT',
+      currentStage: 'READY_FOR_BATCH',
+      recommendedAction: 'MARK_PART_CUT',
+      confidence: 'HIGH',
+      rationale: 'Linked CNC part event indicates the part is likely cut and ready for the next stage.',
+      status: 'OPEN',
+      createdAt: '2026-03-08T10:00:00.000Z',
+      canApply: true
+    }
+  });
+  stageSignalMocks.applyStageCandidateSignal.mockResolvedValue({
+    ok: true,
+    candidate: {
+      id: 'sig_1',
+      targetType: 'PART',
+      candidateStage: 'CUT',
+      currentStage: 'READY_FOR_BATCH',
+      recommendedAction: 'MARK_PART_CUT',
+      confidence: 'HIGH',
+      rationale: 'Linked CNC part event indicates the part is likely cut and ready for the next stage.',
+      status: 'APPLIED',
+      createdAt: '2026-03-08T10:00:00.000Z',
+      canApply: false
+    },
+    appliedResult: {}
+  });
+  stageSignalMocks.rejectStageCandidateSignal.mockResolvedValue({
+    ok: true,
+    candidate: {
+      id: 'sig_1',
+      targetType: 'PART',
+      candidateStage: 'CUT',
+      currentStage: 'READY_FOR_BATCH',
+      recommendedAction: 'MARK_PART_CUT',
+      confidence: 'HIGH',
+      rationale: 'Linked CNC part event indicates the part is likely cut and ready for the next stage.',
+      status: 'REJECTED',
+      rejectionReason: 'Not trusted.',
+      createdAt: '2026-03-08T10:00:00.000Z',
+      canApply: false
+    }
+  });
+  containerMocks.getBatchSortingView.mockResolvedValue({
+    ok: true,
+    batch: {
+      id: 'batch_123',
+      code: '20260308-WHITE_MELAMINE-01',
+      material: 'WHITE_MELAMINE'
+    },
+    summary: {
+      batchId: 'batch_123',
+      batchCode: '20260308-WHITE_MELAMINE-01',
+      totalParts: 2,
+      assignedParts: 1,
+      unassignedParts: 1,
+      openContainers: 1,
+      completionPct: 50
+    },
+    containers: [],
+    unassignedParts: []
+  });
+  containerMocks.createContainer.mockResolvedValue({
+    ok: true,
+    container: {
+      id: 'container_1',
+      batchId: 'batch_123',
+      code: 'BIN-01',
+      label: 'Bin 01',
+      type: 'BIN',
+      status: 'OPEN',
+      partCount: 0,
+      completionPct: 0,
+      mixed: false,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    }
+  });
+  containerMocks.assignPartToContainer.mockResolvedValue({
+    ok: true,
+    action: 'assign-part-to-container',
+    container: {
+      id: 'container_1',
+      batchId: 'batch_123',
+      code: 'BIN-01',
+      label: 'Bin 01',
+      type: 'BIN',
+      status: 'SORTING',
+      partCount: 1,
+      completionPct: 50,
+      mixed: false,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    },
+    part: {
+      partId: 'part_1',
+      labelCode: 'SHELF-WM-19.25x12.5-P01',
+      scanCode: 'PART-part_1',
+      currentContainerId: 'container_1',
+      currentContainerCode: 'BIN-01',
+      currentContainerLabel: 'Bin 01'
+    }
+  });
+  containerMocks.removePartFromContainer.mockResolvedValue({
+    ok: true,
+    action: 'remove-part-from-container',
+    container: {
+      id: 'container_1',
+      batchId: 'batch_123',
+      code: 'BIN-01',
+      label: 'Bin 01',
+      type: 'BIN',
+      status: 'OPEN',
+      partCount: 0,
+      completionPct: 0,
+      mixed: false,
+      createdAt: '2026-03-08T00:00:00.000Z',
+      updatedAt: '2026-03-08T00:00:00.000Z'
+    },
+    part: {
+      partId: 'part_1',
+      labelCode: 'SHELF-WM-19.25x12.5-P01',
+      scanCode: 'PART-part_1'
+    }
+  });
   orderMocks.listOrders.mockResolvedValue([]);
   orderMocks.listCompletedOrders.mockResolvedValue([]);
   orderMocks.generatePackingSlipPdf.mockResolvedValue({
@@ -1744,6 +2047,71 @@ describe('batch routes', () => {
     });
   });
 
+  it('returns the computed material forecast', async () => {
+    const response = await fetch(`${baseUrl}/material-forecast`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.ok).toBe(true);
+    expect(payload.summary.totalPendingMaterials).toBe(1);
+  });
+
+  it('creates a batch from explicit forecast selection', async () => {
+    const response = await post('/material-forecast/create-batch', {
+      materialCode: 'WHITE_MELAMINE',
+      jobIds: ['job_1']
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.action).toBe('create-forecast-batch');
+    expect(materialForecastMocks.createBatchFromForecastSelection).toHaveBeenCalledWith(
+      {
+        materialCode: 'WHITE_MELAMINE',
+        jobIds: ['job_1']
+      },
+      'org_local_craft_board'
+    );
+  });
+
+  it('returns the batch sorting view for a batch', async () => {
+    const response = await fetch(`${baseUrl}/containers/batch/batch_123`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.summary.assignedParts).toBe(1);
+  });
+
+  it('creates a container for a batch', async () => {
+    const response = await post('/containers', {
+      batchId: 'batch_123',
+      type: 'BIN',
+      label: 'Bin 01'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.container.code).toBe('BIN-01');
+  });
+
+  it('assigns a part into a container by scan code', async () => {
+    const response = await post('/containers/scan', {
+      containerId: 'container_1',
+      scanCode: 'PART-part_1'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.action).toBe('assign-part-to-container');
+    expect(containerMocks.assignPartToContainer).toHaveBeenCalledWith(
+      {
+        containerId: 'container_1',
+        scanCode: 'PART-part_1'
+      },
+      'org_local_craft_board'
+    );
+  });
+
   it('allows operators to read batch detail but blocks batch build', async () => {
     const operatorContext = {
       currentUser: {
@@ -2290,6 +2658,200 @@ describe('batch routes', () => {
         version: 1
       }
     });
+  });
+});
+
+describe('machine routes', () => {
+  it('lists machines', async () => {
+    const response = await fetch(`${baseUrl}/machines`);
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(
+      expect.objectContaining({
+        ok: true,
+        machines: expect.any(Array)
+      })
+    );
+  });
+
+  it('creates a machine', async () => {
+    const response = await fetch(`${baseUrl}/machines`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        code: 'CNC-01',
+        name: 'Shop CNC',
+        type: 'CNC'
+      })
+    });
+
+    expect(response.status).toBe(201);
+    expect(machineMocks.createMachine).toHaveBeenCalledWith(
+      expect.objectContaining({
+        code: 'CNC-01',
+        name: 'Shop CNC',
+        type: 'CNC'
+      }),
+      'org_local_craft_board'
+    );
+  });
+
+  it('returns machine detail with recent events', async () => {
+    const response = await fetch(`${baseUrl}/machines/machine_1`);
+    expect(response.status).toBe(200);
+    expect(machineMocks.getMachineDetail).toHaveBeenCalledWith('machine_1', 'org_local_craft_board');
+  });
+
+  it('ingests a machine event', async () => {
+    const response = await fetch(`${baseUrl}/machine-events/ingest`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        machineCode: 'CNC-01',
+        eventType: 'RUN_STARTED',
+        sourceType: 'API',
+        payload: { batchRef: 'BATCH-1' }
+      })
+    });
+
+    expect(response.status).toBe(201);
+    expect(machineMocks.ingestMachineEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        machineCode: 'CNC-01',
+        eventType: 'RUN_STARTED',
+        sourceType: 'API'
+      }),
+      'org_local_craft_board'
+    );
+  });
+
+  it('simulates a machine event', async () => {
+    const response = await fetch(`${baseUrl}/machine-events/simulate`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        machineCode: 'CNC-01',
+        eventType: 'FAULT',
+        payload: { code: 'E-STOP' }
+      })
+    });
+
+    expect(response.status).toBe(201);
+  });
+});
+
+describe('stage signal routes', () => {
+  it('lists open stage candidate signals', async () => {
+    const response = await fetch(`${baseUrl}/stage-signals`);
+    expect(response.status).toBe(200);
+    expect(stageSignalMocks.listStageCandidateSignals).toHaveBeenCalledWith({}, 'org_local_craft_board');
+  });
+
+  it('returns stage candidate signal detail', async () => {
+    const response = await fetch(`${baseUrl}/stage-signals/sig_1`);
+    expect(response.status).toBe(200);
+    expect(stageSignalMocks.getStageCandidateSignal).toHaveBeenCalledWith('sig_1', 'org_local_craft_board');
+  });
+
+  it('applies a stage candidate signal', async () => {
+    const response = await fetch(`${baseUrl}/stage-signals/sig_1/apply`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({})
+    });
+
+    expect(response.status).toBe(200);
+    expect(stageSignalMocks.applyStageCandidateSignal).toHaveBeenCalledWith(
+      'sig_1',
+      expect.objectContaining({
+        reviewedByMemberId: 'membership_demo'
+      }),
+      'org_local_craft_board'
+    );
+  });
+
+  it('rejects a stage candidate signal', async () => {
+    const response = await fetch(`${baseUrl}/stage-signals/sig_1/reject`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        rejectionReason: 'Not trusted.'
+      })
+    });
+
+    expect(response.status).toBe(200);
+    expect(stageSignalMocks.rejectStageCandidateSignal).toHaveBeenCalledWith(
+      'sig_1',
+      expect.objectContaining({
+        reviewedByMemberId: 'membership_demo',
+        rejectionReason: 'Not trusted.'
+      }),
+      'org_local_craft_board'
+    );
+  });
+});
+
+describe('trusted auto-apply routes', () => {
+  it('lists trusted auto-apply rules', async () => {
+    trustedAutoApplyMocks.listTrustedAutoApplyRules.mockResolvedValue({
+      ok: true,
+      rules: [
+        {
+          id: 'rule_1',
+          organizationId: 'org_local_craft_board',
+          machineId: 'machine_1',
+          candidateAction: 'MARK_PART_CUT',
+          enabled: true,
+          createdAt: '2026-03-08T00:00:00.000Z',
+          updatedAt: '2026-03-08T00:00:00.000Z'
+        }
+      ]
+    });
+
+    const response = await fetch(`${baseUrl}/trusted-auto-apply/rules`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.rules).toHaveLength(1);
+  });
+
+  it('creates a trusted auto-apply rule', async () => {
+    trustedAutoApplyMocks.createTrustedAutoApplyRule.mockResolvedValue({
+      ok: true,
+      rule: {
+        id: 'rule_1',
+        organizationId: 'org_local_craft_board',
+        machineId: 'machine_1',
+        candidateAction: 'MARK_PART_CUT',
+        enabled: true,
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    });
+
+    const response = await fetch(`${baseUrl}/trusted-auto-apply/rules`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        machineId: 'machine_1',
+        candidateAction: 'MARK_PART_CUT'
+      })
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.rule.id).toBe('rule_1');
   });
 });
 

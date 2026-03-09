@@ -4,18 +4,26 @@ import { GENERATED_ARTIFACTS_DIR } from "./lib/generatedArtifacts.js";
 import { requestContextMiddleware } from "./lib/requestContext.js";
 import authRouter from "./routes/auth.js";
 import configuratorRouter from "./routes/configurator.js";
+import containersRouter from "./routes/containers.js";
+import edgeBandingRouter from "./routes/edgeBanding.js";
 import healthRouter from "./routes/health.js";
 import jobsRouter from "./routes/jobs.js";
 import labelsRouter from "./routes/labels.js";
+import machineEventsRouter from "./routes/machineEvents.js";
+import machinesRouter from "./routes/machines.js";
 import manufacturingRouter from "./routes/manufacturing.js";
+import materialForecastRouter from "./routes/materialForecast.js";
 import meRouter from "./routes/me.js";
 import orgRouter from "./routes/org.js";
 import ordersRouter from "./routes/orders.js";
 import partsRouter from "./routes/parts.js";
 import batchesRouter from "./routes/batches.js";
 import productionRouter from "./routes/production.js";
+import remnantsRouter from "./routes/remnants.js";
 import reportsRouter from "./routes/reports.js";
 import stationsRouter from "./routes/stations.js";
+import stageSignalsRouter from "./routes/stageSignals.js";
+import trustedAutoApplyRouter from "./routes/trustedAutoApply.js";
 import { logger } from "./lib/logger.js";
 
 export function createApp() {
@@ -37,13 +45,21 @@ export function createApp() {
   app.use("/me", meRouter);
   app.use("/org", orgRouter);
   app.use("/labels", labelsRouter);
+  app.use("/machine-events", machineEventsRouter);
+  app.use("/machines", machinesRouter);
   app.use("/manufacturing", manufacturingRouter);
+  app.use("/material-forecast", materialForecastRouter);
   app.use("/configurator", configuratorRouter);
+  app.use("/containers", containersRouter);
+  app.use("/edge-banding", edgeBandingRouter);
   app.use("/orders", ordersRouter);
   app.use("/parts", partsRouter);
   app.use("/batches", batchesRouter);
   app.use("/stations", stationsRouter);
+  app.use("/stage-signals", stageSignalsRouter);
+  app.use("/trusted-auto-apply", trustedAutoApplyRouter);
   app.use("/production", productionRouter);
+  app.use("/remnants", remnantsRouter);
   app.use("/reports", reportsRouter);
 
   app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {

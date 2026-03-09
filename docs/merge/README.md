@@ -44,9 +44,10 @@ These belong in the shared platform, with tenant configuration layered on top.
 ## Merge Status
 - Pending-work stabilization is complete.
 - Deploy wiring is complete.
-- The current repo is now entering the freeze-note phase.
-- The next major milestone is repo cutover planning and later execution toward `fieldmetriq-core`.
-- This repository remains the temporary execution ground while work converges toward the canonical target repo `fieldmetriq-core`.
+- Repo freeze notes are complete.
+- Repository cutover to the canonical FieldMetriq remote identity has been executed.
+- Remaining follow-up is deploy reconnect validation and local path cleanup.
+- This repository now continues as the active canonical platform repo under the `fieldmetriq-core` direction.
 
 ## Merge Docs
 - [Current Working Tree Snapshot](/Users/brandon/Projects/craft-and-board/docs/merge/current-working-tree-snapshot.md)
@@ -64,3 +65,5 @@ These belong in the shared platform, with tenant configuration layered on top.
 - [Repo Freeze Notes](/Users/brandon/Projects/craft-and-board/docs/merge/repo-freeze-notes.md)
 - [Repo Cutover Plan](/Users/brandon/Projects/craft-and-board/docs/merge/repo-cutover-plan.md)
 - [Allowed Work After Freeze](/Users/brandon/Projects/craft-and-board/docs/merge/repo-allowed-work-after-freeze.md)
+- [Repo Cutover Execution](/Users/brandon/Projects/craft-and-board/docs/merge/repo-cutover-execution.md)
+- [Repo Cutover Results](/Users/brandon/Projects/craft-and-board/docs/merge/repo-cutover-results.md)

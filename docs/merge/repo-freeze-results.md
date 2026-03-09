@@ -27,10 +27,10 @@
 - update docs and references after cutover
 
 ## What Remains Manual / Later
-- actual repo rename/move
-- remote updates
+- local folder rename
 - Vercel/Railway project reconnection after move
 - branch protection review after rename
+- lingering local-path/reference cleanup
 
 ## Recommended Next Branch
-- manual next step: execute repo cutover planning review, then perform the actual repo move/rename in a dedicated cutover branch when the team is ready
+- `chore/post-cutover-deploy-reconnect`

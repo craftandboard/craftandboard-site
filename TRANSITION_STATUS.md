@@ -1,7 +1,8 @@
 # Transition Status
 
-This repo is a transitional execution repo for the FieldMetriq platform baseline.
+This repo is now the active canonical FieldMetriq platform repository.
 
 - Canonical platform direction: `FieldMetriq`
 - Craft & Board is tenant 1 / business context
-- See `docs/merge/repo-freeze-notes.md` for the freeze rules and cutover direction
+- The old Craft & Board repo identity is retired as the platform repo identity
+- See `docs/merge/repo-cutover-execution.md` for the executed cutover state

@@ -12,6 +12,11 @@
 
 ## Recommended Cutover Sequence
 
+Status:
+- remote cutover is now executed
+- local folder rename remains optional/manual
+- deploy reconnect remains manual
+
 ### Phase 1 — Freeze Current Repo Role
 - mark this repo as transitional only
 - stop making identity-deepening Craft & Board platform changes
@@ -20,6 +25,9 @@
 - rename or move the repo to `fieldmetriq-core`
 - preserve commit history
 - avoid simultaneous deep code refactors
+Current execution note:
+- canonical remote now points to `brandonbozarth/fieldmetriq-core`
+- old remote is preserved locally as `legacy-craft-board`
 
 ### Phase 3 — Reconnect Deploy Targets
 - reconnect Vercel projects:

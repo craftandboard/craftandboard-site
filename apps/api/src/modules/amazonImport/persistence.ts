@@ -3,8 +3,10 @@ import { randomUUID } from "node:crypto";
 import type { AmazonImportResult, NormalizedOrderInput } from "./types.js";
 import { prisma } from "../../lib/prisma.js";
 import { translateShelfToManufacturingPart } from "../configurator/service.js";
+import { createPricingScenarioSnapshot } from "../pricing/service.js";
 import { scanCodeForPartId } from "../parts/scanCode.js";
-import { LOCAL_ORG_ID, LOCAL_ORG_NAME, LOCAL_ORG_SLUG } from "../settings/service.js";
+import { ensureDefaultProfiles, LOCAL_ORG_ID, LOCAL_ORG_NAME, LOCAL_ORG_SLUG } from "../settings/service.js";
+import { normalizeShelfOrderItem } from "../orderIntake/normalizer.js";
 import { buildAmazonPartCode } from "./normalization.js";
 
 function decimal(value: number) {
@@ -23,16 +25,77 @@ async function ensureOrganization(organizationId: string, organizationName = LOC
   });
 }
 
+async function getCanonicalImportDefaults(organizationId: string) {
+  await ensureDefaultProfiles();
+
+  const [costProfile, productionProfile, pricingPolicy, packagingProfile, shelfProducts] = await Promise.all([
+    prisma.costProfile.findFirst({
+      where: { organizationId, isDefault: true },
+      orderBy: { createdAt: "asc" }
+    }),
+    prisma.productionAssumptionProfile.findFirst({
+      where: { organizationId, isDefault: true },
+      orderBy: { createdAt: "asc" }
+    }),
+    prisma.pricingPolicy.findFirst({
+      where: { organizationId, isDefault: true },
+      orderBy: { createdAt: "asc" }
+    }),
+    prisma.packagingProfile.findFirst({
+      where: { organizationId, isActive: true },
+      orderBy: [{ isActive: "desc" }, { createdAt: "asc" }]
+    }),
+    prisma.shelfProduct.findMany({
+      where: { organizationId, isActive: true },
+      orderBy: { createdAt: "asc" }
+    })
+  ]);
+
+  return {
+    costProfileId: costProfile?.id,
+    productionAssumptionProfileId: productionProfile?.id,
+    pricingPolicyId: pricingPolicy?.id,
+    packagingProfileId: packagingProfile?.id,
+    shelfProducts
+  };
+}
+
+function decimalToNumber(value: Prisma.Decimal | null | undefined) {
+  return value ? value.toNumber() : null;
+}
+
+function resolveShelfProductId(input: {
+  shelfProducts: Array<{
+    id: string;
+    materialType: string;
+    defaultThicknessIn: Prisma.Decimal;
+  }>;
+  materialType: string;
+  thicknessIn: number;
+}) {
+  const match = input.shelfProducts.find(
+    (product) =>
+      product.materialType === input.materialType &&
+      decimalToNumber(product.defaultThicknessIn) === input.thicknessIn
+  );
+
+  return match?.id;
+}
+
 export async function persistAmazonOrders(
   orders: NormalizedOrderInput[],
   organizationId = LOCAL_ORG_ID
 ): Promise<Omit<AmazonImportResult, "filesProcessed" | "warnings" | "errors">> {
   await ensureOrganization(organizationId);
+  const canonicalDefaults = await getCanonicalImportDefaults(organizationId);
 
   let ordersCreated = 0;
   let orderItemsCreated = 0;
   let partInstancesCreated = 0;
   let jobsCreated = 0;
+  let salesOrdersCreated = 0;
+  let salesOrderItemsCreated = 0;
+  let shelfJobsCreated = 0;
 
   const createdOrders: AmazonImportResult["orders"] = [];
   const createdJobs: AmazonImportResult["jobs"] = [];
@@ -43,9 +106,51 @@ export async function persistAmazonOrders(
   }> = [];
 
   for (const order of orders) {
+    const existingSalesOrder = await prisma.salesOrder.findFirst({
+      where: {
+        organizationId,
+        sourceType: "AMAZON",
+        sourceOrderId: order.externalOrderId
+      },
+      select: { id: true }
+    });
+
+    const salesOrderRecord = existingSalesOrder
+      ? await prisma.salesOrder.update({
+          where: { id: existingSalesOrder.id },
+          data: {
+            sourceStatus: order.status,
+            customerName: order.customerName,
+            customerEmail: null,
+            shipToName: order.shipToName ?? null,
+            orderedAt: new Date(order.orderDate),
+            currency: "USD",
+            notes: null
+          }
+        })
+      : await prisma.salesOrder.create({
+          data: {
+            organizationId,
+            sourceType: "AMAZON",
+            sourceOrderId: order.externalOrderId,
+            sourceStatus: order.status,
+            customerName: order.customerName,
+            customerEmail: null,
+            shipToName: order.shipToName ?? null,
+            shipToAddressJson: Prisma.JsonNull,
+            orderedAt: new Date(order.orderDate),
+            currency: "USD"
+          }
+        });
+
+    if (!existingSalesOrder) {
+      salesOrdersCreated += 1;
+    }
+
     const orderRecord = await prisma.order.upsert({
       where: { amazonOrderId: order.amazonOrderId },
       update: {
+        salesOrderId: salesOrderRecord.id,
         externalOrderId: order.externalOrderId,
         externalRef: order.amazonOrderId,
         amazonOrderSource: order.amazonOrderSource,
@@ -62,6 +167,7 @@ export async function persistAmazonOrders(
       },
       create: {
         organizationId,
+        salesOrderId: salesOrderRecord.id,
         externalOrderId: order.externalOrderId,
         amazonOrderId: order.amazonOrderId,
         externalRef: order.amazonOrderId,
@@ -86,10 +192,220 @@ export async function persistAmazonOrders(
     });
 
     for (const [itemIndex, item] of order.lineItems.entries()) {
+      const shelfProductId = resolveShelfProductId({
+        shelfProducts: canonicalDefaults.shelfProducts,
+        materialType: item.materialCode,
+        thicknessIn: item.thicknessIn
+      });
+
+      const existingSalesOrderItem = await prisma.salesOrderItem.findFirst({
+        where: {
+          organizationId,
+          salesOrderId: salesOrderRecord.id,
+          sourceLineId: item.externalOrderItemId
+        },
+        select: { id: true, pricingSnapshotJson: true }
+      });
+
+      const salesOrderItemRecord = existingSalesOrderItem
+        ? await prisma.salesOrderItem.update({
+            where: { id: existingSalesOrderItem.id },
+            data: {
+              shelfProductId: shelfProductId ?? null,
+              sku: item.sku,
+              title: item.title,
+              quantity: item.quantity,
+              lengthIn: decimal(item.widthIn),
+              depthIn: decimal(item.depthIn),
+              thicknessIn: decimal(item.thicknessIn),
+              materialType: item.materialCode,
+              edgeBandPattern: item.edgeBandPattern,
+              requiresPackaging: true,
+              packagingProfileId: canonicalDefaults.packagingProfileId ?? null,
+              customizationJson: item.sourceCustomizationJson
+                ? toJsonValue(item.sourceCustomizationJson)
+                : Prisma.JsonNull,
+              notes: item.notes ?? null
+            },
+            include: { shelfProduct: true }
+          })
+        : await prisma.salesOrderItem.create({
+            data: {
+              organizationId,
+              salesOrderId: salesOrderRecord.id,
+              sourceLineId: item.externalOrderItemId,
+              shelfProductId: shelfProductId ?? null,
+              sku: item.sku,
+              title: item.title,
+              quantity: item.quantity,
+              lengthIn: decimal(item.widthIn),
+              depthIn: decimal(item.depthIn),
+              thicknessIn: decimal(item.thicknessIn),
+              materialType: item.materialCode,
+              edgeBandPattern: item.edgeBandPattern,
+              requiresPackaging: true,
+              packagingProfileId: canonicalDefaults.packagingProfileId ?? null,
+              customizationJson: item.sourceCustomizationJson
+                ? toJsonValue(item.sourceCustomizationJson)
+                : Prisma.JsonNull,
+              notes: item.notes ?? null
+            },
+            include: { shelfProduct: true }
+          });
+
+      if (!existingSalesOrderItem) {
+        salesOrderItemsCreated += 1;
+      }
+
+      const normalized = normalizeShelfOrderItem({
+        item: {
+          id: salesOrderItemRecord.id,
+          title: salesOrderItemRecord.title,
+          quantity: salesOrderItemRecord.quantity,
+          lengthIn: decimalToNumber(salesOrderItemRecord.lengthIn),
+          depthIn: decimalToNumber(salesOrderItemRecord.depthIn),
+          thicknessIn: decimalToNumber(salesOrderItemRecord.thicknessIn),
+          materialType: salesOrderItemRecord.materialType as any,
+          edgeBandPattern: salesOrderItemRecord.edgeBandPattern as any,
+          requiresPackaging: salesOrderItemRecord.requiresPackaging,
+          shelfProductId: salesOrderItemRecord.shelfProductId,
+          packagingProfileId: salesOrderItemRecord.packagingProfileId
+        },
+        shelfProduct: salesOrderItemRecord.shelfProduct
+          ? {
+              id: salesOrderItemRecord.shelfProduct.id,
+              name: salesOrderItemRecord.shelfProduct.name,
+              materialType: salesOrderItemRecord.shelfProduct.materialType as any,
+              defaultThicknessIn: Number(salesOrderItemRecord.shelfProduct.defaultThicknessIn),
+              defaultEdgeBandPattern: salesOrderItemRecord.shelfProduct.defaultEdgeBandPattern as any,
+              packagingProfileId: salesOrderItemRecord.shelfProduct.packagingProfileId
+            }
+          : null,
+        materialProfile: {
+          thicknessIn: item.thicknessIn,
+          defaultEdgeBandPattern: item.edgeBandPattern
+        },
+        defaultCostProfileId: canonicalDefaults.costProfileId,
+        defaultProductionAssumptionProfileId: canonicalDefaults.productionAssumptionProfileId,
+        defaultPricingPolicyId: canonicalDefaults.pricingPolicyId
+      });
+
+      let shelfJobRecord: { id: string } | null = null;
+      let pricingScenarioId: string | null = null;
+
+      if (normalized.ok) {
+        const spec = normalized.normalizedSpec;
+        if (
+          !spec.costProfileId ||
+          !spec.productionAssumptionProfileId ||
+          !spec.pricingPolicyId ||
+          typeof spec.lengthIn !== "number" ||
+          typeof spec.depthIn !== "number"
+        ) {
+          throw new Error("Canonical import normalization produced incomplete pricing inputs.");
+        }
+
+        const pricing = await createPricingScenarioSnapshot(
+          {
+            shelfProductId: spec.shelfProductId,
+            costProfileId: spec.costProfileId,
+            productionAssumptionProfileId: spec.productionAssumptionProfileId,
+            packagingProfileId: spec.packagingProfileId,
+            pricingPolicyId: spec.pricingPolicyId,
+            sourceType: "ORDER",
+            sourceId: salesOrderItemRecord.id,
+            input: {
+              shelfProductId: spec.shelfProductId,
+              costProfileId: spec.costProfileId,
+              productionAssumptionProfileId: spec.productionAssumptionProfileId,
+              packagingProfileId: spec.packagingProfileId,
+              pricingPolicyId: spec.pricingPolicyId,
+              lengthIn: spec.lengthIn,
+              depthIn: spec.depthIn,
+              thicknessIn: spec.thicknessIn,
+              quantity: spec.quantity,
+              materialType: spec.materialType,
+              edgeBandPattern: spec.edgeBandPattern,
+              requiresPackaging: spec.requiresPackaging
+            }
+          },
+          organizationId
+        );
+
+        pricingScenarioId = pricing.scenario.id;
+
+        await prisma.salesOrderItem.update({
+          where: { id: salesOrderItemRecord.id },
+          data: {
+            normalizedSpecJson: normalized.normalizedSpec as Prisma.InputJsonValue,
+            normalizationStatus: "NORMALIZED",
+            normalizationErrorsJson: Prisma.JsonNull,
+            pricingStatus: "PRICED",
+            pricingSnapshotJson: {
+              scenarioId: pricing.scenario.id,
+              result: pricing.result
+            } as Prisma.InputJsonValue
+          }
+        });
+
+        const existingShelfJob = await prisma.shelfJob.findFirst({
+          where: { organizationId, salesOrderItemId: salesOrderItemRecord.id },
+          select: { id: true }
+        });
+
+        shelfJobRecord = existingShelfJob
+          ? await prisma.shelfJob.update({
+              where: { id: existingShelfJob.id },
+              data: {
+                salesOrderId: salesOrderRecord.id,
+                shelfProductId: spec.shelfProductId ?? null,
+                costProfileId: spec.costProfileId,
+                productionAssumptionProfileId: spec.productionAssumptionProfileId,
+                packagingProfileId: spec.packagingProfileId ?? null,
+                pricingPolicyId: spec.pricingPolicyId,
+                pricingScenarioId: pricing.scenario.id,
+                normalizedSpecJson: spec as Prisma.InputJsonValue,
+                quantity: spec.quantity,
+                jobStatus: "READY"
+              }
+            })
+          : await prisma.shelfJob.create({
+              data: {
+                organizationId,
+                salesOrderId: salesOrderRecord.id,
+                salesOrderItemId: salesOrderItemRecord.id,
+                shelfProductId: spec.shelfProductId ?? null,
+                costProfileId: spec.costProfileId,
+                productionAssumptionProfileId: spec.productionAssumptionProfileId,
+                packagingProfileId: spec.packagingProfileId ?? null,
+                pricingPolicyId: spec.pricingPolicyId,
+                pricingScenarioId: pricing.scenario.id,
+                normalizedSpecJson: spec as Prisma.InputJsonValue,
+                quantity: spec.quantity,
+                jobStatus: "READY"
+              }
+            });
+
+        if (!existingShelfJob) {
+          shelfJobsCreated += 1;
+        }
+      } else {
+        await prisma.salesOrderItem.update({
+          where: { id: salesOrderItemRecord.id },
+          data: {
+            normalizedSpecJson: Prisma.JsonNull,
+            normalizationStatus: "HOLD",
+            normalizationErrorsJson: normalized.errors as Prisma.InputJsonValue,
+            pricingStatus: "HOLD"
+          }
+        });
+      }
+
       const orderItemRecord = await prisma.orderItem.upsert({
         where: { externalOrderItemId: item.externalOrderItemId },
         update: {
           orderId: orderRecord.id,
+          salesOrderItemId: salesOrderItemRecord.id,
           amazonOrderItemId: item.amazonOrderItemId,
           asin: item.asin,
           sku: item.sku,
@@ -114,6 +430,7 @@ export async function persistAmazonOrders(
         create: {
           organizationId,
           orderId: orderRecord.id,
+          salesOrderItemId: salesOrderItemRecord.id,
           externalOrderItemId: item.externalOrderItemId,
           amazonOrderItemId: item.amazonOrderItemId,
           asin: item.asin,
@@ -157,6 +474,7 @@ export async function persistAmazonOrders(
         organizationId,
         orderId: orderRecord.id,
         orderItemId: orderItemRecord.id,
+        shelfJobId: shelfJobRecord?.id ?? null,
         batchId: null,
         source: "AMAZON" as const,
         status: "DRAFT" as const,
@@ -277,6 +595,9 @@ export async function persistAmazonOrders(
     orderItemsCreated,
     partInstancesCreated,
     jobsCreated,
+    salesOrdersCreated,
+    salesOrderItemsCreated,
+    shelfJobsCreated,
     orders: createdOrders,
     jobs: createdJobs,
     parts: persistedParts.map((part) => ({

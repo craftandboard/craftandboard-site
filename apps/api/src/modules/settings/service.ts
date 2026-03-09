@@ -4,8 +4,8 @@ import type { MaterialCode } from '@craft-and-board/shared';
 import { COST_RATE_KEYS } from '../costing/contracts.js';
 
 const LOCAL_ORG_ID = 'org_local_craft_board';
-const LOCAL_ORG_NAME = 'Craft & Board Demo';
-const LOCAL_ORG_SLUG = 'craft-board-demo';
+const LOCAL_ORG_NAME = 'Craft & Board';
+const LOCAL_ORG_SLUG = 'craftandboard';
 const DEFAULT_COST_PROFILE_NAME = 'Starter Shelf Cost Profile';
 const DEFAULT_COST_RATE_EFFECTIVE_FROM = new Date('2026-01-01T00:00:00.000Z');
 const DEFAULT_PACKAGING_PROFILE_NAME = 'Starter Shelf Packaging';
@@ -13,6 +13,34 @@ const DEFAULT_PRODUCTION_ASSUMPTION_PROFILE_NAME = 'Starter Shelf Production Ass
 const DEFAULT_PRICING_POLICY_NAME = 'Starter Shelf Pricing Policy';
 const DEFAULT_SHELF_PRODUCT_CODE = 'SHELF-WM-075';
 const db = prisma as any;
+
+const CRAFT_BOARD_BOOTSTRAP_DEFAULTS = {
+  workstationNaming: {
+    cncOutfeed: 'CNC_OUTFEED',
+    edgebandQueue: 'EDGEBAND_QUEUE',
+    packagingStaging: 'PACKAGING_STAGING',
+    shippingStaging: 'SHIPPING_STAGING'
+  },
+  machineNaming: {
+    cncPrimary: 'CNC-PRIMARY',
+    edgebanderPrimary: 'EDGE-PRIMARY'
+  },
+  packagingDefaults: {
+    profileName: DEFAULT_PACKAGING_PROFILE_NAME
+  },
+  shippingDefaults: {
+    perUnitAllowanceKey: 'shipping_allowance_per_unit',
+    perOrderAllowanceKey: 'shipping_allowance_per_order'
+  },
+  pricingDefaults: {
+    costProfileName: DEFAULT_COST_PROFILE_NAME,
+    productionAssumptionProfileName: DEFAULT_PRODUCTION_ASSUMPTION_PROFILE_NAME,
+    pricingPolicyName: DEFAULT_PRICING_POLICY_NAME
+  },
+  materialDefaults: {
+    primaryPanelMaterials: ['WHITE_MELAMINE', 'MAPLE_MELAMINE']
+  }
+} as const;
 
 function decimal(value: number) {
   return new Prisma.Decimal(value.toFixed(3));
@@ -23,6 +51,25 @@ export async function ensureDefaultProfiles() {
     where: { id: LOCAL_ORG_ID },
     update: { name: LOCAL_ORG_NAME, slug: LOCAL_ORG_SLUG },
     create: { id: LOCAL_ORG_ID, name: LOCAL_ORG_NAME, slug: LOCAL_ORG_SLUG }
+  });
+
+  await db.orgSettings.upsert({
+    where: {
+      organizationId: LOCAL_ORG_ID
+    },
+    update: {
+      timezone: 'America/Los_Angeles',
+      currency: 'USD',
+      defaultUnitSystem: 'IMPERIAL',
+      bootstrapDefaultsJson: CRAFT_BOARD_BOOTSTRAP_DEFAULTS
+    },
+    create: {
+      organizationId: LOCAL_ORG_ID,
+      timezone: 'America/Los_Angeles',
+      currency: 'USD',
+      defaultUnitSystem: 'IMPERIAL',
+      bootstrapDefaultsJson: CRAFT_BOARD_BOOTSTRAP_DEFAULTS
+    }
   });
 
   await db.machineProfile.upsert({
@@ -831,11 +878,37 @@ export async function getMaterialProfile(materialCode: MaterialCode, organizatio
   });
 }
 
+export async function getOrganizationSettings(organizationId = LOCAL_ORG_ID) {
+  await ensureDefaultProfiles();
+  return db.orgSettings.findUniqueOrThrow({
+    where: {
+      organizationId
+    }
+  });
+}
+
+export function resolveActiveOrganizationId(organizationId?: string | null) {
+  return organizationId?.trim() || LOCAL_ORG_ID;
+}
+
 export function getCurrentOrganizationContext() {
   return {
     id: LOCAL_ORG_ID,
     name: LOCAL_ORG_NAME,
     slug: LOCAL_ORG_SLUG
+  };
+}
+
+export function getCraftBoardBootstrapDefaults() {
+  return CRAFT_BOARD_BOOTSTRAP_DEFAULTS;
+}
+
+export async function ensureCraftBoardTenantBootstrap() {
+  await ensureDefaultProfiles();
+  return {
+    organization: getCurrentOrganizationContext(),
+    settings: await getOrganizationSettings(LOCAL_ORG_ID),
+    bootstrapDefaults: getCraftBoardBootstrapDefaults()
   };
 }
 

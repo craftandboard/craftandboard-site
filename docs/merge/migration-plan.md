@@ -11,10 +11,41 @@
 ## Phase 1 — Merge foundation docs
 - Goal: define canonical direction
 - Inputs: stabilized baseline
-- Tasks: docs, inventory, branch plan, env and deploy docs
-- Outputs: merge docs
+- Tasks:
+  - document target architecture
+  - document tenant bootstrap target
+  - document platform guardrails
+  - document current-to-target mapping
+  - refine branch and migration plans for the canonical FieldMetriq direction
+- Outputs:
+  - merge docs
+  - explicit FieldMetriq platform identity
+  - explicit Craft & Board tenant direction
 - Risks: plan drift
-- Exit criteria: docs committed
+- Exit criteria:
+  - platform identity is explicit in-repo
+  - target repo shape is documented
+  - tenant bootstrap target is documented
+  - next branch is unambiguous
+
+### What Foundation Means
+- documentation, structure targets, guardrails, and migration sequencing are explicit
+- no destructive refactors are required to understand the direction
+- platform-vs-tenant boundaries are documented before moving code
+
+### What Must Be True Before Tenant Bootstrap Begins
+- stabilization is complete
+- current platform state is documented
+- target platform domains are documented
+- tenant bootstrap responsibilities are clearly separated from platform responsibilities
+- deployment direction is explicit: Vercel frontend, Railway backend/workers/database
+
+### What Must Not Be Attempted In This Phase
+- schema unification
+- repo-wide rename
+- import path or package renaming
+- broad module extraction
+- breaking runtime route surfaces for naming purity
 
 ## Phase 2 — Tenant/org bootstrap
 - Goal: treat Craft & Board as first tenant on FieldMetriq
@@ -72,3 +103,6 @@
 - Risks: development continues in wrong repo
 - Exit criteria: archive/freeze is safe
 
+## Rule
+- Do NOT skip Phase 0.
+- Do NOT start broad merge changes while current implemented work is still uncommitted or ambiguously classified.

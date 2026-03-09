@@ -16,9 +16,9 @@ import { hashPassword } from "../modules/auth/password.js";
 import { prisma } from "./prisma.js";
 
 const DEV_USER_EMAIL = "demo@craftboard.local";
-const DEV_USER_NAME = "Craft Board Demo User";
+const DEV_USER_NAME = "Craft & Board Owner";
 const DEV_OPERATOR_EMAIL = "operator@craftboard.local";
-const DEV_OPERATOR_NAME = "Craft Board Demo Operator";
+const DEV_OPERATOR_NAME = "Craft & Board Operator";
 const ALT_ORG_ID = "org_brady_builds_demo";
 const ALT_ORG_NAME = "Brady Builds Demo";
 const ALT_ORG_SLUG = "brady-builds-demo";

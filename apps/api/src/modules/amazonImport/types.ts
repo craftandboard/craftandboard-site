@@ -32,6 +32,9 @@ export interface AmazonImportResult {
   orderItemsCreated: number;
   partInstancesCreated: number;
   jobsCreated: number;
+  salesOrdersCreated: number;
+  salesOrderItemsCreated: number;
+  shelfJobsCreated: number;
   warnings: AmazonImportDiagnostic[];
   errors: AmazonImportDiagnostic[];
   orders: Array<{

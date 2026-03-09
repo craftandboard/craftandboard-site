@@ -41,6 +41,13 @@ These belong in the shared platform, with tenant configuration layered on top.
 8. Deploy wiring + cutover prep
 9. Legacy repo freeze/archive
 
+## Merge Status
+- Pending-work stabilization is complete.
+- This branch establishes the platform merge foundation only.
+- The next branch after this phase is `feat/tenant-org-bootstrap`.
+- This repository is the temporary execution ground while work converges toward the canonical target repo `fieldmetriq-core`.
+- No full migration, schema rewrite, or repo-wide rename should happen in this phase.
+
 ## Merge Docs
 - [Current Working Tree Snapshot](/Users/brandon/Projects/craft-and-board/docs/merge/current-working-tree-snapshot.md)
 - [Current Platform State](/Users/brandon/Projects/craft-and-board/docs/merge/current-platform-state.md)
@@ -48,6 +55,9 @@ These belong in the shared platform, with tenant configuration layered on top.
 - [Domain Boundary](/Users/brandon/Projects/craft-and-board/docs/merge/domain-boundary.md)
 - [Branch Plan](/Users/brandon/Projects/craft-and-board/docs/merge/branch-plan.md)
 - [Migration Plan](/Users/brandon/Projects/craft-and-board/docs/merge/migration-plan.md)
+- [Target Architecture](/Users/brandon/Projects/craft-and-board/docs/merge/target-architecture.md)
+- [Tenant Bootstrap Target](/Users/brandon/Projects/craft-and-board/docs/merge/tenant-bootstrap-target.md)
+- [Platform Guardrails](/Users/brandon/Projects/craft-and-board/docs/merge/platform-guardrails.md)
+- [Current To Target Mapping](/Users/brandon/Projects/craft-and-board/docs/merge/current-to-target-mapping.md)
 - [Deployment Topology](/Users/brandon/Projects/craft-and-board/docs/merge/deployment-topology.md)
 - [Env Matrix](/Users/brandon/Projects/craft-and-board/docs/merge/env-matrix.md)
-

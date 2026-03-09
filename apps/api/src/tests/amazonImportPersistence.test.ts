@@ -5,6 +5,36 @@ const prismaMock = vi.hoisted(() => ({
   organization: {
     upsert: vi.fn()
   },
+  costProfile: {
+    findFirst: vi.fn()
+  },
+  productionAssumptionProfile: {
+    findFirst: vi.fn()
+  },
+  pricingPolicy: {
+    findFirst: vi.fn()
+  },
+  packagingProfile: {
+    findFirst: vi.fn()
+  },
+  shelfProduct: {
+    findMany: vi.fn()
+  },
+  salesOrder: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn()
+  },
+  salesOrderItem: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn()
+  },
+  shelfJob: {
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn()
+  },
   order: {
     upsert: vi.fn()
   },
@@ -24,6 +54,19 @@ const prismaMock = vi.hoisted(() => ({
 }));
 
 vi.mock("../lib/prisma.js", () => ({ prisma: prismaMock }));
+vi.mock("../modules/settings/service.js", async () => {
+  const actual = await vi.importActual<any>("../modules/settings/service.js");
+  return {
+    ...actual,
+    ensureDefaultProfiles: vi.fn(async () => undefined)
+  };
+});
+vi.mock("../modules/pricing/service.js", () => ({
+  createPricingScenarioSnapshot: vi.fn(async () => ({
+    scenario: { id: "pricing_scenario_1" },
+    result: { pricingBreakdown: { finalRunChargeCents: 1000 } }
+  }))
+}));
 vi.mock("../modules/configurator/service.js", () => ({
   translateShelfToManufacturingPart: vi.fn(async () => ({
     partType: "SHELF",
@@ -49,6 +92,46 @@ describe("amazon import persistence", () => {
     vi.clearAllMocks();
 
     prismaMock.organization.upsert.mockResolvedValue({ id: "org_local_craft_board" });
+    prismaMock.costProfile.findFirst.mockResolvedValue({ id: "cost_profile_1" });
+    prismaMock.productionAssumptionProfile.findFirst.mockResolvedValue({ id: "production_profile_1" });
+    prismaMock.pricingPolicy.findFirst.mockResolvedValue({ id: "pricing_policy_1" });
+    prismaMock.packagingProfile.findFirst.mockResolvedValue({ id: "packaging_1" });
+    prismaMock.shelfProduct.findMany.mockResolvedValue([
+      {
+        id: "shelf_product_1",
+        materialType: "WHITE_MELAMINE",
+        defaultThicknessIn: new Prisma.Decimal("0.750")
+      }
+    ]);
+    prismaMock.salesOrder.findFirst.mockResolvedValue(null);
+    prismaMock.salesOrder.create.mockResolvedValue({ id: "sales_order_1" });
+    prismaMock.salesOrder.update.mockResolvedValue({ id: "sales_order_1" });
+    prismaMock.salesOrderItem.findFirst.mockResolvedValue(null);
+    prismaMock.salesOrderItem.create.mockResolvedValue({
+      id: "sales_order_item_1",
+      title: "White Shelf",
+      quantity: 2,
+      lengthIn: new Prisma.Decimal("19.250"),
+      depthIn: new Prisma.Decimal("12.500"),
+      thicknessIn: new Prisma.Decimal("0.750"),
+      materialType: "WHITE_MELAMINE",
+      edgeBandPattern: "ALL_FOUR",
+      requiresPackaging: true,
+      shelfProductId: "shelf_product_1",
+      packagingProfileId: "packaging_1",
+      shelfProduct: {
+        id: "shelf_product_1",
+        name: "3/4 White Melamine Shelf",
+        materialType: "WHITE_MELAMINE",
+        defaultThicknessIn: new Prisma.Decimal("0.750"),
+        defaultEdgeBandPattern: "ALL_FOUR",
+        packagingProfileId: "packaging_1"
+      }
+    });
+    prismaMock.salesOrderItem.update.mockResolvedValue({ id: "sales_order_item_1" });
+    prismaMock.shelfJob.findFirst.mockResolvedValue(null);
+    prismaMock.shelfJob.create.mockResolvedValue({ id: "shelf_job_1" });
+    prismaMock.shelfJob.update.mockResolvedValue({ id: "shelf_job_1" });
     prismaMock.order.upsert.mockResolvedValue({ id: "order_1" });
     prismaMock.orderItem.upsert.mockResolvedValue({ id: "item_1" });
     prismaMock.manufacturingJob.findFirst.mockResolvedValue(null);
@@ -124,18 +207,44 @@ describe("amazon import persistence", () => {
       }
     ]);
 
+    expect(prismaMock.salesOrder.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        organizationId: "org_local_craft_board",
+        sourceType: "AMAZON",
+        sourceOrderId: "111-5237066-4129810"
+      })
+    });
+    expect(prismaMock.salesOrderItem.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        salesOrderId: "sales_order_1",
+        sourceLineId: "123098226833562",
+        materialType: "WHITE_MELAMINE"
+      }),
+      include: { shelfProduct: true }
+    });
+    expect(prismaMock.shelfJob.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        salesOrderId: "sales_order_1",
+        salesOrderItemId: "sales_order_item_1",
+        quantity: 2,
+        jobStatus: "READY"
+      })
+    });
     expect(prismaMock.order.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
         update: expect.objectContaining({
+          salesOrderId: "sales_order_1",
           channel: "AMAZON"
         }),
         create: expect.objectContaining({
+          salesOrderId: "sales_order_1",
           channel: "AMAZON"
         })
       })
     );
     expect(prismaMock.manufacturingJob.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
+        shelfJobId: "shelf_job_1",
         source: "AMAZON",
         status: "DRAFT",
         channel: "AMAZON",
@@ -156,6 +265,9 @@ describe("amazon import persistence", () => {
       orderItemsCreated: 1,
       partInstancesCreated: 2,
       jobsCreated: 1,
+      salesOrdersCreated: 1,
+      salesOrderItemsCreated: 1,
+      shelfJobsCreated: 1,
       orders: [{ id: "order_1", source: "AMAZON" }],
       jobs: [
         {

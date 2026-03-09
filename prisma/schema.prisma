@@ -130,6 +130,11 @@ enum OrganizationMemberRole {
   OPERATOR
 }
 
+enum UnitSystem {
+  IMPERIAL
+  METRIC
+}
+
 enum ContainerType {
   CONTAINER
   BIN
@@ -361,6 +366,12 @@ enum PricingRoundingMode {
   UP
 }
 
+enum CostEstimateStatus {
+  COMPLETE
+  PARTIAL
+  ERROR
+}
+
 enum SalesOrderSourceType {
   MANUAL
   AMAZON
@@ -484,6 +495,7 @@ model Organization {
   updatedAt DateTime  @updatedAt
   users     User[]    @relation("UserDefaultOrganization")
   memberships OrganizationMember[]
+  settings  OrgSettings?
   orders    Order[]
   orderItems OrderItem[]
   parts     Part[]
@@ -515,6 +527,8 @@ model Organization {
   costProfiles CostProfile[]
   costRates CostRate[]
   costScenarios CostScenario[]
+  shelfCostEstimates ShelfCostEstimate[]
+  orderCostEstimates OrderCostEstimate[]
   shelfProducts ShelfProduct[]
   productionAssumptionProfiles ProductionAssumptionProfile[]
   packagingProfiles PackagingProfile[]
@@ -537,6 +551,20 @@ model Organization {
   activeContainerSessions ActiveContainerSession[]
 }
 
+model OrgSettings {
+  id                   String       @id @default(cuid())
+  organizationId       String       @unique
+  timezone             String
+  currency             String
+  defaultUnitSystem    UnitSystem   @default(IMPERIAL)
+  bootstrapDefaultsJson Json?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
 model User {
   id             String       @id @default(cuid())
   organizationId String
@@ -553,6 +581,8 @@ model User {
   passwordResetTokens PasswordResetToken[]
   costScenarios  CostScenario[]
   pricingScenarios PricingScenario[]
+  shelfCostEstimates ShelfCostEstimate[]
+  orderCostEstimates OrderCostEstimate[]
   manufacturingPackets ManufacturingPacket[]
   packetExpansionRuns PacketExpansionRun[]
   scanEvents           ScanEvent[]             @relation("ScanEventScannedByUser")
@@ -622,6 +652,7 @@ model PasswordResetToken {
 model Order {
   id               String       @id @default(cuid())
   organizationId   String
+  salesOrderId     String?      @unique
   externalRef      String?
   externalOrderId  String?      @unique
   amazonOrderId    String?      @unique
@@ -639,6 +670,7 @@ model Order {
   createdAt        DateTime     @default(now())
   updatedAt        DateTime     @updatedAt
   organization     Organization @relation(fields: [organizationId], references: [id])
+  salesOrder       SalesOrder?  @relation("LegacyOrderToSalesOrder", fields: [salesOrderId], references: [id])
   items            OrderItem[]
   parts            Part[]
   shipments        Shipment[]
@@ -654,6 +686,7 @@ model OrderItem {
   id                    String          @id @default(cuid())
   organizationId        String?
   orderId               String
+  salesOrderItemId      String?         @unique
   externalOrderItemId   String?         @unique
   amazonOrderItemId     String?         @unique
   asin                  String?
@@ -677,6 +710,7 @@ model OrderItem {
   updatedAt             DateTime        @updatedAt
   organization          Organization?   @relation(fields: [organizationId], references: [id])
   order                 Order           @relation(fields: [orderId], references: [id])
+  salesOrderItem        SalesOrderItem? @relation("LegacyOrderItemToSalesOrderItem", fields: [salesOrderItemId], references: [id])
   parts                 Part[]
   manufacturingJobs     ManufacturingJob[]
 
@@ -689,6 +723,7 @@ model Part {
   organizationId    String?
   orderItemId      String?
   batchId          String?
+  manufacturingPartId String?       @unique
   currentContainerId String?
   orderId          String?
   manufacturingJobId String?
@@ -712,6 +747,7 @@ model Part {
   order            Order?           @relation(fields: [orderId], references: [id])
   orderItem        OrderItem?       @relation(fields: [orderItemId], references: [id])
   batch            Batch?           @relation(fields: [batchId], references: [id])
+  manufacturingPart ManufacturingPart? @relation("LegacyPartToManufacturingPart", fields: [manufacturingPartId], references: [id])
   currentContainer Container?       @relation("CurrentContainerParts", fields: [currentContainerId], references: [id])
   manufacturingJob ManufacturingJob? @relation(fields: [manufacturingJobId], references: [id])
   placements       SheetPlacement[]
@@ -732,6 +768,7 @@ model ManufacturingJob {
   organizationId    String
   orderId           String?
   orderItemId       String?
+  shelfJobId        String?                @unique
   batchId           String?
   source            JobSource              @default(CONFIGURATOR)
   status            ManufacturingJobStatus @default(DRAFT)
@@ -751,6 +788,7 @@ model ManufacturingJob {
   organization      Organization           @relation(fields: [organizationId], references: [id])
   order             Order?                 @relation(fields: [orderId], references: [id])
   orderItem         OrderItem?             @relation(fields: [orderItemId], references: [id])
+  shelfJob          ShelfJob?              @relation("LegacyManufacturingJobToShelfJob", fields: [shelfJobId], references: [id])
   batch             Batch?                 @relation(fields: [batchId], references: [id])
   parts             Part[]
   containers        Container[]
@@ -764,6 +802,7 @@ model ManufacturingJob {
 model Batch {
   id             String       @id @default(cuid())
   organizationId String
+  manufacturingBatchId String? @unique
   code           String       @unique
   name           String
   status         BatchStatus  @default(DRAFT)
@@ -772,6 +811,7 @@ model Batch {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
   organization   Organization @relation(fields: [organizationId], references: [id])
+  manufacturingBatch ManufacturingBatch? @relation("LegacyBatchToManufacturingBatch", fields: [manufacturingBatchId], references: [id])
   parts          Part[]
   manufacturingJobs ManufacturingJob[]
   sheets         Sheet[]
@@ -1432,6 +1472,8 @@ model CostProfile {
   scenarios      CostScenario[]
   pricingScenarios PricingScenario[]
   shelfJobs      ShelfJob[]
+  shelfCostEstimates ShelfCostEstimate[]
+  orderCostEstimates OrderCostEstimate[]
 
   @@index([organizationId, isDefault])
 }
@@ -1518,6 +1560,8 @@ model ProductionAssumptionProfile {
   organization                 Organization      @relation(fields: [organizationId], references: [id])
   pricingScenarios             PricingScenario[]
   shelfJobs                    ShelfJob[]
+  shelfCostEstimates           ShelfCostEstimate[]
+  orderCostEstimates           OrderCostEstimate[]
 
   @@index([organizationId, isDefault])
   @@unique([organizationId, name])
@@ -1543,6 +1587,8 @@ model PackagingProfile {
   pricingScenarios          PricingScenario[]
   salesOrderItems           SalesOrderItem[]
   shelfJobs                 ShelfJob[]
+  shelfCostEstimates        ShelfCostEstimate[]
+  orderCostEstimates        OrderCostEstimate[]
 
   @@unique([organizationId, name])
   @@index([organizationId, isActive])
@@ -1564,6 +1610,8 @@ model PricingPolicy {
   organization                Organization        @relation(fields: [organizationId], references: [id])
   pricingScenarios            PricingScenario[]
   shelfJobs                   ShelfJob[]
+  shelfCostEstimates          ShelfCostEstimate[]
+  orderCostEstimates          OrderCostEstimate[]
 
   @@index([organizationId, isDefault])
   @@unique([organizationId, name])
@@ -1612,9 +1660,12 @@ model SalesOrder {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   organization      Organization        @relation(fields: [organizationId], references: [id])
+  legacyOrder       Order?              @relation("LegacyOrderToSalesOrder")
   items             SalesOrderItem[]
   shelfJobs         ShelfJob[]
   manufacturingParts ManufacturingPart[]
+  shelfCostEstimates ShelfCostEstimate[]
+  costEstimates     OrderCostEstimate[]
 
   @@index([organizationId, status, createdAt])
   @@index([organizationId, sourceType, createdAt])
@@ -1648,10 +1699,12 @@ model SalesOrderItem {
   updatedAt             DateTime                          @updatedAt
   organization          Organization                      @relation(fields: [organizationId], references: [id])
   salesOrder            SalesOrder                        @relation(fields: [salesOrderId], references: [id])
+  legacyOrderItem       OrderItem?                        @relation("LegacyOrderItemToSalesOrderItem")
   shelfProduct          ShelfProduct?                     @relation(fields: [shelfProductId], references: [id])
   packagingProfile      PackagingProfile?                 @relation(fields: [packagingProfileId], references: [id])
   shelfJobs             ShelfJob[]
   manufacturingParts    ManufacturingPart[]
+  shelfCostEstimates    ShelfCostEstimate[]
 
   @@index([organizationId, salesOrderId, createdAt])
   @@index([organizationId, normalizationStatus, pricingStatus])
@@ -1678,6 +1731,7 @@ model ShelfJob {
   organization                 Organization   @relation(fields: [organizationId], references: [id])
   salesOrder                   SalesOrder     @relation(fields: [salesOrderId], references: [id])
   salesOrderItem               SalesOrderItem @relation(fields: [salesOrderItemId], references: [id])
+  legacyManufacturingJob       ManufacturingJob? @relation("LegacyManufacturingJobToShelfJob")
   manufacturingPacket          ManufacturingPacket? @relation(fields: [manufacturingPacketId], references: [id])
   shelfProduct                 ShelfProduct?  @relation(fields: [shelfProductId], references: [id])
   costProfile                  CostProfile    @relation(fields: [costProfileId], references: [id])
@@ -1686,10 +1740,75 @@ model ShelfJob {
   pricingPolicy                PricingPolicy  @relation(fields: [pricingPolicyId], references: [id])
   pricingScenario              PricingScenario? @relation(fields: [pricingScenarioId], references: [id])
   manufacturingParts           ManufacturingPart[]
+  costEstimates                ShelfCostEstimate[]
 
   @@index([organizationId, jobStatus, createdAt])
   @@index([organizationId, salesOrderId])
   @@index([organizationId, manufacturingPacketId])
+}
+
+model ShelfCostEstimate {
+  id                            String                       @id @default(cuid())
+  organizationId                String
+  shelfJobId                    String
+  salesOrderId                  String
+  salesOrderItemId              String
+  costProfileId                 String
+  productionAssumptionProfileId String
+  packagingProfileId            String?
+  pricingPolicyId               String
+  estimateStatus                CostEstimateStatus           @default(COMPLETE)
+  warningsJson                  Json?
+  inputSnapshotJson             Json
+  assumptionSnapshotJson        Json
+  resultJson                    Json
+  isCurrent                     Boolean                      @default(true)
+  createdByUserId               String?
+  createdAt                     DateTime                     @default(now())
+  updatedAt                     DateTime                     @updatedAt
+  organization                  Organization                 @relation(fields: [organizationId], references: [id])
+  shelfJob                      ShelfJob                     @relation(fields: [shelfJobId], references: [id])
+  salesOrder                    SalesOrder                   @relation(fields: [salesOrderId], references: [id])
+  salesOrderItem                SalesOrderItem               @relation(fields: [salesOrderItemId], references: [id])
+  costProfile                   CostProfile                  @relation(fields: [costProfileId], references: [id])
+  productionAssumptionProfile   ProductionAssumptionProfile  @relation(fields: [productionAssumptionProfileId], references: [id])
+  packagingProfile              PackagingProfile?            @relation(fields: [packagingProfileId], references: [id])
+  pricingPolicy                 PricingPolicy                @relation(fields: [pricingPolicyId], references: [id])
+  createdByUser                 User?                        @relation(fields: [createdByUserId], references: [id])
+
+  @@index([organizationId, shelfJobId, createdAt])
+  @@index([organizationId, salesOrderId, createdAt])
+  @@index([organizationId, salesOrderItemId, createdAt])
+  @@index([organizationId, isCurrent, createdAt])
+}
+
+model OrderCostEstimate {
+  id                            String                       @id @default(cuid())
+  organizationId                String
+  salesOrderId                  String
+  costProfileId                 String
+  productionAssumptionProfileId String?
+  packagingProfileId            String?
+  pricingPolicyId               String?
+  estimateStatus                CostEstimateStatus           @default(COMPLETE)
+  warningsJson                  Json?
+  inputSnapshotJson             Json
+  assumptionSnapshotJson        Json
+  resultJson                    Json
+  isCurrent                     Boolean                      @default(true)
+  createdByUserId               String?
+  createdAt                     DateTime                     @default(now())
+  updatedAt                     DateTime                     @updatedAt
+  organization                  Organization                 @relation(fields: [organizationId], references: [id])
+  salesOrder                    SalesOrder                   @relation(fields: [salesOrderId], references: [id])
+  costProfile                   CostProfile                  @relation(fields: [costProfileId], references: [id])
+  productionAssumptionProfile   ProductionAssumptionProfile? @relation(fields: [productionAssumptionProfileId], references: [id])
+  packagingProfile              PackagingProfile?            @relation(fields: [packagingProfileId], references: [id])
+  pricingPolicy                 PricingPolicy?               @relation(fields: [pricingPolicyId], references: [id])
+  createdByUser                 User?                        @relation(fields: [createdByUserId], references: [id])
+
+  @@index([organizationId, salesOrderId, createdAt])
+  @@index([organizationId, isCurrent, createdAt])
 }
 
 model ManufacturingPacket {
@@ -1742,6 +1861,7 @@ model ManufacturingPart {
   organization          Organization             @relation(fields: [organizationId], references: [id])
   manufacturingPacket   ManufacturingPacket      @relation(fields: [manufacturingPacketId], references: [id])
   shelfJob              ShelfJob                 @relation(fields: [shelfJobId], references: [id])
+  legacyPart            Part?                    @relation("LegacyPartToManufacturingPart")
   salesOrder            SalesOrder               @relation(fields: [salesOrderId], references: [id])
   salesOrderItem        SalesOrderItem           @relation(fields: [salesOrderItemId], references: [id])
   batch                 ManufacturingBatch?      @relation(fields: [batchId], references: [id])
@@ -1775,6 +1895,7 @@ model ManufacturingBatch {
   createdAt      DateTime                 @default(now())
   updatedAt      DateTime                 @updatedAt
   organization   Organization             @relation(fields: [organizationId], references: [id])
+  legacyBatch    Batch?                   @relation("LegacyBatchToManufacturingBatch")
   parts          ManufacturingPart[]
   batchParts     ManufacturingBatchPart[]
   scanEvents     ScanEvent[]

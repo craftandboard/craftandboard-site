@@ -19,9 +19,10 @@ const prismaMock = vi.hoisted(() => ({
 
 const settingsMocks = vi.hoisted(() => ({
   ensureDefaultProfiles: vi.fn(),
+  getOrganizationSettings: vi.fn(),
   LOCAL_ORG_ID: "org_local_craft_board",
-  LOCAL_ORG_NAME: "Craft & Board Demo",
-  LOCAL_ORG_SLUG: "craft-board-demo"
+  LOCAL_ORG_NAME: "Craft & Board",
+  LOCAL_ORG_SLUG: "craftandboard"
 }));
 
 const envMocks = vi.hoisted(() => ({
@@ -43,13 +44,13 @@ describe("request context", () => {
     prismaMock.user.upsert.mockResolvedValue({
       id: "user_demo",
       email: DEV_USER_EMAIL,
-      name: "Craft Board Demo User",
+      name: "Craft & Board Owner",
       organizationId: "org_local_craft_board"
     });
     prismaMock.organization.upsert.mockResolvedValue({
       id: "org_local_craft_board",
-      name: "Craft & Board Demo",
-      slug: "craft-board-demo"
+      name: "Craft & Board",
+      slug: "craftandboard"
     });
     prismaMock.session.findUnique.mockResolvedValue(null);
     prismaMock.session.delete.mockResolvedValue({ id: "session_1" });
@@ -59,15 +60,15 @@ describe("request context", () => {
       role: "OWNER",
       organization: {
         id: "org_local_craft_board",
-        name: "Craft & Board Demo",
-        slug: "craft-board-demo"
+        name: "Craft & Board",
+        slug: "craftandboard"
       }
     });
 
     prismaMock.user.findUnique.mockResolvedValue({
       id: "user_demo",
       email: DEV_USER_EMAIL,
-      name: "Craft Board Demo User",
+      name: "Craft & Board Owner",
       organizationId: "org_local_craft_board",
       memberships: [
         {
@@ -77,8 +78,8 @@ describe("request context", () => {
           createdAt: new Date("2026-03-08T00:00:00.000Z"),
           organization: {
             id: "org_local_craft_board",
-            name: "Craft & Board Demo",
-            slug: "craft-board-demo"
+            name: "Craft & Board",
+            slug: "craftandboard"
           }
         },
         {
@@ -104,7 +105,7 @@ describe("request context", () => {
     expect(prismaMock.user.upsert).toHaveBeenCalledTimes(2);
     expect(prismaMock.organizationMember.upsert).toHaveBeenCalledTimes(3);
     expect(context.currentUser.email).toBe(DEV_USER_EMAIL);
-    expect(context.currentOrganization.slug).toBe("craft-board-demo");
+    expect(context.currentOrganization.slug).toBe("craftandboard");
     expect(context.membership.role).toBe("OWNER");
     expect(context.organizations).toHaveLength(2);
   });

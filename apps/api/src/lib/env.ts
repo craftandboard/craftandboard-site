@@ -4,10 +4,12 @@ import { z } from "zod";
 config();
 
 process.env.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/craftandboard";
+process.env.PORT_API ??= process.env.PORT;
 process.env.PORT_API ??= "4000";
 process.env.REDIS_URL ??= "redis://localhost:6379";
 process.env.ENABLE_BACKGROUND_WORKER ??= "false";
 process.env.CNC_WATCH_FOLDER_PATH ??= "";
+process.env.AUTH_SESSION_SECRET ??= process.env.AUTH_SECRET;
 process.env.AUTH_SESSION_SECRET ??= "craft-board-dev-session-secret";
 process.env.ALLOW_DEV_AUTH_BYPASS ??= "false";
 

@@ -7,7 +7,11 @@
 ## Backend API
 - `DATABASE_URL`
 - `DIRECT_URL`
+- `PORT`
+- `PORT_API`
 - `AUTH_SECRET`
+- `AUTH_SESSION_SECRET`
+- `ENABLE_BACKGROUND_WORKER`
 
 ## Database
 - `DATABASE_URL`
@@ -15,6 +19,7 @@
 
 ## Auth / Session
 - `AUTH_SECRET`
+- `AUTH_SESSION_SECRET`
 - `SESSION_COOKIE_NAME`
 
 ## Integrations
@@ -28,6 +33,7 @@
 
 ## Queues / Workers
 - `QUEUE_*`
+- `QUEUE_REDIS_URL`
 
 ## Matrix
 
@@ -42,3 +48,27 @@
 | printing/labels | local output path | dev config | prod config |
 | queues/workers | local Redis | Railway/managed Redis dev | Railway/managed Redis prod |
 
+## Vercel Only
+- `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_API_BASE_URL`
+
+## Railway Only
+- `DATABASE_URL`
+- `DIRECT_URL`
+- `PORT`
+- `PORT_API`
+- `REDIS_URL`
+- `QUEUE_REDIS_URL`
+- `ENABLE_BACKGROUND_WORKER`
+- `STORAGE_*`
+- `PRINT_*`
+- `AMAZON_*`
+
+## Shared Across Web And API
+- `AUTH_SECRET`
+- `AUTH_SESSION_SECRET`
+
+## Notes
+- `apps/web` now resolves API base URL from `NEXT_PUBLIC_API_BASE_URL` first, then `API_BASE_URL`, then localhost.
+- `apps/api` now resolves `PORT_API` from Railway `PORT` when present.
+- Railway should own the database and queue runtime vars even when the frontend is deployed on Vercel.

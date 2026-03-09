@@ -186,3 +186,166 @@ export async function createCostScenario(input: {
     }
   });
 }
+
+export async function getShelfJobByIdForCosting(shelfJobId: string, organizationId: string) {
+  return prisma.shelfJob.findFirst({
+    where: { id: shelfJobId, organizationId },
+    include: {
+      salesOrder: true,
+      salesOrderItem: {
+        include: {
+          shelfProduct: true,
+          packagingProfile: true
+        }
+      },
+      shelfProduct: true,
+      packagingProfile: true,
+      costProfile: true,
+      productionAssumptionProfile: true,
+      pricingPolicy: true
+    }
+  });
+}
+
+export async function getSalesOrderByIdForCosting(salesOrderId: string, organizationId: string) {
+  return prisma.salesOrder.findFirst({
+    where: { id: salesOrderId, organizationId },
+    include: {
+      items: {
+        include: {
+          shelfProduct: true,
+          packagingProfile: true
+        },
+        orderBy: { createdAt: "asc" }
+      },
+      shelfJobs: {
+        include: {
+          salesOrderItem: {
+            include: {
+              shelfProduct: true,
+              packagingProfile: true
+            }
+          },
+          shelfProduct: true,
+          packagingProfile: true,
+          costProfile: true,
+          productionAssumptionProfile: true,
+          pricingPolicy: true
+        },
+        orderBy: { createdAt: "asc" }
+      }
+    }
+  });
+}
+
+export async function clearCurrentShelfCostEstimates(shelfJobId: string, organizationId: string) {
+  await prisma.shelfCostEstimate.updateMany({
+    where: {
+      organizationId,
+      shelfJobId,
+      isCurrent: true
+    },
+    data: { isCurrent: false }
+  });
+}
+
+export async function createShelfCostEstimate(input: {
+  organizationId: string;
+  shelfJobId: string;
+  salesOrderId: string;
+  salesOrderItemId: string;
+  costProfileId: string;
+  productionAssumptionProfileId: string;
+  packagingProfileId?: string;
+  pricingPolicyId: string;
+  estimateStatus: "COMPLETE" | "PARTIAL" | "ERROR";
+  warningsJson?: unknown;
+  inputSnapshotJson: unknown;
+  assumptionSnapshotJson: unknown;
+  resultJson: unknown;
+  createdByUserId?: string;
+}) {
+  return prisma.shelfCostEstimate.create({
+    data: {
+      organizationId: input.organizationId,
+      shelfJobId: input.shelfJobId,
+      salesOrderId: input.salesOrderId,
+      salesOrderItemId: input.salesOrderItemId,
+      costProfileId: input.costProfileId,
+      productionAssumptionProfileId: input.productionAssumptionProfileId,
+      packagingProfileId: input.packagingProfileId ?? null,
+      pricingPolicyId: input.pricingPolicyId,
+      estimateStatus: input.estimateStatus,
+      warningsJson: (input.warningsJson ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+      inputSnapshotJson: input.inputSnapshotJson as Prisma.InputJsonValue,
+      assumptionSnapshotJson: input.assumptionSnapshotJson as Prisma.InputJsonValue,
+      resultJson: input.resultJson as Prisma.InputJsonValue,
+      createdByUserId: input.createdByUserId ?? null
+    }
+  });
+}
+
+export async function getLatestShelfCostEstimate(shelfJobId: string, organizationId: string) {
+  return prisma.shelfCostEstimate.findFirst({
+    where: {
+      organizationId,
+      shelfJobId,
+      isCurrent: true
+    },
+    orderBy: { createdAt: "desc" }
+  });
+}
+
+export async function clearCurrentOrderCostEstimates(salesOrderId: string, organizationId: string) {
+  await prisma.orderCostEstimate.updateMany({
+    where: {
+      organizationId,
+      salesOrderId,
+      isCurrent: true
+    },
+    data: { isCurrent: false }
+  });
+}
+
+export async function createOrderCostEstimate(input: {
+  organizationId: string;
+  salesOrderId: string;
+  costProfileId: string;
+  productionAssumptionProfileId?: string;
+  packagingProfileId?: string;
+  pricingPolicyId?: string;
+  estimateStatus: "COMPLETE" | "PARTIAL" | "ERROR";
+  warningsJson?: unknown;
+  inputSnapshotJson: unknown;
+  assumptionSnapshotJson: unknown;
+  resultJson: unknown;
+  createdByUserId?: string;
+}) {
+  return prisma.orderCostEstimate.create({
+    data: {
+      organizationId: input.organizationId,
+      salesOrderId: input.salesOrderId,
+      costProfileId: input.costProfileId,
+      productionAssumptionProfileId: input.productionAssumptionProfileId ?? null,
+      packagingProfileId: input.packagingProfileId ?? null,
+      pricingPolicyId: input.pricingPolicyId ?? null,
+      estimateStatus: input.estimateStatus,
+      warningsJson: (input.warningsJson ?? Prisma.JsonNull) as Prisma.InputJsonValue,
+      inputSnapshotJson: input.inputSnapshotJson as Prisma.InputJsonValue,
+      assumptionSnapshotJson: input.assumptionSnapshotJson as Prisma.InputJsonValue,
+      resultJson: input.resultJson as Prisma.InputJsonValue,
+      createdByUserId: input.createdByUserId ?? null
+    }
+  });
+}
+
+export async function getLatestOrderCostEstimate(salesOrderId: string, organizationId: string) {
+  return prisma.orderCostEstimate.findFirst({
+    where: {
+      organizationId,
+      salesOrderId,
+      isCurrent: true
+    },
+    orderBy: { createdAt: "desc" }
+  });
+}

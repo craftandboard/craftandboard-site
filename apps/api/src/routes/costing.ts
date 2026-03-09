@@ -13,8 +13,12 @@ import {
   calculateCost,
   createCostProfile,
   createCostScenarioSnapshot,
+  getSalesOrderCostEstimate,
   getCostProfileRates,
   getCostProfiles,
+  getShelfJobCostEstimate,
+  recomputeSalesOrderCostEstimate,
+  recomputeShelfJobCostEstimate,
   updateCostProfile,
   upsertCostRates
 } from "../modules/costing/service.js";
@@ -119,6 +123,46 @@ router.post("/scenarios", async (req, res, next) => {
         context.currentOrganization.id
       )
     );
+  } catch (error) {
+    handleRouteError(error, res, next);
+  }
+});
+
+router.get("/shelf-jobs/:id/estimate", async (req, res, next) => {
+  try {
+    const context = getRequestContext(req);
+    assertCapability(context, "costing_read");
+    res.json(await getShelfJobCostEstimate(req.params.id, context.currentOrganization.id));
+  } catch (error) {
+    handleRouteError(error, res, next);
+  }
+});
+
+router.post("/shelf-jobs/:id/estimate", async (req, res, next) => {
+  try {
+    const context = getRequestContext(req);
+    assertCapability(context, "costing_manage");
+    res.status(201).json(await recomputeShelfJobCostEstimate(req.params.id, context.currentOrganization.id, context.currentUser.id));
+  } catch (error) {
+    handleRouteError(error, res, next);
+  }
+});
+
+router.get("/orders/:id/estimate", async (req, res, next) => {
+  try {
+    const context = getRequestContext(req);
+    assertCapability(context, "costing_read");
+    res.json(await getSalesOrderCostEstimate(req.params.id, context.currentOrganization.id));
+  } catch (error) {
+    handleRouteError(error, res, next);
+  }
+});
+
+router.post("/orders/:id/estimate", async (req, res, next) => {
+  try {
+    const context = getRequestContext(req);
+    assertCapability(context, "costing_manage");
+    res.status(201).json(await recomputeSalesOrderCostEstimate(req.params.id, context.currentOrganization.id, context.currentUser.id));
   } catch (error) {
     handleRouteError(error, res, next);
   }

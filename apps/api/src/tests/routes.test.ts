@@ -67,8 +67,12 @@ const costingMocks = vi.hoisted(() => ({
   calculateCost: vi.fn(),
   createCostProfile: vi.fn(),
   createCostScenarioSnapshot: vi.fn(),
+  getSalesOrderCostEstimate: vi.fn(),
   getCostProfileRates: vi.fn(),
   getCostProfiles: vi.fn(),
+  getShelfJobCostEstimate: vi.fn(),
+  recomputeSalesOrderCostEstimate: vi.fn(),
+  recomputeShelfJobCostEstimate: vi.fn(),
   updateCostProfile: vi.fn(),
   upsertCostRates: vi.fn()
 }));
@@ -3738,6 +3742,99 @@ describe('costing routes', () => {
 
     expect(response.status).toBe(200);
     expect(payload.result.breakdown.recommendedSellPriceCents).toBe(5421);
+  });
+
+  it('gets a shelf-job cost estimate', async () => {
+    costingMocks.getShelfJobCostEstimate.mockResolvedValue({
+      ok: true,
+      estimate: {
+        id: 'shelf_estimate_1',
+        estimateStatus: 'COMPLETE',
+        warnings: [],
+        inputSnapshot: { shelfJobId: 'shelf_job_1' },
+        assumptionSnapshot: { profilesUsed: {} },
+        result: { totalEstimatedCostCents: 9201 },
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    });
+
+    const response = await fetch(`${baseUrl}/costing/shelf-jobs/shelf_job_1/estimate`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.estimate.id).toBe('shelf_estimate_1');
+  });
+
+  it('recomputes a shelf-job cost estimate', async () => {
+    costingMocks.recomputeShelfJobCostEstimate.mockResolvedValue({
+      ok: true,
+      estimate: {
+        id: 'shelf_estimate_1',
+        estimateStatus: 'COMPLETE',
+        warnings: [],
+        inputSnapshot: { shelfJobId: 'shelf_job_1' },
+        assumptionSnapshot: { profilesUsed: {} },
+        result: { totalEstimatedCostCents: 9201 },
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    });
+
+    const response = await fetch(`${baseUrl}/costing/shelf-jobs/shelf_job_1/estimate`, {
+      method: 'POST'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.estimate.id).toBe('shelf_estimate_1');
+  });
+
+  it('gets a sales-order cost estimate', async () => {
+    costingMocks.getSalesOrderCostEstimate.mockResolvedValue({
+      ok: true,
+      estimate: {
+        id: 'order_estimate_1',
+        estimateStatus: 'COMPLETE',
+        warnings: [],
+        inputSnapshot: { salesOrderId: 'sales_order_1' },
+        assumptionSnapshot: { lineAssumptions: [] },
+        result: { totalEstimatedOrderCostCents: 12000 },
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    });
+
+    const response = await fetch(`${baseUrl}/costing/orders/sales_order_1/estimate`);
+    const payload = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(payload.estimate.id).toBe('order_estimate_1');
+  });
+
+  it('recomputes a sales-order cost estimate', async () => {
+    costingMocks.recomputeSalesOrderCostEstimate.mockResolvedValue({
+      ok: true,
+      estimate: {
+        id: 'order_estimate_1',
+        estimateStatus: 'PARTIAL',
+        warnings: ['ShelfJob shelf_job_bad: missing depth'],
+        inputSnapshot: { salesOrderId: 'sales_order_1' },
+        assumptionSnapshot: { lineAssumptions: [] },
+        result: { totalEstimatedOrderCostCents: 12000 },
+        createdAt: '2026-03-08T00:00:00.000Z',
+        updatedAt: '2026-03-08T00:00:00.000Z'
+      }
+    });
+
+    const response = await fetch(`${baseUrl}/costing/orders/sales_order_1/estimate`, {
+      method: 'POST'
+    });
+    const payload = await response.json();
+
+    expect(response.status).toBe(201);
+    expect(payload.estimate.id).toBe('order_estimate_1');
+    expect(payload.estimate.estimateStatus).toBe('PARTIAL');
   });
 });
 

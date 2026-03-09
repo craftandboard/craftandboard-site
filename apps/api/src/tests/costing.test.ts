@@ -3,7 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const repositoryMocks = vi.hoisted(() => ({
   createCostProfile: vi.fn(),
   createCostScenario: vi.fn(),
+  createOrderCostEstimate: vi.fn(),
+  createShelfCostEstimate: vi.fn(),
+  clearCurrentOrderCostEstimates: vi.fn(),
+  clearCurrentShelfCostEstimates: vi.fn(),
   getCostProfileById: vi.fn(),
+  getLatestOrderCostEstimate: vi.fn(),
+  getLatestShelfCostEstimate: vi.fn(),
+  getSalesOrderByIdForCosting: vi.fn(),
+  getShelfJobByIdForCosting: vi.fn(),
   listActiveCostRates: vi.fn(),
   listCostProfiles: vi.fn(),
   updateCostProfile: vi.fn(),
@@ -15,11 +23,26 @@ const settingsMocks = vi.hoisted(() => ({
   getMaterialProfile: vi.fn()
 }));
 
+const pricingRepositoryMocks = vi.hoisted(() => ({
+  getPackagingProfileById: vi.fn(),
+  getPricingPolicyById: vi.fn(),
+  getProductionAssumptionProfileById: vi.fn(),
+  getShelfProductById: vi.fn()
+}));
+
 vi.mock("../modules/costing/repository.js", () => repositoryMocks);
 vi.mock("../modules/settings/service.js", () => settingsMocks);
+vi.mock("../modules/pricing/repository.js", () => pricingRepositoryMocks);
 
 import { calculateShelfManufacturingCost } from "../modules/costing/calculator.js";
-import { calculateCost, createCostScenarioSnapshot } from "../modules/costing/service.js";
+import {
+  calculateCost,
+  createCostScenarioSnapshot,
+  getSalesOrderCostEstimate,
+  getShelfJobCostEstimate,
+  recomputeSalesOrderCostEstimate,
+  recomputeShelfJobCostEstimate
+} from "../modules/costing/service.js";
 
 function buildRateMap(
   overrides: Partial<Record<string, { value: number; unit: string; effectiveFrom: string }>> = {}
@@ -258,26 +281,7 @@ describe("costing service", () => {
     vi.clearAllMocks();
   });
 
-  it("enforces org isolation for profile-owned calculations", async () => {
-    repositoryMocks.getCostProfileById.mockResolvedValue(null);
-
-    await expect(
-      calculateCost(
-        {
-          costProfileId: "cost_profile_other",
-          lengthIn: 24,
-          depthIn: 12,
-          quantity: 2,
-          materialType: "WHITE_MELAMINE",
-          edgeBandPattern: "ALL_FOUR",
-          requiresPackaging: true
-        },
-        "org_local_craft_board"
-      )
-    ).rejects.toThrow("Cost profile not found.");
-  });
-
-  it("persists a scenario snapshot with the calculated result shape", async () => {
+  function mockPricingContext() {
     repositoryMocks.getCostProfileById.mockResolvedValue({
       id: "cost_profile_1",
       name: "Starter Shelf Cost Profile",
@@ -306,6 +310,66 @@ describe("costing service", () => {
       sheetWidthIn: 48,
       sheetDepthIn: 96
     });
+    pricingRepositoryMocks.getProductionAssumptionProfileById.mockResolvedValue({
+      id: "production_profile_1",
+      name: "Starter Production",
+      cncLoadMinutesPerRun: 4,
+      cncUnloadMinutesPerRun: 2,
+      cncRunMinutesPerUnit: 3,
+      edgebanderSetupMinutesPerRun: 3,
+      edgebanderRunMinutesPerLinearFt: 0.5,
+      handlingMinutesPerUnit: 2,
+      packagingMinutesPerUnit: 1,
+      qcMinutesPerUnit: 0.5
+    });
+    pricingRepositoryMocks.getPricingPolicyById.mockResolvedValue({
+      id: "pricing_policy_1",
+      name: "Starter Policy",
+      manufacturingMarkupPercent: 12,
+      minimumChargeCentsPerUnit: 1500,
+      minimumRunChargeCents: 0,
+      roundingMode: "UP",
+      roundToCents: 25
+    });
+    pricingRepositoryMocks.getShelfProductById.mockResolvedValue({
+      id: "shelf_product_1",
+      name: "3/4 White Melamine Shelf",
+      code: "SHELF-WM-075"
+    });
+    pricingRepositoryMocks.getPackagingProfileById.mockResolvedValue({
+      id: "packaging_1",
+      name: "Starter Packaging",
+      boxCostCentsPerUnit: 40,
+      bubbleWrapCostCentsPerUnit: 15,
+      shrinkWrapCostCentsPerUnit: 10,
+      tapeCostCentsPerUnit: 8,
+      labelCostCentsPerUnit: 5,
+      insertFlyerCostCentsPerUnit: 2,
+      otherPackagingCostCentsPerUnit: 4
+    });
+  }
+
+  it("enforces org isolation for profile-owned calculations", async () => {
+    repositoryMocks.getCostProfileById.mockResolvedValue(null);
+
+    await expect(
+      calculateCost(
+        {
+          costProfileId: "cost_profile_other",
+          lengthIn: 24,
+          depthIn: 12,
+          quantity: 2,
+          materialType: "WHITE_MELAMINE",
+          edgeBandPattern: "ALL_FOUR",
+          requiresPackaging: true
+        },
+        "org_local_craft_board"
+      )
+    ).rejects.toThrow("Cost profile not found.");
+  });
+
+  it("persists a scenario snapshot with the calculated result shape", async () => {
+    mockPricingContext();
     repositoryMocks.createCostScenario.mockResolvedValue({
       id: "scenario_1",
       name: "Pilot shelf run",
@@ -341,5 +405,260 @@ describe("costing service", () => {
     );
     expect(result.scenario.id).toBe("scenario_1");
     expect(result.result.breakdown.recommendedSellPriceCents).toBe(7471);
+  });
+
+  it("recomputes and persists a shelf-job estimate from canonical entities", async () => {
+    mockPricingContext();
+    repositoryMocks.getShelfJobByIdForCosting.mockResolvedValue({
+      id: "shelf_job_1",
+      organizationId: "org_local_craft_board",
+      salesOrderId: "sales_order_1",
+      salesOrderItemId: "item_1",
+      normalizedSpecJson: {
+        shelfProductId: "shelf_product_1",
+        costProfileId: "cost_profile_1",
+        productionAssumptionProfileId: "production_profile_1",
+        packagingProfileId: "packaging_1",
+        pricingPolicyId: "pricing_policy_1",
+        lengthIn: 30,
+        depthIn: 12,
+        thicknessIn: 0.75,
+        quantity: 2,
+        materialType: "WHITE_MELAMINE",
+        edgeBandPattern: "ALL_FOUR",
+        requiresPackaging: true
+      }
+    });
+    repositoryMocks.createShelfCostEstimate.mockResolvedValue({
+      id: "shelf_estimate_1",
+      estimateStatus: "COMPLETE",
+      warningsJson: [],
+      inputSnapshotJson: {
+        costProfileId: "cost_profile_1"
+      },
+      assumptionSnapshotJson: {
+        profilesUsed: {
+          costProfile: {
+            id: "cost_profile_1"
+          }
+        }
+      },
+      resultJson: {
+        shelfJobId: "shelf_job_1",
+        totalEstimatedCostCents: 9201
+      },
+      createdAt: new Date("2026-03-08T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-08T00:00:00.000Z")
+    });
+
+    const result = await recomputeShelfJobCostEstimate("shelf_job_1", "org_local_craft_board", "user_1");
+
+    expect(repositoryMocks.clearCurrentShelfCostEstimates).toHaveBeenCalledWith(
+      "shelf_job_1",
+      "org_local_craft_board"
+    );
+    expect(repositoryMocks.createShelfCostEstimate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: "org_local_craft_board",
+        shelfJobId: "shelf_job_1",
+        salesOrderId: "sales_order_1",
+        salesOrderItemId: "item_1",
+        createdByUserId: "user_1",
+        estimateStatus: "COMPLETE"
+      })
+    );
+    expect(result.estimate.id).toBe("shelf_estimate_1");
+    expect(result.estimate.result).toEqual({
+      shelfJobId: "shelf_job_1",
+      totalEstimatedCostCents: 9201
+    });
+  });
+
+  it("returns the latest persisted shelf-job estimate", async () => {
+    repositoryMocks.getLatestShelfCostEstimate.mockResolvedValue({
+      id: "shelf_estimate_1",
+      estimateStatus: "COMPLETE",
+      warningsJson: [],
+      inputSnapshotJson: { shelfJobId: "shelf_job_1" },
+      assumptionSnapshotJson: { profilesUsed: {} },
+      resultJson: { totalEstimatedCostCents: 9201 },
+      createdAt: new Date("2026-03-08T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-08T00:00:00.000Z")
+    });
+
+    const result = await getShelfJobCostEstimate("shelf_job_1", "org_local_craft_board");
+
+    expect(repositoryMocks.getLatestShelfCostEstimate).toHaveBeenCalledWith(
+      "shelf_job_1",
+      "org_local_craft_board"
+    );
+    expect(result.estimate.id).toBe("shelf_estimate_1");
+  });
+
+  it("aggregates sales-order estimates across canonical shelf jobs", async () => {
+    mockPricingContext();
+    repositoryMocks.getSalesOrderByIdForCosting.mockResolvedValue({
+      id: "sales_order_1",
+      organizationId: "org_local_craft_board",
+      shelfJobs: [
+        {
+          id: "shelf_job_1",
+          salesOrderId: "sales_order_1",
+          salesOrderItemId: "item_1",
+          normalizedSpecJson: {
+            shelfProductId: "shelf_product_1",
+            costProfileId: "cost_profile_1",
+            productionAssumptionProfileId: "production_profile_1",
+            packagingProfileId: "packaging_1",
+            pricingPolicyId: "pricing_policy_1",
+            lengthIn: 30,
+            depthIn: 12,
+            thicknessIn: 0.75,
+            quantity: 2,
+            materialType: "WHITE_MELAMINE",
+            edgeBandPattern: "ALL_FOUR",
+            requiresPackaging: true
+          }
+        },
+        {
+          id: "shelf_job_2",
+          salesOrderId: "sales_order_1",
+          salesOrderItemId: "item_2",
+          normalizedSpecJson: {
+            shelfProductId: "shelf_product_1",
+            costProfileId: "cost_profile_1",
+            productionAssumptionProfileId: "production_profile_1",
+            packagingProfileId: "packaging_1",
+            pricingPolicyId: "pricing_policy_1",
+            lengthIn: 24,
+            depthIn: 12,
+            thicknessIn: 0.75,
+            quantity: 1,
+            materialType: "WHITE_MELAMINE",
+            edgeBandPattern: "TWO_LONG_EDGES",
+            requiresPackaging: false
+          }
+        }
+      ]
+    });
+    repositoryMocks.createOrderCostEstimate.mockResolvedValue({
+      id: "order_estimate_1",
+      estimateStatus: "COMPLETE",
+      warningsJson: [],
+      inputSnapshotJson: { salesOrderId: "sales_order_1" },
+      assumptionSnapshotJson: { lineAssumptions: [] },
+      resultJson: {
+        salesOrderId: "sales_order_1",
+        totalEstimatedOrderCostCents: 12000
+      },
+      createdAt: new Date("2026-03-08T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-08T00:00:00.000Z")
+    });
+
+    const result = await recomputeSalesOrderCostEstimate("sales_order_1", "org_local_craft_board", "user_1");
+
+    expect(repositoryMocks.clearCurrentOrderCostEstimates).toHaveBeenCalledWith(
+      "sales_order_1",
+      "org_local_craft_board"
+    );
+    expect(repositoryMocks.createOrderCostEstimate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: "org_local_craft_board",
+        salesOrderId: "sales_order_1",
+        createdByUserId: "user_1",
+        estimateStatus: "COMPLETE"
+      })
+    );
+    expect(result.estimate.id).toBe("order_estimate_1");
+  });
+
+  it("marks order estimates partial when one shelf job cannot be costed", async () => {
+    mockPricingContext();
+    repositoryMocks.getSalesOrderByIdForCosting.mockResolvedValue({
+      id: "sales_order_1",
+      organizationId: "org_local_craft_board",
+      shelfJobs: [
+        {
+          id: "shelf_job_1",
+          salesOrderId: "sales_order_1",
+          salesOrderItemId: "item_1",
+          normalizedSpecJson: {
+            shelfProductId: "shelf_product_1",
+            costProfileId: "cost_profile_1",
+            productionAssumptionProfileId: "production_profile_1",
+            packagingProfileId: "packaging_1",
+            pricingPolicyId: "pricing_policy_1",
+            lengthIn: 30,
+            depthIn: 12,
+            thicknessIn: 0.75,
+            quantity: 2,
+            materialType: "WHITE_MELAMINE",
+            edgeBandPattern: "ALL_FOUR",
+            requiresPackaging: true
+          }
+        },
+        {
+          id: "shelf_job_bad",
+          salesOrderId: "sales_order_1",
+          salesOrderItemId: "item_bad",
+          normalizedSpecJson: {
+            shelfProductId: "shelf_product_1",
+            costProfileId: "cost_profile_1",
+            productionAssumptionProfileId: "production_profile_1",
+            pricingPolicyId: "pricing_policy_1",
+            lengthIn: 30,
+            quantity: 1,
+            materialType: "WHITE_MELAMINE",
+            edgeBandPattern: "ALL_FOUR",
+            requiresPackaging: true
+          }
+        }
+      ]
+    });
+    repositoryMocks.createOrderCostEstimate.mockResolvedValue({
+      id: "order_estimate_1",
+      estimateStatus: "PARTIAL",
+      warningsJson: ["ShelfJob shelf_job_bad: Shelf job shelf_job_bad is missing required field depthIn."],
+      inputSnapshotJson: { salesOrderId: "sales_order_1" },
+      assumptionSnapshotJson: { lineAssumptions: [] },
+      resultJson: {
+        salesOrderId: "sales_order_1",
+        totalEstimatedOrderCostCents: 9000
+      },
+      createdAt: new Date("2026-03-08T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-08T00:00:00.000Z")
+    });
+
+    await recomputeSalesOrderCostEstimate("sales_order_1", "org_local_craft_board", "user_1");
+
+    expect(repositoryMocks.createOrderCostEstimate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        estimateStatus: "PARTIAL",
+        warningsJson: expect.arrayContaining([
+          expect.stringContaining("shelf_job_bad")
+        ])
+      })
+    );
+  });
+
+  it("returns the latest persisted sales-order estimate", async () => {
+    repositoryMocks.getLatestOrderCostEstimate.mockResolvedValue({
+      id: "order_estimate_1",
+      estimateStatus: "COMPLETE",
+      warningsJson: [],
+      inputSnapshotJson: { salesOrderId: "sales_order_1" },
+      assumptionSnapshotJson: { lineAssumptions: [] },
+      resultJson: { totalEstimatedOrderCostCents: 12000 },
+      createdAt: new Date("2026-03-08T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-08T00:00:00.000Z")
+    });
+
+    const result = await getSalesOrderCostEstimate("sales_order_1", "org_local_craft_board");
+
+    expect(repositoryMocks.getLatestOrderCostEstimate).toHaveBeenCalledWith(
+      "sales_order_1",
+      "org_local_craft_board"
+    );
+    expect(result.estimate.id).toBe("order_estimate_1");
   });
 });

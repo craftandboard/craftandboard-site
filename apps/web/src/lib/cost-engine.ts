@@ -153,3 +153,21 @@ export function getShippingZoneRuleSummary(rule: {
   }
   return parts.join(" · ");
 }
+
+export function getLaunchStrategyLabel(strategy: string | null | undefined) {
+  switch (strategy) {
+    case "AGGRESSIVE":
+      return "Aggressive launch";
+    case "SAFER_MARGIN":
+      return "Safer margin";
+    case "BALANCED":
+    default:
+      return "Balanced launch";
+  }
+}
+
+export function getRankingLabel(index: number) {
+  if (index === 0) return "Best launch candidate";
+  if (index === 1) return "Runner-up";
+  return `Rank ${index + 1}`;
+}

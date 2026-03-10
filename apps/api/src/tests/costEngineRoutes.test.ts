@@ -38,21 +38,27 @@ const serviceMocks = vi.hoisted(() => ({
   createShippingCostRule: vi.fn(),
   updateShippingCostRule: vi.fn(),
   createAmazonFeePreset: vi.fn(),
+  createLaunchTemplate: vi.fn(),
   listAmazonFeePresets: vi.fn(),
   getAmazonFeePreset: vi.fn(),
+  getComparisonSetRecommendation: vi.fn(),
   updateAmazonFeePreset: vi.fn(),
   createShippingZoneRule: vi.fn(),
   listShippingZoneRules: vi.fn(),
   getShippingZoneRule: vi.fn(),
+  getLaunchTemplate: vi.fn(),
   updateShippingZoneRule: vi.fn(),
+  listLaunchTemplates: vi.fn(),
   calculateShelfCostView: vi.fn(),
   compareShelfCostScenarios: vi.fn(),
+  rankComparisonSet: vi.fn(),
   saveShelfCostCalculation: vi.fn(),
   listShelfCostCalculations: vi.fn(),
   getShelfCostCalculation: vi.fn(),
   saveComparisonSet: vi.fn(),
   listComparisonSets: vi.fn(),
-  getComparisonSet: vi.fn()
+  getComparisonSet: vi.fn(),
+  updateLaunchTemplate: vi.fn()
 }));
 
 vi.mock("../modules/costEngine/contextAdapter.js", () => contextMocks);
@@ -94,15 +100,20 @@ beforeEach(async () => {
   serviceMocks.createShippingCostRule.mockResolvedValue({ ok: true });
   serviceMocks.updateShippingCostRule.mockResolvedValue({ ok: true });
   serviceMocks.createAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.createLaunchTemplate.mockResolvedValue({ ok: true, launchTemplate: { id: "template_1" } });
   serviceMocks.listAmazonFeePresets.mockResolvedValue({ ok: true, presets: [] });
   serviceMocks.getAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.getComparisonSetRecommendation.mockResolvedValue({ ok: true, recommendation: null });
   serviceMocks.updateAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
   serviceMocks.createShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
   serviceMocks.listShippingZoneRules.mockResolvedValue({ ok: true, shippingZoneRules: [] });
   serviceMocks.getShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
+  serviceMocks.getLaunchTemplate.mockResolvedValue({ ok: true, launchTemplate: { id: "template_1" } });
   serviceMocks.updateShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
+  serviceMocks.listLaunchTemplates.mockResolvedValue({ ok: true, launchTemplates: [] });
   serviceMocks.calculateShelfCostView.mockResolvedValue({ ok: true, calculation: { subtotalCostCents: 1000 } });
   serviceMocks.compareShelfCostScenarios.mockResolvedValue({ ok: true, comparison: { scenarios: [] } });
+  serviceMocks.rankComparisonSet.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
   serviceMocks.saveShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
   serviceMocks.listShelfCostCalculations.mockResolvedValue({ ok: true, calculations: [] });
   serviceMocks.getShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
@@ -236,6 +247,21 @@ describe("cost engine routes", () => {
     expect(serviceMocks.compareShelfCostScenarios).toHaveBeenCalled();
   });
 
+  it("creates launch templates in org scope", async () => {
+    const response = await fetch(`${baseUrl}/cost-profiles/profile_1/launch-templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Balanced launch", launchStrategy: "BALANCED" })
+    });
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createLaunchTemplate).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Balanced launch",
+      launchStrategy: "BALANCED"
+    });
+  });
+
   it("saves comparison sets", async () => {
     const response = await fetch(`${baseUrl}/cost-comparison-sets`, {
       method: "POST",
@@ -257,6 +283,17 @@ describe("cost engine routes", () => {
     });
     expect(response.status).toBe(201);
     expect(serviceMocks.saveComparisonSet).toHaveBeenCalled();
+  });
+
+  it("reranks a saved comparison set", async () => {
+    const response = await fetch(`${baseUrl}/cost-comparison-sets/set_1/rank`, {
+      method: "POST"
+    });
+    expect(response.status).toBe(200);
+    expect(serviceMocks.rankComparisonSet).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "set_1"
+    });
   });
 
   it("lists saved calculations", async () => {

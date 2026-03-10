@@ -1,5 +1,9 @@
 import { z } from "zod";
-import { COST_PROFILE_STATUSES, SHELF_COST_EDGE_BAND_PATTERNS } from "./contracts.js";
+import {
+  COST_PROFILE_STATUSES,
+  LAUNCH_STRATEGIES,
+  SHELF_COST_EDGE_BAND_PATTERNS
+} from "./contracts.js";
 
 const percentSchema = z.number().min(0).max(100);
 const nonNegativeCentsSchema = z.number().int().min(0);
@@ -8,6 +12,7 @@ const optionalNullableIdSchema = z.string().trim().min(1).nullable().optional();
 
 export const costProfileStatusSchema = z.enum(COST_PROFILE_STATUSES);
 export const shelfCostEdgeBandPatternSchema = z.enum(SHELF_COST_EDGE_BAND_PATTERNS);
+export const launchStrategySchema = z.enum(LAUNCH_STRATEGIES);
 
 export const costProfileIdParamsSchema = z.object({
   costProfileId: z.string().trim().min(1)
@@ -43,6 +48,10 @@ export const calculationIdParamsSchema = z.object({
 
 export const comparisonSetIdParamsSchema = z.object({
   comparisonSetId: z.string().trim().min(1)
+});
+
+export const templateIdParamsSchema = z.object({
+  templateId: z.string().trim().min(1)
 });
 
 export const createCostProfileSchema = z.object({
@@ -232,6 +241,7 @@ export const saveShelfCostCalculationSchema = calculationInputBaseSchema;
 
 export const compareScenarioInputSchema = z.object({
   name: z.string().trim().min(1).max(160),
+  launchStrategy: launchStrategySchema.nullable().optional(),
   amazonFeePresetId: optionalNullableIdSchema,
   shippingZoneRuleId: optionalNullableIdSchema,
   packagingCode: z.string().trim().max(80).nullable().optional(),
@@ -258,6 +268,23 @@ export const saveComparisonSetSchema = z.object({
   baseSpec: calculationInputBaseSchema,
   scenarios: z.array(compareScenarioInputSchema).min(1)
 });
+
+export const createLaunchTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  status: costProfileStatusSchema.optional(),
+  defaultAmazonFeePresetId: optionalNullableIdSchema,
+  defaultShippingZoneRuleId: optionalNullableIdSchema,
+  defaultPackagingRuleId: optionalNullableIdSchema,
+  defaultShippingRuleId: optionalNullableIdSchema,
+  launchStrategy: launchStrategySchema,
+  notes: z.string().trim().max(4000).nullable().optional(),
+  assumptionsSnapshot: z.unknown().nullable().optional()
+});
+
+export const updateLaunchTemplateSchema = createLaunchTemplateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one launch template field must be provided." }
+);
 
 export const listShelfCostCalculationsQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()

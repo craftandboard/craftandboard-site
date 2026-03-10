@@ -8,6 +8,7 @@ import {
   createComparisonSetScenarioRecord,
   createCostProfileRecord,
   createEdgeBandCostRuleRecord,
+  createLaunchTemplateRecord,
   createMaterialCostRuleRecord,
   createPackagingCostRuleRecord,
   createShelfCostCalculationRecord,
@@ -16,21 +17,27 @@ import {
   getAmazonFeePresetRecord,
   getCalculationComparisonSetRecord,
   getCostProfileRecord,
+  getLaunchTemplateRecord,
   getShelfCostCalculationRecord,
   getShippingZoneRuleRecord,
   listAmazonFeePresetsForOrganization,
   listCalculationComparisonSetsForOrganization,
   listCostProfilesForOrganization,
+  listLaunchTemplatesForOrganization,
   listShelfCostCalculationsForOrganization,
   listShippingZoneRulesForOrganization,
   updateAmazonFeePresetRecord,
+  updateCalculationComparisonSetRecord,
   updateCostProfileRecord,
   updateEdgeBandCostRuleRecord,
+  updateLaunchTemplateRecord,
   updateMaterialCostRuleRecord,
   updatePackagingCostRuleRecord,
   updateShippingCostRuleRecord,
   updateShippingZoneRuleRecord
 } from "./repository.js";
+import { rankComparisonScenarios } from "./ranking.js";
+import type { LaunchStrategy } from "./contracts.js";
 
 type AnyRecord = Record<string, unknown>;
 
@@ -61,6 +68,25 @@ function mapShippingZoneRule(record: any) {
     orgId: record.organizationId,
     costProfileId: record.costProfileId ?? null,
     bufferPct: decimalToNumber(record.bufferPct)
+  };
+}
+
+function mapLaunchTemplate(record: any) {
+  return {
+    ...mapRuleDates(record),
+    orgId: record.organizationId,
+    costProfileId: record.costProfileId,
+    defaultAmazonFeePresetId: record.defaultAmazonFeePresetId ?? null,
+    defaultAmazonFeePresetName: record.defaultAmazonFeePreset?.name ?? null,
+    defaultShippingZoneRuleId: record.defaultShippingZoneRuleId ?? null,
+    defaultShippingZoneRuleName: record.defaultShippingZoneRule?.name ?? null,
+    defaultPackagingRuleId: record.defaultPackagingRuleId ?? null,
+    defaultPackagingRuleName: record.defaultPackagingRule?.packagingName ?? null,
+    defaultShippingRuleId: record.defaultShippingRuleId ?? null,
+    defaultShippingRuleName: record.defaultShippingRule?.shippingName ?? null,
+    launchStrategy: record.launchStrategy,
+    notes: record.notes ?? null,
+    assumptionsSnapshot: record.assumptionsSnapshot ?? null
   };
 }
 
@@ -137,6 +163,7 @@ function mapCostProfile(profile: any) {
     })),
     amazonFeePresets: (profile.amazonFeePresets ?? []).map(mapAmazonFeePreset),
     shippingZoneRules: (profile.shippingZoneRules ?? []).map(mapShippingZoneRule),
+    launchTemplates: (profile.launchTemplates ?? []).map(mapLaunchTemplate),
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString()
   };
@@ -230,6 +257,10 @@ function mapScenario(record: any) {
     shippingRuleId: record.shippingRuleId ?? null,
     shippingRuleName: record.shippingRule?.shippingName ?? null,
     shelfCostCalculationId: record.shelfCostCalculationId ?? null,
+    launchStrategy: record.launchStrategy ?? null,
+    rankingScore: decimalToNumber(record.rankingScore),
+    rankingSummary: record.rankingSummary ?? null,
+    isRecommendedLaunchScenario: Boolean(record.isRecommendedLaunchScenario),
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -244,6 +275,10 @@ function mapComparisonSet(record: any) {
     name: record.name,
     notes: record.notes ?? null,
     baseShelfSpecSnapshot: record.baseShelfSpecSnapshot,
+    recommendedScenarioId: record.recommendedScenarioId ?? null,
+    recommendedScenarioName: record.recommendedScenario?.name ?? null,
+    rankingSnapshot: record.rankingSnapshot ?? null,
+    comparisonSummary: record.comparisonSummary ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -619,6 +654,80 @@ export async function updateShippingZoneRule(input: {
   return { ok: true, shippingZoneRule: mapShippingZoneRule(updated) };
 }
 
+export async function createLaunchTemplate(input: {
+  organizationId: string;
+  costProfileId: string;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  defaultAmazonFeePresetId?: string | null;
+  defaultShippingZoneRuleId?: string | null;
+  defaultPackagingRuleId?: string | null;
+  defaultShippingRuleId?: string | null;
+  launchStrategy: LaunchStrategy;
+  notes?: string | null;
+  assumptionsSnapshot?: unknown;
+}) {
+  const profile = await getCostProfileRecord({
+    organizationId: input.organizationId,
+    costProfileId: input.costProfileId
+  });
+  if (!profile) {
+    throw new Error("Cost profile not found.");
+  }
+
+  const template = await createLaunchTemplateRecord(input);
+  const hydrated = await getLaunchTemplateRecord({
+    organizationId: input.organizationId,
+    templateId: template.id
+  });
+  return { ok: true, launchTemplate: mapLaunchTemplate(hydrated) };
+}
+
+export async function listLaunchTemplates(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  const templates = await listLaunchTemplatesForOrganization(input);
+  return { ok: true, launchTemplates: templates.map(mapLaunchTemplate) };
+}
+
+export async function getLaunchTemplate(input: {
+  organizationId: string;
+  templateId: string;
+}) {
+  const template = await getLaunchTemplateRecord(input);
+  if (!template) {
+    throw new Error("Launch template not found.");
+  }
+
+  return { ok: true, launchTemplate: mapLaunchTemplate(template) };
+}
+
+export async function updateLaunchTemplate(input: {
+  organizationId: string;
+  templateId: string;
+} & AnyRecord) {
+  const existing = await getLaunchTemplateRecord({
+    organizationId: input.organizationId,
+    templateId: input.templateId
+  });
+  if (!existing) {
+    throw new Error("Launch template not found.");
+  }
+
+  await updateLaunchTemplateRecord({
+    organizationId: input.organizationId,
+    templateId: input.templateId,
+    data: normalizeUpdateData({ ...input, organizationId: undefined, templateId: undefined })
+  });
+
+  const updated = await getLaunchTemplateRecord({
+    organizationId: input.organizationId,
+    templateId: input.templateId
+  });
+  return { ok: true, launchTemplate: mapLaunchTemplate(updated) };
+}
+
 type CostCalculationViewInput = {
   organizationId: string;
   costProfileId: string;
@@ -775,6 +884,7 @@ export async function getShelfCostCalculation(input: {
 
 type ScenarioInput = {
   name: string;
+  launchStrategy?: LaunchStrategy | null;
   amazonFeePresetId?: string | null;
   shippingZoneRuleId?: string | null;
   packagingCode?: string | null;
@@ -805,6 +915,7 @@ export async function compareShelfCostScenarios(input: {
       ...input.baseSpec,
       organizationId: input.organizationId,
       name: input.baseSpec.name ?? `Scenario ${index + 1}`,
+      launchStrategy: scenario.launchStrategy ?? null,
       amazonFeePresetId:
         scenario.amazonFeePresetId !== undefined ? scenario.amazonFeePresetId : input.baseSpec.amazonFeePresetId,
       shippingZoneRuleId:
@@ -839,13 +950,15 @@ export async function compareShelfCostScenarios(input: {
       calculation: payload.calculation,
       assumptionsSnapshot,
       result: payload.result,
+      launchStrategy: mergedInput.launchStrategy ?? null,
       changedAssumptions: {
         packagingCode: mergedInput.packagingCode ?? null,
         shippingCode: mergedInput.shippingCode ?? null,
         amazonFeePresetId: mergedInput.amazonFeePresetId ?? null,
         shippingZoneRuleId: mergedInput.shippingZoneRuleId ?? null,
         targetMarginPct: mergedInput.targetMarginPct ?? null,
-        growthMarginPct: mergedInput.growthMarginPct ?? null
+        growthMarginPct: mergedInput.growthMarginPct ?? null,
+        launchStrategy: mergedInput.launchStrategy ?? null
       }
     });
   }
@@ -858,6 +971,14 @@ export async function compareShelfCostScenarios(input: {
       assumptionsSnapshot: scenario.assumptionsSnapshot
     }))
   );
+  const ranking = rankComparisonScenarios(
+    scenarioResults.map((scenario) => ({
+      id: scenario.id,
+      name: scenario.name,
+      launchStrategy: scenario.launchStrategy,
+      result: scenario.result
+    }))
+  );
 
   return {
     ok: true,
@@ -866,10 +987,23 @@ export async function compareShelfCostScenarios(input: {
       notes: input.notes ?? null,
       baseSpec: input.baseSpec,
       baselineScenarioId: deltaComparison.baselineScenarioId,
+      ranking: {
+        scenarios: ranking.ranked.map((entry) => ({
+          scenarioId: entry.id,
+          rankingScore: entry.rankingScore,
+          rankingSummary: entry.rankingSummary
+        })),
+        recommendation: ranking.recommendation
+      },
       scenarios: scenarioResults.map((scenario) => {
         const deltaEntry = deltaComparison.scenarios.find((entry) => entry.id === scenario.id);
+        const rankingEntry = ranking.ranked.find((entry) => entry.id === scenario.id);
         return {
           ...scenario,
+          rankingScore: rankingEntry?.rankingScore ?? null,
+          rankingSummary: rankingEntry?.rankingSummary ?? null,
+          isRecommendedLaunchScenario:
+            ranking.recommendation?.recommendedScenarioId === scenario.id,
           deltas: deltaEntry?.deltas ?? {
             subtotalCostCents: 0,
             breakEvenPriceCents: 0,
@@ -890,12 +1024,7 @@ export async function saveComparisonSet(input: {
   scenarios: ScenarioInput[];
 }) {
   const comparison = await compareShelfCostScenarios(input);
-  const set = await createCalculationComparisonSetRecord({
-    organizationId: input.organizationId,
-    name: input.name,
-    notes: input.notes ?? null,
-    baseShelfSpecSnapshot: comparison.comparison.baseSpec
-  });
+  const scenarioRecords = [];
 
   for (const [index, scenario] of comparison.comparison.scenarios.entries()) {
     const scenarioRecord = await createCalculationScenarioRecord({
@@ -907,10 +1036,28 @@ export async function saveComparisonSet(input: {
       packagingRuleId: null,
       shippingRuleId: null,
       shelfCostCalculationId: null,
+      launchStrategy: scenario.launchStrategy ?? null,
+      rankingScore: scenario.rankingScore ?? null,
+      rankingSummary: scenario.rankingSummary ?? null,
+      isRecommendedLaunchScenario: Boolean(scenario.isRecommendedLaunchScenario),
       assumptionsSnapshot: scenario.assumptionsSnapshot,
       resultSnapshot: scenario.result
     });
+    scenarioRecords.push(scenarioRecord);
+  }
 
+  const recommendedScenarioRecord = scenarioRecords.find((scenario) => scenario.isRecommendedLaunchScenario);
+  const set = await createCalculationComparisonSetRecord({
+    organizationId: input.organizationId,
+    name: input.name,
+    notes: input.notes ?? null,
+    baseShelfSpecSnapshot: comparison.comparison.baseSpec,
+    recommendedScenarioId: recommendedScenarioRecord?.id ?? null,
+    rankingSnapshot: comparison.comparison.ranking,
+    comparisonSummary: comparison.comparison.ranking?.recommendation ?? null
+  });
+
+  for (const [index, scenarioRecord] of scenarioRecords.entries()) {
     await createComparisonSetScenarioRecord({
       organizationId: input.organizationId,
       comparisonSetId: set.id,
@@ -926,6 +1073,57 @@ export async function saveComparisonSet(input: {
   return { ok: true, comparisonSet: mapComparisonSet(hydrated) };
 }
 
+export async function rankComparisonSet(input: {
+  organizationId: string;
+  comparisonSetId: string;
+}) {
+  const comparisonSet = await getCalculationComparisonSetRecord(input);
+  if (!comparisonSet) {
+    throw new Error("Cost comparison set not found.");
+  }
+
+  const ranking = rankComparisonScenarios(
+    (comparisonSet.scenarios ?? []).map((entry: any) => ({
+      id: entry.calculationScenario.id,
+      name: entry.calculationScenario.name,
+      launchStrategy: entry.calculationScenario.launchStrategy ?? null,
+      result: entry.calculationScenario.resultSnapshot
+    }))
+  );
+
+  const recommendedScenarioId = ranking.recommendation?.recommendedScenarioId ?? null;
+  await updateCalculationComparisonSetRecord({
+    organizationId: input.organizationId,
+    comparisonSetId: input.comparisonSetId,
+    data: {
+      recommendedScenarioId: recommendedScenarioId ?? undefined,
+      rankingSnapshot: ranking,
+      comparisonSummary: ranking.recommendation ?? undefined
+    }
+  });
+
+  const hydrated = await getCalculationComparisonSetRecord(input);
+  return { ok: true, comparisonSet: mapComparisonSet(hydrated) };
+}
+
+export async function getComparisonSetRecommendation(input: {
+  organizationId: string;
+  comparisonSetId: string;
+}) {
+  const comparisonSet = await getCalculationComparisonSetRecord(input);
+  if (!comparisonSet) {
+    throw new Error("Cost comparison set not found.");
+  }
+
+  return {
+    ok: true,
+    recommendation:
+      comparisonSet.comparisonSummary ??
+      comparisonSet.rankingSnapshot?.recommendation ??
+      null
+  };
+}
+
 export async function listComparisonSets(input: { organizationId: string }) {
   const sets = await listCalculationComparisonSetsForOrganization(input.organizationId);
   return {
@@ -936,6 +1134,9 @@ export async function listComparisonSets(input: { organizationId: string }) {
       name: record.name,
       notes: record.notes ?? null,
       scenarioCount: record.scenarios.length,
+      recommendedScenarioId: record.recommendedScenarioId ?? null,
+      recommendedScenarioName: record.recommendedScenario?.name ?? null,
+      comparisonSummary: record.comparisonSummary ?? null,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString()
     }))

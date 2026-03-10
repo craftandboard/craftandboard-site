@@ -7,6 +7,7 @@ const repositoryMocks = vi.hoisted(() => ({
   createComparisonSetScenarioRecord: vi.fn(),
   createCostProfileRecord: vi.fn(),
   createEdgeBandCostRuleRecord: vi.fn(),
+  createLaunchTemplateRecord: vi.fn(),
   createMaterialCostRuleRecord: vi.fn(),
   createPackagingCostRuleRecord: vi.fn(),
   createShelfCostCalculationRecord: vi.fn(),
@@ -15,16 +16,20 @@ const repositoryMocks = vi.hoisted(() => ({
   getAmazonFeePresetRecord: vi.fn(),
   getCalculationComparisonSetRecord: vi.fn(),
   getCostProfileRecord: vi.fn(),
+  getLaunchTemplateRecord: vi.fn(),
   getShelfCostCalculationRecord: vi.fn(),
   getShippingZoneRuleRecord: vi.fn(),
   listAmazonFeePresetsForOrganization: vi.fn(),
   listCalculationComparisonSetsForOrganization: vi.fn(),
   listCostProfilesForOrganization: vi.fn(),
+  listLaunchTemplatesForOrganization: vi.fn(),
   listShelfCostCalculationsForOrganization: vi.fn(),
   listShippingZoneRulesForOrganization: vi.fn(),
   updateAmazonFeePresetRecord: vi.fn(),
   updateCostProfileRecord: vi.fn(),
   updateEdgeBandCostRuleRecord: vi.fn(),
+  updateCalculationComparisonSetRecord: vi.fn(),
+  updateLaunchTemplateRecord: vi.fn(),
   updateMaterialCostRuleRecord: vi.fn(),
   updatePackagingCostRuleRecord: vi.fn(),
   updateShippingCostRuleRecord: vi.fn(),
@@ -36,8 +41,11 @@ vi.mock("../modules/costEngine/repository.js", () => repositoryMocks);
 import {
   calculateShelfCostView,
   compareShelfCostScenarios,
+  createLaunchTemplate,
   getShelfCostCalculation,
+  rankComparisonSet,
   listCostProfiles,
+  listLaunchTemplates,
   saveComparisonSet,
   saveShelfCostCalculation
 } from "../modules/costEngine/service.js";
@@ -193,7 +201,8 @@ function makeProfile() {
         createdAt: new Date("2026-03-10T00:00:00.000Z"),
         updatedAt: new Date("2026-03-10T00:00:00.000Z")
       }
-    ]
+    ],
+    launchTemplates: []
   };
 }
 
@@ -286,6 +295,64 @@ describe("cost engine service", () => {
 
     expect(payload.comparison.scenarios).toHaveLength(2);
     expect(payload.comparison.scenarios[1]?.deltas.breakEvenPriceCents).not.toBe(0);
+    expect(payload.comparison.ranking?.recommendation?.recommendedScenarioId).toBeTruthy();
+  });
+
+  it("creates and lists launch templates", async () => {
+    repositoryMocks.createLaunchTemplateRecord.mockResolvedValueOnce({ id: "template_1" });
+    repositoryMocks.getLaunchTemplateRecord.mockResolvedValueOnce({
+      id: "template_1",
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Balanced launch",
+      status: "ACTIVE",
+      defaultAmazonFeePresetId: "preset_1",
+      defaultAmazonFeePreset: { name: "Amazon Standard" },
+      defaultShippingZoneRuleId: "zone_1",
+      defaultShippingZoneRule: { name: "Zone 2" },
+      defaultPackagingRuleId: null,
+      defaultPackagingRule: null,
+      defaultShippingRuleId: null,
+      defaultShippingRule: null,
+      launchStrategy: "BALANCED",
+      notes: null,
+      assumptionsSnapshot: {},
+      createdAt: new Date("2026-03-10T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-10T00:00:00.000Z")
+    });
+    repositoryMocks.listLaunchTemplatesForOrganization.mockResolvedValueOnce([
+      {
+        id: "template_1",
+        organizationId: "org_local_craft_board",
+        costProfileId: "profile_1",
+        name: "Balanced launch",
+        status: "ACTIVE",
+        defaultAmazonFeePresetId: "preset_1",
+        defaultAmazonFeePreset: { name: "Amazon Standard" },
+        defaultShippingZoneRuleId: "zone_1",
+        defaultShippingZoneRule: { name: "Zone 2" },
+        defaultPackagingRuleId: null,
+        defaultPackagingRule: null,
+        defaultShippingRuleId: null,
+        defaultShippingRule: null,
+        launchStrategy: "BALANCED",
+        notes: null,
+        assumptionsSnapshot: {},
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      }
+    ]);
+
+    const created = await createLaunchTemplate({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Balanced launch",
+      launchStrategy: "BALANCED"
+    });
+    expect(created.launchTemplate.name).toBe("Balanced launch");
+
+    const listed = await listLaunchTemplates({ organizationId: "org_local_craft_board" });
+    expect(listed.launchTemplates).toHaveLength(1);
   });
 
   it("saves comparison sets with scenario records", async () => {
@@ -321,6 +388,10 @@ describe("cost engine service", () => {
             shippingRuleId: null,
             shippingRule: null,
             shelfCostCalculationId: null,
+            launchStrategy: "BALANCED",
+            rankingScore: { toNumber: () => 51.25 },
+            rankingSummary: { recommendationNote: "Balanced" },
+            isRecommendedLaunchScenario: true,
             assumptionsSnapshot: {},
             resultSnapshot: {},
             createdAt: new Date("2026-03-10T00:00:00.000Z"),
@@ -353,6 +424,78 @@ describe("cost engine service", () => {
 
     expect(payload.comparisonSet.id).toBe("compare_1");
     expect(repositoryMocks.createCalculationScenarioRecord).toHaveBeenCalled();
+    expect(repositoryMocks.createCalculationComparisonSetRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rankingSnapshot: expect.any(Object),
+        comparisonSummary: expect.any(Object)
+      })
+    );
+  });
+
+  it("reranks a saved comparison set and updates the recommendation snapshot", async () => {
+    repositoryMocks.getCalculationComparisonSetRecord
+      .mockResolvedValueOnce({
+        id: "compare_1",
+        organizationId: "org_local_craft_board",
+        name: "Launch compare",
+        notes: null,
+        baseShelfSpecSnapshot: {},
+        rankingSnapshot: null,
+        comparisonSummary: null,
+        recommendedScenarioId: null,
+        recommendedScenario: null,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z"),
+        scenarios: [
+          {
+            id: "join_1",
+            sortOrder: 0,
+            createdAt: new Date("2026-03-10T00:00:00.000Z"),
+            calculationScenario: {
+              id: "scenario_1",
+              name: "Balanced",
+              launchStrategy: "BALANCED",
+              resultSnapshot: {
+                breakdown: {
+                  breakEvenPriceCents: 4000,
+                  recommendedMinSellPriceCents: 4600,
+                  recommendedTargetSellPriceCents: 5200,
+                  marketplaceFeeCostCents: 500,
+                  referralFeeCostCents: 300,
+                  advertisingAllowanceCostCents: 100,
+                  returnReserveCostCents: 50,
+                  damageReserveCostCents: 25,
+                  miscMarketplaceCostCents: 25
+                },
+                pricing: { targetMarginPct: 20, growthMarginPct: 10 },
+                shipping: { baseCostCents: 900, weightCostCents: 0, volumeCostCents: 0, dimensionalCostCents: 0, shippingBufferCostCents: 50 }
+              }
+            }
+          }
+        ]
+      })
+      .mockResolvedValueOnce({
+        id: "compare_1",
+        organizationId: "org_local_craft_board",
+        name: "Launch compare",
+        notes: null,
+        baseShelfSpecSnapshot: {},
+        rankingSnapshot: { recommendation: { recommendedScenarioId: "scenario_1" } },
+        comparisonSummary: { recommendedScenarioId: "scenario_1" },
+        recommendedScenarioId: "scenario_1",
+        recommendedScenario: { id: "scenario_1", name: "Balanced" },
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z"),
+        scenarios: []
+      });
+
+    const payload = await rankComparisonSet({
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "compare_1"
+    });
+
+    expect(repositoryMocks.updateCalculationComparisonSetRecord).toHaveBeenCalled();
+    expect(payload.comparisonSet.recommendedScenarioId).toBe("scenario_1");
   });
 
   it("rejects missing edge band rules when the pattern requires one", async () => {

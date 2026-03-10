@@ -7,6 +7,7 @@ import {
   createAmazonFeePreset,
   createCostProfile,
   createEdgeBandCostRule,
+  createLaunchTemplate,
   createMaterialCostRule,
   createPackagingCostRule,
   createShippingCostRule,
@@ -20,9 +21,11 @@ import {
   saveShelfCostCalculation,
   updateAmazonFeePreset,
   updateCostProfile,
+  updateLaunchTemplate,
   updatePackagingCostRule,
   updateShippingCostRule,
   updateShippingZoneRule,
+  type LaunchTemplateItem,
   type ComparisonSetListItem,
   type CostCalculationInput,
   type CostCalculationPreview,
@@ -37,10 +40,13 @@ import { CostAssumptionsPanel } from "./cost-assumptions-panel";
 import { AmazonFeePresetEditor } from "./amazon-fee-preset-editor";
 import { CostBreakdownCard } from "./cost-breakdown-card";
 import { CostHistoryList } from "./cost-history-list";
+import { LaunchRecommendationCard } from "./launch-recommendation-card";
+import { LaunchTemplateEditor } from "./launch-template-editor";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { CostProfileEditor } from "./cost-profile-editor";
 import { CostScenarioBuilder } from "./cost-scenario-builder";
 import { CostScenarioComparisonCard } from "./cost-scenario-comparison-card";
+import { ScenarioRankingTable } from "./scenario-ranking-table";
 import { ShippingZoneRuleEditor } from "./shipping-zone-rule-editor";
 import { getEdgeBandPatternLabel } from "../lib/cost-engine";
 
@@ -55,6 +61,7 @@ function toOptionalNumber(value: FormDataEntryValue | null) {
 function createDefaultScenario(index: number): CostScenarioInput {
   return {
     name: index === 0 ? "Baseline" : `Scenario ${index + 1}`,
+    launchStrategy: "BALANCED",
     amazonFeePresetId: null,
     shippingZoneRuleId: null,
     packagingCode: null,
@@ -230,7 +237,8 @@ export function CostCalculatorForm() {
       packaging: selectedProfile?.packagingRules ?? [],
       shipping: selectedProfile?.shippingRules ?? [],
       feePresets: selectedProfile?.amazonFeePresets ?? [],
-      shippingZones: selectedProfile?.shippingZoneRules ?? []
+      shippingZones: selectedProfile?.shippingZoneRules ?? [],
+      launchTemplates: selectedProfile?.launchTemplates ?? []
     }),
     [selectedProfile]
   );
@@ -481,6 +489,7 @@ export function CostCalculatorForm() {
               const assumptions = entry.scenario.assumptionsSnapshot as Record<string, unknown>;
               return {
                 name: entry.scenario.name,
+                launchStrategy: entry.scenario.launchStrategy ?? "BALANCED",
                 amazonFeePresetId: (assumptions["amazonFeePreset"] as Record<string, unknown> | undefined)?.["id"] as
                   | string
                   | null
@@ -507,7 +516,55 @@ export function CostCalculatorForm() {
               };
             })
           );
-          setComparison(null);
+          setComparison({
+            name: comparisonSet.name,
+            notes: comparisonSet.notes,
+            baseSpec,
+            baselineScenarioId: comparisonSet.scenarios[0]?.scenario.id ?? "scenario-1",
+            ranking: (comparisonSet.rankingSnapshot as CostComparisonResult["ranking"]) ?? undefined,
+            scenarios: comparisonSet.scenarios.map((entry, index) => ({
+              id: entry.scenario.id,
+              name: entry.scenario.name,
+              launchStrategy: entry.scenario.launchStrategy,
+              calculation: entry.scenario.resultSnapshot as unknown as CostCalculationPreview,
+              assumptionsSnapshot: entry.scenario.assumptionsSnapshot,
+              result: entry.scenario.resultSnapshot as unknown as CostCalculationResult,
+              changedAssumptions: {
+                packagingCode: ((entry.scenario.assumptionsSnapshot.packagingRule as Record<string, unknown> | undefined)?.[
+                  "packagingCode"
+                ] as string | null | undefined) ?? null,
+                shippingCode: ((entry.scenario.assumptionsSnapshot.shippingRule as Record<string, unknown> | undefined)?.[
+                  "shippingCode"
+                ] as string | null | undefined) ?? null,
+                amazonFeePresetId: ((entry.scenario.assumptionsSnapshot.amazonFeePreset as Record<string, unknown> | undefined)?.[
+                  "id"
+                ] as string | null | undefined) ?? null,
+                shippingZoneRuleId: ((entry.scenario.assumptionsSnapshot.shippingZoneRule as Record<string, unknown> | undefined)?.[
+                  "id"
+                ] as string | null | undefined) ?? null,
+                targetMarginPct: null,
+                growthMarginPct: null,
+                launchStrategy: entry.scenario.launchStrategy ?? null
+              },
+              rankingScore: entry.scenario.rankingScore,
+              rankingSummary: entry.scenario.rankingSummary,
+              isRecommendedLaunchScenario: entry.scenario.isRecommendedLaunchScenario,
+              deltas:
+                index === 0
+                  ? {
+                      subtotalCostCents: 0,
+                      breakEvenPriceCents: 0,
+                      recommendedMinSellPriceCents: 0,
+                      recommendedTargetSellPriceCents: 0
+                    }
+                  : {
+                      subtotalCostCents: 0,
+                      breakEvenPriceCents: 0,
+                      recommendedMinSellPriceCents: 0,
+                      recommendedTargetSellPriceCents: 0
+                    }
+            }))
+          });
           setSuccess("Comparison set loaded.");
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : "Failed to load comparison set.");
@@ -791,6 +848,80 @@ export function CostCalculatorForm() {
     });
   }
 
+  function handleCreateLaunchTemplate(formData: FormData) {
+    if (!selectedProfileId) return;
+    startTransition(() => {
+      void createLaunchTemplate(selectedProfileId, {
+        name: String(formData.get("name") ?? ""),
+        status: (String(formData.get("status") ?? "ACTIVE") as "ACTIVE" | "ARCHIVED"),
+        defaultAmazonFeePresetId:
+          (String(formData.get("defaultAmazonFeePresetId") ?? "") || null),
+        defaultShippingZoneRuleId:
+          (String(formData.get("defaultShippingZoneRuleId") ?? "") || null),
+        defaultPackagingRuleId:
+          (String(formData.get("defaultPackagingRuleId") ?? "") || null),
+        defaultShippingRuleId:
+          (String(formData.get("defaultShippingRuleId") ?? "") || null),
+        launchStrategy: String(formData.get("launchStrategy") ?? "BALANCED") as
+          | "BALANCED"
+          | "AGGRESSIVE"
+          | "SAFER_MARGIN",
+        notes: (String(formData.get("notes") ?? "") || null)
+      })
+        .then(() => refreshAll(selectedProfileId))
+        .then(() => setSuccess("Launch template added."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to add launch template.")
+        );
+    });
+  }
+
+  function handleUpdateLaunchTemplate(templateId: string, formData: FormData) {
+    startTransition(() => {
+      void updateLaunchTemplate(templateId, {
+        name: String(formData.get("name") ?? ""),
+        status: String(formData.get("status") ?? "ACTIVE"),
+        defaultAmazonFeePresetId: String(formData.get("defaultAmazonFeePresetId") ?? "") || null,
+        defaultShippingZoneRuleId: String(formData.get("defaultShippingZoneRuleId") ?? "") || null,
+        defaultPackagingRuleId: String(formData.get("defaultPackagingRuleId") ?? "") || null,
+        defaultShippingRuleId: String(formData.get("defaultShippingRuleId") ?? "") || null,
+        launchStrategy: String(formData.get("launchStrategy") ?? "BALANCED"),
+        notes: String(formData.get("notes") ?? "") || null
+      })
+        .then(() => refreshAll(selectedProfileId))
+        .then(() => setSuccess("Launch template updated."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to update launch template.")
+        );
+    });
+  }
+
+  function handleApplyLaunchTemplate(index: number, templateId: string) {
+    if (!templateId) return;
+    const template = options.launchTemplates.find((item) => item.id === templateId);
+    if (!template) return;
+    setScenarios((current) =>
+      current.map((scenario, currentIndex) =>
+        currentIndex === index
+          ? {
+              ...scenario,
+              name: template.name,
+              launchStrategy: template.launchStrategy,
+              amazonFeePresetId: template.defaultAmazonFeePresetId,
+              shippingZoneRuleId: template.defaultShippingZoneRuleId,
+              packagingCode:
+                selectedProfile?.packagingRules.find((rule) => rule.id === template.defaultPackagingRuleId)
+                  ?.packagingCode ?? scenario.packagingCode ?? null,
+              shippingCode:
+                selectedProfile?.shippingRules.find((rule) => rule.id === template.defaultShippingRuleId)
+                  ?.shippingCode ?? scenario.shippingCode ?? null
+            }
+          : scenario
+      )
+    );
+    setSuccess(`Applied ${template.name} to scenario ${index + 1}.`);
+  }
+
   if (loading) {
     return <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-8 text-slate-300">Loading Hugo cost engine…</div>;
   }
@@ -862,18 +993,22 @@ export function CostCalculatorForm() {
         <div className="space-y-6">
           <CostBreakdownCard preview={preview} result={result} />
           <CostPricingRecommendationCard preview={preview} result={result} />
+          <LaunchRecommendationCard comparison={comparison} />
           <CostScenarioBuilder
             scenarios={scenarios}
             feePresets={options.feePresets}
             shippingZones={options.shippingZones}
             packagingRules={options.packaging}
             shippingRules={options.shipping}
+            launchTemplates={options.launchTemplates}
             onChange={(index, next) =>
               setScenarios((current) => current.map((scenario, currentIndex) => (currentIndex === index ? next : scenario)))
             }
             onAdd={() => setScenarios((current) => [...current, createDefaultScenario(current.length)])}
             onRemove={(index) => setScenarios((current) => current.filter((_, currentIndex) => currentIndex !== index))}
+            onApplyTemplate={handleApplyLaunchTemplate}
           />
+          <ScenarioRankingTable comparison={comparison} />
           <CostScenarioComparisonCard comparison={comparison} />
         </div>
 
@@ -893,7 +1028,10 @@ export function CostCalculatorForm() {
                   <button key={set.id} type="button" onClick={() => loadComparisonSet(set.id)} className="flex w-full items-center justify-between rounded-2xl border border-white/10 bg-slate-950/25 px-4 py-4 text-left text-sm text-slate-200 transition hover:border-emerald-300/30">
                     <div>
                       <p className="font-medium text-white">{set.name}</p>
-                      <p className="mt-1 text-xs text-slate-400">{set.scenarioCount} scenarios</p>
+                      <p className="mt-1 text-xs text-slate-400">
+                        {set.scenarioCount} scenarios
+                        {set.recommendedScenarioName ? ` · recommends ${set.recommendedScenarioName}` : ""}
+                      </p>
                     </div>
                     <span className="text-xs text-slate-400">{new Date(set.updatedAt).toLocaleDateString()}</span>
                   </button>
@@ -931,6 +1069,16 @@ export function CostCalculatorForm() {
           busy={isPending}
         />
       </section>
+
+      <LaunchTemplateEditor
+        templates={selectedProfile?.launchTemplates ?? []}
+        feePresets={selectedProfile?.amazonFeePresets ?? []}
+        shippingZones={selectedProfile?.shippingZoneRules ?? []}
+        packagingRules={selectedProfile?.packagingRules ?? []}
+        shippingRules={selectedProfile?.shippingRules ?? []}
+        onCreate={handleCreateLaunchTemplate}
+        onUpdate={handleUpdateLaunchTemplate}
+      />
     </div>
   );
 }

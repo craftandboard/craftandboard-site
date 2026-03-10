@@ -29,7 +29,8 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
           <p className="mt-1 text-sm text-slate-300">
             {profile.materialRules.length} material rules · {profile.edgeBandRules.length} edge band rules ·{" "}
             {profile.packagingRules.length} packaging rules · {profile.shippingRules.length} shipping rules ·{" "}
-            {profile.amazonFeePresets.length} fee presets · {profile.shippingZoneRules.length} zone rules
+            {profile.amazonFeePresets.length} fee presets · {profile.shippingZoneRules.length} zone rules ·{" "}
+            {profile.launchTemplates.length} launch templates
           </p>
         </div>
         <div className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
@@ -144,6 +145,24 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
             ))}
             {profile.amazonFeePresets.length === 0 && profile.shippingZoneRules.length === 0 ? (
               <p className="text-slate-400">No Amazon fee presets or shipping zone rules yet.</p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Launch Templates</p>
+          <div className="mt-3 space-y-3 text-sm text-slate-200">
+            {profile.launchTemplates.slice(0, 3).map((template) => (
+              <div key={template.id} className="rounded-xl border border-white/10 px-3 py-3">
+                <p className="font-medium text-white">{template.name}</p>
+                <p className="mt-1 text-xs text-slate-300">
+                  {template.launchStrategy} · Fee {template.defaultAmazonFeePresetName ?? "default"} · Zone{" "}
+                  {template.defaultShippingZoneRuleName ?? "base"}
+                </p>
+              </div>
+            ))}
+            {profile.launchTemplates.length === 0 ? (
+              <p className="text-slate-400">No launch templates yet.</p>
             ) : null}
           </div>
         </div>

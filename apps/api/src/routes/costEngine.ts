@@ -14,6 +14,7 @@ import {
   createAmazonFeePreset,
   createCostProfile,
   createEdgeBandCostRule,
+  createLaunchTemplate,
   createMaterialCostRule,
   createPackagingCostRule,
   createShippingCostRule,
@@ -21,18 +22,23 @@ import {
   getAmazonFeePreset,
   getComparisonSet,
   getCostProfile,
+  getComparisonSetRecommendation,
+  getLaunchTemplate,
   getShelfCostCalculation,
   getShippingZoneRule,
   listAmazonFeePresets,
   listComparisonSets,
   listCostProfiles,
+  listLaunchTemplates,
   listShelfCostCalculations,
   listShippingZoneRules,
   saveComparisonSet,
   saveShelfCostCalculation,
+  rankComparisonSet,
   updateAmazonFeePreset,
   updateCostProfile,
   updateEdgeBandCostRule,
+  updateLaunchTemplate,
   updateMaterialCostRule,
   updatePackagingCostRule,
   updateShippingCostRule,
@@ -47,6 +53,7 @@ import {
   createAmazonFeePresetSchema,
   createCostProfileSchema,
   createEdgeBandCostRuleSchema,
+  createLaunchTemplateSchema,
   createMaterialCostRuleSchema,
   createPackagingCostRuleSchema,
   createShippingCostRuleSchema,
@@ -64,11 +71,13 @@ import {
   updateAmazonFeePresetSchema,
   updateCostProfileSchema,
   updateEdgeBandCostRuleSchema,
+  updateLaunchTemplateSchema,
   updateMaterialCostRuleSchema,
   updatePackagingCostRuleSchema,
   updateShippingCostRuleSchema,
   updateShippingZoneRuleSchema,
-  zoneRuleIdParamsSchema
+  zoneRuleIdParamsSchema,
+  templateIdParamsSchema
 } from "../modules/costEngine/schemas.js";
 
 const router = Router();
@@ -92,7 +101,8 @@ function handleCostEngineRouteError(error: unknown, res: any, next: any) {
       "Shelf cost calculation not found.",
       "Amazon fee preset not found.",
       "Shipping zone rule not found.",
-      "Cost comparison set not found."
+      "Cost comparison set not found.",
+      "Launch template not found."
     ]);
     res.status(notFoundErrors.has(error.message) ? 404 : 400).json({ ok: false, error: error.message });
     return;
@@ -415,6 +425,70 @@ router.patch("/shipping-zone-rules/:zoneRuleId", async (req, res, next) => {
   }
 });
 
+router.post("/cost-profiles/:costProfileId/launch-templates", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createLaunchTemplateSchema.parse(req.body);
+    res.status(201).json(
+      await createLaunchTemplate({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/launch-templates", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const query = listAmazonFeePresetsQuerySchema.parse(req.query);
+    res.json(
+      await listLaunchTemplates({
+        organizationId: context.currentOrganization.id,
+        costProfileId: query.costProfileId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/launch-templates/:templateId", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const params = templateIdParamsSchema.parse(req.params);
+    res.json(
+      await getLaunchTemplate({
+        organizationId: context.currentOrganization.id,
+        templateId: params.templateId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/launch-templates/:templateId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = templateIdParamsSchema.parse(req.params);
+    const body = updateLaunchTemplateSchema.parse(req.body);
+    res.json(
+      await updateLaunchTemplate({
+        organizationId: context.currentOrganization.id,
+        templateId: params.templateId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.post("/cost-calculations/calculate", async (req, res, next) => {
   try {
     const context = getCostCalculationWriteContext(req);
@@ -509,6 +583,36 @@ router.get("/cost-comparison-sets/:comparisonSetId", async (req, res, next) => {
     const params = comparisonSetIdParamsSchema.parse(req.params);
     res.json(
       await getComparisonSet({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-comparison-sets/:comparisonSetId/rank", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    res.json(
+      await rankComparisonSet({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-comparison-sets/:comparisonSetId/recommendation", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    res.json(
+      await getComparisonSetRecommendation({
         organizationId: context.currentOrganization.id,
         comparisonSetId: params.comparisonSetId
       })

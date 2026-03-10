@@ -2809,6 +2809,27 @@ export interface ShippingZoneRuleItem {
   updatedAt: string;
 }
 
+export interface LaunchTemplateItem {
+  id: string;
+  orgId: string;
+  costProfileId: string;
+  name: string;
+  status: "ACTIVE" | "ARCHIVED";
+  defaultAmazonFeePresetId: string | null;
+  defaultAmazonFeePresetName: string | null;
+  defaultShippingZoneRuleId: string | null;
+  defaultShippingZoneRuleName: string | null;
+  defaultPackagingRuleId: string | null;
+  defaultPackagingRuleName: string | null;
+  defaultShippingRuleId: string | null;
+  defaultShippingRuleName: string | null;
+  launchStrategy: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN";
+  notes: string | null;
+  assumptionsSnapshot: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MaterialCostRuleItem {
   id: string;
   orgId: string;
@@ -2919,6 +2940,7 @@ export interface CostProfileDetail {
   shippingRules: ShippingCostRuleItem[];
   amazonFeePresets: AmazonFeePresetItem[];
   shippingZoneRules: ShippingZoneRuleItem[];
+  launchTemplates: LaunchTemplateItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -3163,6 +3185,7 @@ export interface ShelfCostCalculationRecord {
 
 export interface CostScenarioInput {
   name: string;
+  launchStrategy?: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN" | null;
   amazonFeePresetId?: string | null;
   shippingZoneRuleId?: string | null;
   packagingCode?: string | null;
@@ -3179,6 +3202,7 @@ export interface CostScenarioInput {
 export interface CostScenarioResult {
   id: string;
   name: string;
+  launchStrategy?: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN" | null;
   calculation: CostCalculationPreview;
   assumptionsSnapshot: Record<string, unknown>;
   result: CostCalculationResult;
@@ -3189,7 +3213,11 @@ export interface CostScenarioResult {
     shippingZoneRuleId: string | null;
     targetMarginPct: number | null;
     growthMarginPct: number | null;
+    launchStrategy?: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN" | null;
   };
+  rankingScore: number | null;
+  rankingSummary: Record<string, unknown> | null;
+  isRecommendedLaunchScenario: boolean;
   deltas: {
     subtotalCostCents: number;
     breakEvenPriceCents: number;
@@ -3203,6 +3231,24 @@ export interface CostComparisonResult {
   notes: string | null;
   baseSpec: CostCalculationInput;
   baselineScenarioId: string;
+  ranking?: {
+    scenarios: Array<{
+      scenarioId: string;
+      rankingScore: number;
+      rankingSummary: Record<string, unknown>;
+    }>;
+    recommendation: {
+      recommendedScenarioId: string;
+      recommendedLaunchPriceCents: number;
+      recommendedFloorPriceCents: number;
+      recommendedSaferMarginPriceCents: number;
+      bestLaunchScenarioLabel: string;
+      safestMarginScenarioLabel: string;
+      mostAggressiveScenarioLabel: string;
+      recommendationSummary: string;
+      tradeoffSummary: Record<string, unknown>;
+    } | null;
+  };
   scenarios: CostScenarioResult[];
 }
 
@@ -3220,6 +3266,10 @@ export interface CalculationScenarioRecord {
   shippingRuleId: string | null;
   shippingRuleName: string | null;
   shelfCostCalculationId: string | null;
+  launchStrategy: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN" | null;
+  rankingScore: number | null;
+  rankingSummary: Record<string, unknown> | null;
+  isRecommendedLaunchScenario: boolean;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3232,6 +3282,10 @@ export interface ComparisonSetRecord {
   name: string;
   notes: string | null;
   baseShelfSpecSnapshot: Record<string, unknown>;
+  recommendedScenarioId: string | null;
+  recommendedScenarioName: string | null;
+  rankingSnapshot: Record<string, unknown> | null;
+  comparisonSummary: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3248,6 +3302,9 @@ export interface ComparisonSetListItem {
   name: string;
   notes: string | null;
   scenarioCount: number;
+  recommendedScenarioId: string | null;
+  recommendedScenarioName: string | null;
+  comparisonSummary: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -3522,6 +3579,47 @@ export async function updateShippingZoneRule(zoneRuleId: string, input: Record<s
   );
 }
 
+export async function createLaunchTemplate(
+  costProfileId: string,
+  input: {
+    name: string;
+    status?: "ACTIVE" | "ARCHIVED";
+    defaultAmazonFeePresetId?: string | null;
+    defaultShippingZoneRuleId?: string | null;
+    defaultPackagingRuleId?: string | null;
+    defaultShippingRuleId?: string | null;
+    launchStrategy: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN";
+    notes?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; launchTemplate: LaunchTemplateItem }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/launch-templates`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function getLaunchTemplates(input?: { costProfileId?: string }) {
+  const params = new URLSearchParams();
+  if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
+  const query = params.toString();
+  return readJson<{ ok: true; launchTemplates: LaunchTemplateItem[] }>(
+    `/launch-templates${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getLaunchTemplate(templateId: string) {
+  return readJson<{ ok: true; launchTemplate: LaunchTemplateItem }>(
+    `/launch-templates/${encodeURIComponent(templateId)}`
+  );
+}
+
+export async function updateLaunchTemplate(templateId: string, input: Record<string, unknown>) {
+  return sendJson<{ ok: true; launchTemplate: LaunchTemplateItem }>(
+    `/launch-templates/${encodeURIComponent(templateId)}`,
+    { method: "PATCH", body: JSON.stringify(input) }
+  );
+}
+
 export async function calculateShelfCost(input: CostCalculationInput) {
   return sendJson<{
     ok: true;
@@ -3589,6 +3687,19 @@ export async function getCostComparisonSets() {
 export async function getCostComparisonSet(comparisonSetId: string) {
   return readJson<{ ok: true; comparisonSet: ComparisonSetRecord }>(
     `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}`
+  );
+}
+
+export async function rankCostComparisonSet(comparisonSetId: string) {
+  return sendJson<{ ok: true; comparisonSet: ComparisonSetRecord }>(
+    `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/rank`,
+    { method: "POST" }
+  );
+}
+
+export async function getCostComparisonRecommendation(comparisonSetId: string) {
+  return readJson<{ ok: true; recommendation: Record<string, unknown> | null }>(
+    `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/recommendation`
   );
 }
 

@@ -25,6 +25,12 @@ enum CostProfileStatus {
   ARCHIVED
 }
 
+enum LaunchStrategy {
+  BALANCED
+  AGGRESSIVE
+  SAFER_MARGIN
+}
+
 enum ShelfCostEdgeBandPattern {
   NONE
   LONG_EDGES
@@ -789,6 +795,7 @@ model Organization {
   calculationScenarios CalculationScenario[]
   calculationComparisonSets CalculationComparisonSet[]
   comparisonSetScenarios ComparisonSetScenario[]
+  launchTemplates LaunchTemplate[]
   shelfCostEstimates ShelfCostEstimate[]
   orderCostEstimates OrderCostEstimate[]
   shelfProducts ShelfProduct[]
@@ -2291,6 +2298,7 @@ model CostProfile {
   shippingZoneRules                ShippingZoneRule[]
   shelfCostCalculations             ShelfCostCalculation[]
   calculationScenarios             CalculationScenario[]
+  launchTemplates                  LaunchTemplate[]
 
   @@index([organizationId, isDefault])
   @@index([organizationId, status])
@@ -2362,6 +2370,7 @@ model PackagingCostRule {
   organization              Organization @relation(fields: [organizationId], references: [id])
   costProfile               CostProfile @relation(fields: [costProfileId], references: [id])
   calculationScenarios      CalculationScenario[]
+  launchTemplates           LaunchTemplate[]
 
   @@index([organizationId, costProfileId])
   @@index([organizationId, packagingCode])
@@ -2389,6 +2398,7 @@ model ShippingCostRule {
   organization         Organization @relation(fields: [organizationId], references: [id])
   costProfile          CostProfile @relation(fields: [costProfileId], references: [id])
   calculationScenarios CalculationScenario[]
+  launchTemplates      LaunchTemplate[]
 
   @@index([organizationId, costProfileId])
   @@index([organizationId, shippingCode])
@@ -2420,6 +2430,7 @@ model AmazonFeePreset {
   costProfile                CostProfile?      @relation(fields: [costProfileId], references: [id])
   shelfCostCalculations      ShelfCostCalculation[]
   calculationScenarios       CalculationScenario[]
+  launchTemplates            LaunchTemplate[]
 
   @@index([organizationId, status])
   @@index([organizationId, costProfileId])
@@ -2446,6 +2457,7 @@ model ShippingZoneRule {
   costProfile              CostProfile?      @relation(fields: [costProfileId], references: [id])
   shelfCostCalculations    ShelfCostCalculation[]
   calculationScenarios     CalculationScenario[]
+  launchTemplates          LaunchTemplate[]
 
   @@index([organizationId, status])
   @@index([organizationId, costProfileId])
@@ -2525,6 +2537,10 @@ model CalculationScenario {
   packagingRuleId        String?
   shippingRuleId         String?
   shelfCostCalculationId String?
+  launchStrategy         LaunchStrategy?
+  rankingScore           Decimal?               @db.Decimal(12, 4)
+  rankingSummary         Json?
+  isRecommendedLaunchScenario Boolean           @default(false)
   assumptionsSnapshot    Json
   resultSnapshot         Json
   createdAt              DateTime               @default(now())
@@ -2537,9 +2553,11 @@ model CalculationScenario {
   shippingRule           ShippingCostRule?      @relation(fields: [shippingRuleId], references: [id])
   shelfCostCalculation   ShelfCostCalculation?  @relation(fields: [shelfCostCalculationId], references: [id])
   comparisonSetScenarios ComparisonSetScenario[]
+  recommendedByComparisonSets CalculationComparisonSet[] @relation("ComparisonSetRecommendation")
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
+  @@index([organizationId, rankingScore])
 }
 
 model CalculationComparisonSet {
@@ -2548,12 +2566,17 @@ model CalculationComparisonSet {
   name                 String
   baseShelfSpecSnapshot Json
   notes                String?
+  recommendedScenarioId String?
+  rankingSnapshot      Json?
+  comparisonSummary    Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
   scenarios            ComparisonSetScenario[]
+  recommendedScenario  CalculationScenario?   @relation("ComparisonSetRecommendation", fields: [recommendedScenarioId], references: [id])
 
   @@index([organizationId, createdAt])
+  @@index([organizationId, recommendedScenarioId])
 }
 
 model ComparisonSetScenario {
@@ -2568,6 +2591,32 @@ model ComparisonSetScenario {
   calculationScenario   CalculationScenario      @relation(fields: [calculationScenarioId], references: [id])
 
   @@index([organizationId, comparisonSetId])
+}
+
+model LaunchTemplate {
+  id                        String            @id @default(cuid())
+  organizationId            String
+  costProfileId             String
+  name                      String
+  status                    CostProfileStatus @default(ACTIVE)
+  defaultAmazonFeePresetId  String?
+  defaultShippingZoneRuleId String?
+  defaultPackagingRuleId    String?
+  defaultShippingRuleId     String?
+  launchStrategy            LaunchStrategy    @default(BALANCED)
+  notes                     String?
+  assumptionsSnapshot       Json?
+  createdAt                 DateTime          @default(now())
+  updatedAt                 DateTime          @updatedAt
+  organization              Organization      @relation(fields: [organizationId], references: [id])
+  costProfile               CostProfile       @relation(fields: [costProfileId], references: [id])
+  defaultAmazonFeePreset    AmazonFeePreset?  @relation(fields: [defaultAmazonFeePresetId], references: [id])
+  defaultShippingZoneRule   ShippingZoneRule? @relation(fields: [defaultShippingZoneRuleId], references: [id])
+  defaultPackagingRule      PackagingCostRule? @relation(fields: [defaultPackagingRuleId], references: [id])
+  defaultShippingRule       ShippingCostRule? @relation(fields: [defaultShippingRuleId], references: [id])
+
+  @@index([organizationId, costProfileId])
+  @@index([organizationId, status])
 }
 
 model CostRate {

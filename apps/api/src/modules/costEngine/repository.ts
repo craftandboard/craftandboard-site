@@ -104,6 +104,16 @@ export async function getCostProfileRecord(input: {
       shippingZoneRules: {
         where: { status: "ACTIVE" },
         orderBy: [{ name: "asc" }, { id: "asc" }]
+      },
+      launchTemplates: {
+        where: { status: "ACTIVE" },
+        include: {
+          defaultAmazonFeePreset: true,
+          defaultShippingZoneRule: true,
+          defaultPackagingRule: true,
+          defaultShippingRule: true
+        },
+        orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
       }
     }
   });
@@ -627,6 +637,10 @@ export async function createCalculationScenarioRecord(input: {
   packagingRuleId?: string | null;
   shippingRuleId?: string | null;
   shelfCostCalculationId?: string | null;
+  launchStrategy?: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN" | null;
+  rankingScore?: number | null;
+  rankingSummary?: unknown;
+  isRecommendedLaunchScenario?: boolean;
   assumptionsSnapshot: unknown;
   resultSnapshot: unknown;
 }) {
@@ -640,6 +654,10 @@ export async function createCalculationScenarioRecord(input: {
       packagingRuleId: input.packagingRuleId ?? undefined,
       shippingRuleId: input.shippingRuleId ?? undefined,
       shelfCostCalculationId: input.shelfCostCalculationId ?? undefined,
+      launchStrategy: input.launchStrategy ?? undefined,
+      rankingScore: input.rankingScore ?? undefined,
+      rankingSummary: normalizeMetadata(input.rankingSummary),
+      isRecommendedLaunchScenario: input.isRecommendedLaunchScenario ?? false,
       assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
       resultSnapshot: normalizeMetadata(input.resultSnapshot)
     }
@@ -651,14 +669,34 @@ export async function createCalculationComparisonSetRecord(input: {
   name: string;
   baseShelfSpecSnapshot: unknown;
   notes?: string | null;
+  recommendedScenarioId?: string | null;
+  rankingSnapshot?: unknown;
+  comparisonSummary?: unknown;
 }) {
   return prismaClient.calculationComparisonSet.create({
     data: {
       organizationId: input.organizationId,
       name: input.name,
       baseShelfSpecSnapshot: normalizeMetadata(input.baseShelfSpecSnapshot),
-      notes: input.notes ?? null
+      notes: input.notes ?? null,
+      recommendedScenarioId: input.recommendedScenarioId ?? undefined,
+      rankingSnapshot: normalizeMetadata(input.rankingSnapshot),
+      comparisonSummary: normalizeMetadata(input.comparisonSummary)
     }
+  });
+}
+
+export async function updateCalculationComparisonSetRecord(input: {
+  organizationId: string;
+  comparisonSetId: string;
+  data: Record<string, unknown>;
+}) {
+  return prismaClient.calculationComparisonSet.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      id: input.comparisonSetId
+    },
+    data: input.data
   });
 }
 
@@ -692,7 +730,8 @@ export async function listCalculationComparisonSetsForOrganization(organizationI
           }
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
-      }
+      },
+      recommendedScenario: true
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }]
   });
@@ -718,7 +757,89 @@ export async function getCalculationComparisonSetRecord(input: {
           }
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
-      }
+      },
+      recommendedScenario: true
     }
+  });
+}
+
+export async function createLaunchTemplateRecord(input: {
+  organizationId: string;
+  costProfileId: string;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  defaultAmazonFeePresetId?: string | null;
+  defaultShippingZoneRuleId?: string | null;
+  defaultPackagingRuleId?: string | null;
+  defaultShippingRuleId?: string | null;
+  launchStrategy: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN";
+  notes?: string | null;
+  assumptionsSnapshot?: unknown;
+}) {
+  return prismaClient.launchTemplate.create({
+    data: {
+      organizationId: input.organizationId,
+      costProfileId: input.costProfileId,
+      name: input.name,
+      status: input.status ?? "ACTIVE",
+      defaultAmazonFeePresetId: input.defaultAmazonFeePresetId ?? undefined,
+      defaultShippingZoneRuleId: input.defaultShippingZoneRuleId ?? undefined,
+      defaultPackagingRuleId: input.defaultPackagingRuleId ?? undefined,
+      defaultShippingRuleId: input.defaultShippingRuleId ?? undefined,
+      launchStrategy: input.launchStrategy,
+      notes: input.notes ?? null,
+      assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot)
+    }
+  });
+}
+
+export async function listLaunchTemplatesForOrganization(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  return prismaClient.launchTemplate.findMany({
+    where: {
+      organizationId: input.organizationId,
+      ...(input.costProfileId ? { costProfileId: input.costProfileId } : {})
+    },
+    include: {
+      defaultAmazonFeePreset: true,
+      defaultShippingZoneRule: true,
+      defaultPackagingRule: true,
+      defaultShippingRule: true
+    },
+    orderBy: [{ status: "asc" }, { updatedAt: "desc" }, { id: "desc" }]
+  });
+}
+
+export async function getLaunchTemplateRecord(input: {
+  organizationId: string;
+  templateId: string;
+}) {
+  return prismaClient.launchTemplate.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      id: input.templateId
+    },
+    include: {
+      defaultAmazonFeePreset: true,
+      defaultShippingZoneRule: true,
+      defaultPackagingRule: true,
+      defaultShippingRule: true
+    }
+  });
+}
+
+export async function updateLaunchTemplateRecord(input: {
+  organizationId: string;
+  templateId: string;
+  data: Record<string, unknown>;
+}) {
+  return prismaClient.launchTemplate.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      id: input.templateId
+    },
+    data: input.data
   });
 }

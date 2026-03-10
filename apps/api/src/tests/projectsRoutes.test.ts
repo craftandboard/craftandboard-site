@@ -6,6 +6,16 @@ const contextMocks = vi.hoisted(() => ({
     currentOrganization: {
       id: "org_local_craft_board"
     }
+  })),
+  getProjectWriteContext: vi.fn(() => ({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
+  })),
+  getProjectTaskWriteContext: vi.fn(() => ({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
   }))
 }));
 
@@ -19,7 +29,11 @@ const authorizationMocks = vi.hoisted(() => ({
 
 const serviceMocks = vi.hoisted(() => ({
   listProjectsView: vi.fn(),
-  getProjectDetailView: vi.fn()
+  getProjectDetailView: vi.fn(),
+  createProject: vi.fn(),
+  updateProject: vi.fn(),
+  createProjectTask: vi.fn(),
+  updateProjectTask: vi.fn()
 }));
 
 vi.mock("../modules/projects/adapters/contextAdapter.js", () => contextMocks);
@@ -53,6 +67,16 @@ beforeEach(async () => {
       id: "org_local_craft_board"
     }
   });
+  contextMocks.getProjectWriteContext.mockReturnValue({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
+  });
+  contextMocks.getProjectTaskWriteContext.mockReturnValue({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
+  });
   serviceMocks.listProjectsView.mockResolvedValue({
     ok: true,
     projects: []
@@ -62,6 +86,34 @@ beforeEach(async () => {
     project: {
       id: "proj_1",
       name: "Kitchen Remodel"
+    }
+  });
+  serviceMocks.createProject.mockResolvedValue({
+    ok: true,
+    project: {
+      id: "proj_new",
+      name: "New Project"
+    }
+  });
+  serviceMocks.updateProject.mockResolvedValue({
+    ok: true,
+    project: {
+      id: "proj_1",
+      name: "Updated Project"
+    }
+  });
+  serviceMocks.createProjectTask.mockResolvedValue({
+    ok: true,
+    task: {
+      id: "task_1",
+      title: "Confirm schedule"
+    }
+  });
+  serviceMocks.updateProjectTask.mockResolvedValue({
+    ok: true,
+    task: {
+      id: "task_1",
+      title: "Confirm schedule"
     }
   });
 });
@@ -109,6 +161,22 @@ describe("projects routes", () => {
     expect(response.status).toBe(403);
   });
 
+  it("returns 403 when write capability enforcement rejects access", async () => {
+    contextMocks.getProjectWriteContext.mockImplementationOnce(() => {
+      throw new authorizationMocks.AuthorizationError("Forbidden.");
+    });
+
+    const response = await fetch(`${baseUrl}/projects`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "Alpha Project"
+      })
+    });
+
+    expect(response.status).toBe(403);
+  });
+
   it("returns 404 for missing project detail", async () => {
     serviceMocks.getProjectDetailView.mockRejectedValueOnce(new Error("Project not found."));
 
@@ -117,5 +185,100 @@ describe("projects routes", () => {
 
     expect(response.status).toBe(404);
     expect(payload.ok).toBe(false);
+  });
+
+  it("creates a project using target org context", async () => {
+    const response = await fetch(`${baseUrl}/projects`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        key: "alpha",
+        name: "Alpha Project",
+        status: "planned"
+      })
+    });
+
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createProject).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      key: "alpha",
+      name: "Alpha Project",
+      status: "planned"
+    });
+  });
+
+  it("updates a project through the target write route", async () => {
+    const response = await fetch(`${baseUrl}/projects/proj_1`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        status: "in_progress"
+      })
+    });
+
+    expect(response.status).toBe(200);
+    expect(serviceMocks.updateProject).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      projectId: "proj_1",
+      status: "in_progress"
+    });
+  });
+
+  it("rejects invalid project creation payloads", async () => {
+    const response = await fetch(`${baseUrl}/projects`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: ""
+      })
+    });
+
+    expect(response.status).toBe(400);
+  });
+
+  it("creates a project task in project scope", async () => {
+    const response = await fetch(`${baseUrl}/projects/proj_1/tasks`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        phaseId: "phase_1",
+        title: "Confirm schedule",
+        isRequired: true
+      })
+    });
+
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createProjectTask).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      projectId: "proj_1",
+      phaseId: "phase_1",
+      title: "Confirm schedule",
+      status: undefined,
+      dueDate: undefined,
+      assignedToUserId: undefined,
+      isRequired: true
+    });
+  });
+
+  it("updates a project task in project scope", async () => {
+    const response = await fetch(`${baseUrl}/projects/proj_1/tasks/task_1`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        status: "DONE"
+      })
+    });
+
+    expect(response.status).toBe(200);
+    expect(serviceMocks.updateProjectTask).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      projectId: "proj_1",
+      taskId: "task_1",
+      title: undefined,
+      status: "DONE",
+      dueDate: undefined,
+      assignedToUserId: undefined,
+      isRequired: undefined
+    });
   });
 });

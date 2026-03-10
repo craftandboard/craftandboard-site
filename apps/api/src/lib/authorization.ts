@@ -4,7 +4,10 @@ export type ApiCapability =
   | "org_member_read"
   | "org_member_manage"
   | "project_read"
+  | "project_write"
   | "work_module_read"
+  | "work_module_write"
+  | "project_task_write"
   | "costing_read"
   | "costing_manage"
   | "pricing_read"
@@ -37,7 +40,10 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
   org_member_read: ["OWNER", "ADMIN"],
   org_member_manage: ["OWNER"],
   project_read: ["OWNER", "ADMIN"],
+  project_write: ["OWNER", "ADMIN"],
   work_module_read: ["OWNER", "ADMIN"],
+  work_module_write: ["OWNER", "ADMIN"],
+  project_task_write: ["OWNER", "ADMIN"],
   costing_read: ["OWNER", "ADMIN"],
   costing_manage: ["OWNER", "ADMIN"],
   pricing_read: ["OWNER", "ADMIN"],
@@ -71,7 +77,10 @@ const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   org_member_read: "organization member access",
   org_member_manage: "organization member management",
   project_read: "project access",
+  project_write: "project management",
   work_module_read: "work module access",
+  work_module_write: "work module management",
+  project_task_write: "project task management",
   costing_read: "costing access",
   costing_manage: "costing management",
   pricing_read: "pricing access",

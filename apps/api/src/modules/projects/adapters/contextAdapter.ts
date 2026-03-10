@@ -14,3 +14,20 @@ export function getWorkModuleReadContext(req: Request) {
   return context;
 }
 
+export function getProjectWriteContext(req: Request) {
+  const context = getRequestContext(req);
+  assertCapability(context, "project_write");
+  return context;
+}
+
+export function getWorkModuleWriteContext(req: Request) {
+  const context = getRequestContext(req);
+  assertCapability(context, "work_module_write");
+  return context;
+}
+
+export function getProjectTaskWriteContext(req: Request) {
+  const context = getRequestContext(req);
+  assertCapability(context, "project_task_write");
+  return context;
+}

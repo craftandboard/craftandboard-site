@@ -6,6 +6,11 @@ const contextMocks = vi.hoisted(() => ({
     currentOrganization: {
       id: "org_local_craft_board"
     }
+  })),
+  getWorkModuleWriteContext: vi.fn(() => ({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
   }))
 }));
 
@@ -19,7 +24,9 @@ const authorizationMocks = vi.hoisted(() => ({
 
 const serviceMocks = vi.hoisted(() => ({
   listWorkModulesView: vi.fn(),
-  getWorkModuleDetailView: vi.fn()
+  getWorkModuleDetailView: vi.fn(),
+  createWorkModule: vi.fn(),
+  updateWorkModule: vi.fn()
 }));
 
 vi.mock("../modules/projects/adapters/contextAdapter.js", () => contextMocks);
@@ -53,11 +60,30 @@ beforeEach(async () => {
       id: "org_local_craft_board"
     }
   });
+  contextMocks.getWorkModuleWriteContext.mockReturnValue({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
+  });
   serviceMocks.listWorkModulesView.mockResolvedValue({
     ok: true,
     workModules: []
   });
   serviceMocks.getWorkModuleDetailView.mockResolvedValue({
+    ok: true,
+    workModule: {
+      id: "phase_1",
+      name: "Scheduling"
+    }
+  });
+  serviceMocks.createWorkModule.mockResolvedValue({
+    ok: true,
+    workModule: {
+      id: "phase_new",
+      name: "Planning"
+    }
+  });
+  serviceMocks.updateWorkModule.mockResolvedValue({
     ok: true,
     workModule: {
       id: "phase_1",
@@ -108,5 +134,72 @@ describe("work module routes", () => {
 
     const response = await fetch(`${baseUrl}/work-modules`);
     expect(response.status).toBe(403);
+  });
+
+  it("returns 403 when write capability enforcement rejects access", async () => {
+    contextMocks.getWorkModuleWriteContext.mockImplementationOnce(() => {
+      throw new authorizationMocks.AuthorizationError("Forbidden.");
+    });
+
+    const response = await fetch(`${baseUrl}/work-modules`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        projectId: "proj_1",
+        name: "Planning"
+      })
+    });
+
+    expect(response.status).toBe(403);
+  });
+
+  it("creates a work module using target org context", async () => {
+    const response = await fetch(`${baseUrl}/work-modules`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        projectId: "proj_1",
+        name: "Planning",
+        status: "OPEN"
+      })
+    });
+
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createWorkModule).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      projectId: "proj_1",
+      name: "Planning",
+      status: "OPEN"
+    });
+  });
+
+  it("updates a work module through the target write route", async () => {
+    const response = await fetch(`${baseUrl}/work-modules/phase_1`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        summary: "Updated summary"
+      })
+    });
+
+    expect(response.status).toBe(200);
+    expect(serviceMocks.updateWorkModule).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      workModuleId: "phase_1",
+      summary: "Updated summary"
+    });
+  });
+
+  it("rejects invalid work module payloads", async () => {
+    const response = await fetch(`${baseUrl}/work-modules`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        projectId: "",
+        name: ""
+      })
+    });
+
+    expect(response.status).toBe(400);
   });
 });

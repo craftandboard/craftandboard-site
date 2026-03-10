@@ -3,9 +3,9 @@
 Safest canonical repo right now: `/Users/brandon/Projects/craft-and-board`
 
 Do not do yet:
-- do not import payments or Stripe next
+- do not import Stripe or project payments blindly
+- do not pull in proposal, deposit, or lead flows yet
 - do not collapse project-domain and manufacturing job terms
-- do not widen the slice into source monolithic server behavior
 
-Exact next Phase 4 action:
-- add write-safe project and work-module mutations inside the new target-owned modules, keeping auth/org/prisma adapters intact and deferring payments, proposals, and leads
+Exact next Phase 5 action:
+- define the payment, proposal, deposit, and lead boundary plan before any finance or sales-domain import starts

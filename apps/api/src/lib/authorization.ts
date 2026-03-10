@@ -5,6 +5,8 @@ export type ApiCapability =
   | "org_member_manage"
   | "project_read"
   | "project_write"
+  | "lead_read"
+  | "proposal_read"
   | "work_module_read"
   | "work_module_write"
   | "project_task_write"
@@ -41,6 +43,8 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
   org_member_manage: ["OWNER"],
   project_read: ["OWNER", "ADMIN"],
   project_write: ["OWNER", "ADMIN"],
+  lead_read: ["OWNER", "ADMIN"],
+  proposal_read: ["OWNER", "ADMIN"],
   work_module_read: ["OWNER", "ADMIN"],
   work_module_write: ["OWNER", "ADMIN"],
   project_task_write: ["OWNER", "ADMIN"],
@@ -78,6 +82,8 @@ const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   org_member_manage: "organization member management",
   project_read: "project access",
   project_write: "project management",
+  lead_read: "lead access",
+  proposal_read: "proposal access",
   work_module_read: "work module access",
   work_module_write: "work module management",
   project_task_write: "project task management",

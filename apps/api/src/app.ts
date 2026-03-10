@@ -30,6 +30,7 @@ import batchesRouter from "./routes/batches.js";
 import productionRouter from "./routes/production.js";
 import pricingRouter from "./routes/pricing.js";
 import proposalsRouter from "./routes/proposals.js";
+import proposalOrchestrationRouter from "./routes/proposalOrchestration.js";
 import projectsRouter from "./routes/projects.js";
 import remnantsRouter from "./routes/remnants.js";
 import reportsRouter from "./routes/reports.js";
@@ -81,6 +82,7 @@ export function createApp() {
   app.use("/batches", batchesRouter);
   app.use("/pricing", pricingRouter);
   app.use("/proposals", proposalsRouter);
+  app.use("/", proposalOrchestrationRouter);
   app.use("/projects", projectsRouter);
   app.use("/", shelfJobsRouter);
   app.use("/", scanningRouter);

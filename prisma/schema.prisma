@@ -471,6 +471,54 @@ enum PaymentReconciliationOutcome {
   FAILED
 }
 
+enum ProposalDepositPolicy {
+  NO_DEPOSIT_REQUIRED
+  DEPOSIT_REQUIRED_BEFORE_CONVERSION
+}
+
+enum ProposalAcceptanceStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  CANCELED
+}
+
+enum ProposalAcceptanceDecisionSource {
+  MANUAL_INTERNAL
+  MANUAL_EXTERNAL
+  PROVIDER_CONFIRMED
+}
+
+enum ProposalConversionStatus {
+  PENDING
+  ELIGIBLE
+  BLOCKED
+  CONVERTED
+  FAILED
+  CANCELED
+}
+
+enum ProposalOrchestrationAction {
+  ACCEPTANCE_CREATED
+  ACCEPTANCE_ACCEPTED
+  ACCEPTANCE_REJECTED
+  ACCEPTANCE_CANCELED
+  ELIGIBILITY_CHECKED
+  CONVERSION_MARKED_ELIGIBLE
+  CONVERSION_BLOCKED
+  PROJECT_CREATED
+  LEAD_STATUS_SYNCED
+  PROPOSAL_STATUS_SYNCED
+  REQUEST_IGNORED_DUPLICATE
+  ORCHESTRATION_FAILED
+}
+
+enum ProposalOrchestrationOutcome {
+  APPLIED
+  SKIPPED
+  FAILED
+}
+
 enum ShelfJobStatus {
   READY
   HOLD
@@ -580,6 +628,9 @@ model Organization {
   paymentExecutions PaymentExecution[]
   paymentProviderEvents PaymentProviderEvent[]
   paymentReconciliationLogs PaymentReconciliationLog[]
+  proposalAcceptances ProposalAcceptance[]
+  proposalConversions ProposalConversion[]
+  proposalOrchestrationLogs ProposalOrchestrationLog[]
   parts     Part[]
   batches   Batch[]
   bundles   ProductionBundle[]
@@ -722,6 +773,7 @@ model Project {
   organization   Organization @relation(fields: [organizationId], references: [id])
   leads          Lead[]
   proposals      Proposal[]
+  proposalConversions ProposalConversion[]
   phases         ProjectPhase[]
   tasks          ProjectTask[]
 
@@ -790,6 +842,7 @@ model Lead {
   organization   Organization @relation(fields: [organizationId], references: [id])
   project        Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   proposals      Proposal[]
+  proposalConversions ProposalConversion[]
 
   @@index([organizationId, createdAt])
   @@index([organizationId, status])
@@ -805,6 +858,7 @@ model Proposal {
   status         String?
   version        Int               @default(1)
   publicToken    String?           @unique
+  depositPolicy  ProposalDepositPolicy @default(NO_DEPOSIT_REQUIRED)
   createdAt      DateTime          @default(now())
   updatedAt      DateTime          @updatedAt
   organization   Organization      @relation(fields: [organizationId], references: [id])
@@ -816,6 +870,9 @@ model Proposal {
   payments       Payment[]
   paymentExecutions PaymentExecution[]
   paymentProviderEvents PaymentProviderEvent[]
+  acceptance     ProposalAcceptance?
+  conversion     ProposalConversion?
+  orchestrationLogs ProposalOrchestrationLog[]
 
   @@index([organizationId, projectId])
   @@index([organizationId, leadId])
@@ -1013,6 +1070,79 @@ model PaymentReconciliationLog {
   depositRequest   DepositRequest?              @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, executionId])
+}
+
+model ProposalAcceptance {
+  id                    String                           @id @default(cuid())
+  organizationId        String
+  proposalId            String                           @unique
+  status                ProposalAcceptanceStatus         @default(PENDING)
+  acceptedAt            DateTime?
+  rejectedAt            DateTime?
+  canceledAt            DateTime?
+  acceptedByMembershipId String?
+  rejectedByMembershipId String?
+  canceledByMembershipId String?
+  decisionSource        ProposalAcceptanceDecisionSource @default(MANUAL_INTERNAL)
+  note                  String?
+  metadata              Json?
+  createdAt             DateTime                         @default(now())
+  updatedAt             DateTime                         @updatedAt
+  organization          Organization                     @relation(fields: [organizationId], references: [id])
+  proposal              Proposal                         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  conversion            ProposalConversion?
+  orchestrationLogs     ProposalOrchestrationLog[]
+
+  @@index([organizationId, proposalId])
+}
+
+model ProposalConversion {
+  id                    String                   @id @default(cuid())
+  organizationId        String
+  proposalId            String                   @unique
+  leadId                String?
+  acceptanceId          String?                  @unique
+  status                ProposalConversionStatus @default(PENDING)
+  eligibilitySnapshot   Json?
+  blockedReasonCode     String?
+  blockedReasonMessage  String?
+  convertedAt           DateTime?
+  projectId             String?
+  initiatedByMembershipId String?
+  completedByMembershipId String?
+  metadata              Json?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
+  organization          Organization             @relation(fields: [organizationId], references: [id])
+  proposal              Proposal                 @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  lead                  Lead?                    @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  acceptance            ProposalAcceptance?      @relation(fields: [acceptanceId], references: [id], onDelete: SetNull)
+  project               Project?                 @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  orchestrationLogs     ProposalOrchestrationLog[]
+
+  @@index([organizationId, proposalId, status])
+  @@index([organizationId, projectId])
+}
+
+model ProposalOrchestrationLog {
+  id             String                        @id @default(cuid())
+  organizationId String
+  proposalId     String
+  acceptanceId   String?
+  conversionId   String?
+  action         ProposalOrchestrationAction
+  outcome        ProposalOrchestrationOutcome
+  message        String?
+  details        Json?
+  createdAt      DateTime                      @default(now())
+  organization   Organization                  @relation(fields: [organizationId], references: [id])
+  proposal       Proposal                      @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  acceptance     ProposalAcceptance?           @relation(fields: [acceptanceId], references: [id], onDelete: SetNull)
+  conversion     ProposalConversion?           @relation(fields: [conversionId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, proposalId])
+  @@index([organizationId, acceptanceId])
+  @@index([organizationId, conversionId])
 }
 
 model ActivationToken {

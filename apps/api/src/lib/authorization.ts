@@ -17,6 +17,10 @@ export type ApiCapability =
   | "payment_execution_write"
   | "payment_event_read"
   | "payment_event_write"
+  | "proposal_acceptance_read"
+  | "proposal_acceptance_write"
+  | "proposal_conversion_read"
+  | "proposal_conversion_write"
   | "work_module_read"
   | "work_module_write"
   | "project_task_write"
@@ -65,6 +69,10 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
   payment_execution_write: ["OWNER", "ADMIN"],
   payment_event_read: ["OWNER", "ADMIN"],
   payment_event_write: ["OWNER", "ADMIN"],
+  proposal_acceptance_read: ["OWNER", "ADMIN"],
+  proposal_acceptance_write: ["OWNER", "ADMIN"],
+  proposal_conversion_read: ["OWNER", "ADMIN"],
+  proposal_conversion_write: ["OWNER", "ADMIN"],
   work_module_read: ["OWNER", "ADMIN"],
   work_module_write: ["OWNER", "ADMIN"],
   project_task_write: ["OWNER", "ADMIN"],
@@ -114,6 +122,10 @@ const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   payment_execution_write: "payment execution management",
   payment_event_read: "payment provider event access",
   payment_event_write: "payment provider event management",
+  proposal_acceptance_read: "proposal acceptance access",
+  proposal_acceptance_write: "proposal acceptance management",
+  proposal_conversion_read: "proposal conversion access",
+  proposal_conversion_write: "proposal conversion management",
   work_module_read: "work module access",
   work_module_write: "work module management",
   project_task_write: "project task management",

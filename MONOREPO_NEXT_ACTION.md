@@ -3,9 +3,9 @@
 Safest canonical repo right now: `/Users/brandon/Projects/craft-and-board`
 
 Do not do yet:
-- do not import Stripe or payment runtime yet
-- do not couple proposals directly to deposit/payment workflows
-- do not merge sales models into pricing/costing structures
+- do not let provider events create projects directly
+- do not add invoice/accounting/customer sync yet
+- do not couple conversion directly to manufacturing automation
 
-Exact next Phase 10 action:
-- add a controlled proposal-acceptance and conversion orchestration layer on top of the canonical money and provider boundary without coupling provider events directly to project creation or lead-stage automation
+Exact next Phase 11 action:
+- add a controlled external-acceptance intake boundary that feeds the canonical proposal orchestrator without bypassing audit, deposit gating, or conversion rules

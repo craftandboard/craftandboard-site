@@ -116,6 +116,14 @@
 105. Verify the share/copy packaging card makes copy-first and share-first sections obvious
 106. Edit a channel mapping preset to change entry-critical ordering, entry completion cue checks, or handoff packet summary text
 107. Refresh the listing-prep package and confirm handoff-packet, entry-complete, entry-completion, and share/copy snapshots update and persist
+108. Load the current approved listing-prep artifact and verify the end-of-entry confirmation card renders clearly
+109. Confirm entry complete with an optional note
+110. Verify the closeout summary card shows what artifact was used, warning/override state at closeout, and retained share text
+111. Verify the completed artifact card clearly distinguishes completed versus still-current state
+112. Reload the package and confirm completion confirmation, closeout summary, and completed artifact summaries persist
+113. Confirm a completion note is retained and visible after reload
+114. Verify the package now distinguishes ready-to-use versus already completed without losing the current artifact context
+115. Verify the closeout summary reflects the final approval state, version summary, and warning/override context used at completion
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -153,3 +161,8 @@
 - A user can see a single final handoff packet that tells them what to copy first, what to share first, and what still remains before entry is complete
 - A user can distinguish operational readiness from entry completion state without inferring it from multiple lower-level cards
 - A user can tell whether the package is `ENTRY_READY`, `ENTRY_IN_PROGRESS`, or `ENTRY_BLOCKED` at a glance
+- A user can explicitly confirm that manual entry was completed from the current approved artifact without leaving the cost engine
+- A user can retain a concise closeout summary showing what artifact was used, what warnings remained, and whether override awareness still mattered
+- A user can tell whether the artifact is ready to use, already completed, or historical-after-completion without reconstructing state manually
+- A user can explicitly confirm that manual listing entry was completed and retain the note, timestamp, and final closeout state without leaving the cost engine
+- A user can inspect a concise completed-artifact summary later and still tell what package was used, whether override awareness mattered, and whether the artifact is still current

@@ -676,6 +676,7 @@ export async function createCalculationScenarioRecord(input: {
   latestOperatorPromptSummarySnapshot?: unknown;
   latestQuickCopySummarySnapshot?: unknown;
   latestHandoffPacketSummarySnapshot?: unknown;
+  latestCloseoutSummarySnapshot?: unknown;
   assumptionsSnapshot: unknown;
   resultSnapshot: unknown;
 }) {
@@ -716,6 +717,7 @@ export async function createCalculationScenarioRecord(input: {
       latestOperatorPromptSummarySnapshot: normalizeMetadata(input.latestOperatorPromptSummarySnapshot),
       latestQuickCopySummarySnapshot: normalizeMetadata(input.latestQuickCopySummarySnapshot),
       latestHandoffPacketSummarySnapshot: normalizeMetadata(input.latestHandoffPacketSummarySnapshot),
+      latestCloseoutSummarySnapshot: normalizeMetadata(input.latestCloseoutSummarySnapshot),
       assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
       resultSnapshot: normalizeMetadata(input.resultSnapshot)
     }
@@ -742,6 +744,8 @@ export async function createCalculationComparisonSetRecord(input: {
   selectedExecutionPackageSummarySnapshot?: unknown;
   selectedHandoffPacketVersion?: string | null;
   selectedHandoffPacketSummarySnapshot?: unknown;
+  selectedCloseoutVersion?: string | null;
+  selectedCloseoutSummarySnapshot?: unknown;
   selectedListingPrepPackageId?: string | null;
   listingPrepSummarySnapshot?: unknown;
   selectedListingPrepReadySnapshot?: unknown;
@@ -774,6 +778,8 @@ export async function createCalculationComparisonSetRecord(input: {
       selectedHandoffPacketSummarySnapshot: normalizeMetadata(
         input.selectedHandoffPacketSummarySnapshot
       ),
+      selectedCloseoutVersion: input.selectedCloseoutVersion ?? undefined,
+      selectedCloseoutSummarySnapshot: normalizeMetadata(input.selectedCloseoutSummarySnapshot),
       selectedListingPrepPackageId: input.selectedListingPrepPackageId ?? undefined,
       listingPrepSummarySnapshot: normalizeMetadata(input.listingPrepSummarySnapshot),
       selectedListingPrepReadySnapshot: normalizeMetadata(input.selectedListingPrepReadySnapshot),
@@ -969,6 +975,14 @@ export async function createListingPrepPackageRecord(input: {
   entryCompletionSummarySnapshot?: unknown;
   handoffPacketVersion?: string | null;
   shareCopyPackagingSummary?: unknown;
+  entryCompletedAt?: Date | null;
+  entryCompletedByMembershipId?: string | null;
+  entryCompletionNote?: string | null;
+  entryCompletionConfirmed?: boolean;
+  closeoutSummarySnapshot?: unknown;
+  closeoutVersion?: string | null;
+  completedArtifactSummarySnapshot?: unknown;
+  entryCompletionState?: string | null;
   currentApprovedArtifact?: boolean;
   notes?: string | null;
   approvedAt?: Date | null;
@@ -1037,6 +1051,14 @@ export async function createListingPrepPackageRecord(input: {
       entryCompletionSummarySnapshot: normalizeMetadata(input.entryCompletionSummarySnapshot),
       handoffPacketVersion: input.handoffPacketVersion ?? undefined,
       shareCopyPackagingSummary: normalizeMetadata(input.shareCopyPackagingSummary),
+      entryCompletedAt: input.entryCompletedAt ?? null,
+      entryCompletedByMembershipId: input.entryCompletedByMembershipId ?? null,
+      entryCompletionNote: input.entryCompletionNote ?? null,
+      entryCompletionConfirmed: input.entryCompletionConfirmed ?? false,
+      closeoutSummarySnapshot: normalizeMetadata(input.closeoutSummarySnapshot),
+      closeoutVersion: input.closeoutVersion ?? undefined,
+      completedArtifactSummarySnapshot: normalizeMetadata(input.completedArtifactSummarySnapshot),
+      entryCompletionState: input.entryCompletionState ?? undefined,
       currentApprovedArtifact: input.currentApprovedArtifact ?? false,
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
@@ -1207,6 +1229,8 @@ export async function createChannelMappingPresetRecord(input: {
   entryCriticalOrderingSnapshot?: unknown;
   entryCompletionCueTemplateSnapshot?: unknown;
   handoffPacketFormatSnapshot?: unknown;
+  completionConfirmationPromptSnapshot?: unknown;
+  closeoutSummaryFormatSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -1249,6 +1273,10 @@ export async function createChannelMappingPresetRecord(input: {
       entryCriticalOrderingSnapshot: normalizeMetadata(input.entryCriticalOrderingSnapshot),
       entryCompletionCueTemplateSnapshot: normalizeMetadata(input.entryCompletionCueTemplateSnapshot),
       handoffPacketFormatSnapshot: normalizeMetadata(input.handoffPacketFormatSnapshot),
+      completionConfirmationPromptSnapshot: normalizeMetadata(
+        input.completionConfirmationPromptSnapshot
+      ),
+      closeoutSummaryFormatSnapshot: normalizeMetadata(input.closeoutSummaryFormatSnapshot),
       notes: input.notes ?? null,
       presetSnapshot: normalizeMetadata(input.presetSnapshot)
     }

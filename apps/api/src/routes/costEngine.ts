@@ -36,6 +36,7 @@ import {
   getExecutionPackage,
   getEntryCompleteCue,
   getEntryCompletionSummary,
+  getCloseoutSummary,
   getFinalRunbook,
   getFinalHandoffPacket,
   getLastStepChecklist,
@@ -67,6 +68,7 @@ import {
   applyChannelMappingPresetToPackage,
   applyDefaultChannelMappingPreset,
   approveListingPrepPackage,
+  confirmEntryComplete,
   saveComparisonSet,
   saveShelfCostCalculation,
   rankComparisonSet,
@@ -122,6 +124,7 @@ import {
   applyChannelMappingPresetSchema,
   applyDefaultChannelPresetSchema,
   approveListingPrepPackageSchema,
+  confirmEntryCompleteSchema,
   saveComparisonSetSchema,
   saveShelfCostCalculationSchema,
   shippingRuleIdParamsSchema,
@@ -1056,6 +1059,25 @@ router.post("/listing-prep-packages/:listingPrepPackageId/approve", async (req, 
   }
 });
 
+router.post("/listing-prep-packages/:listingPrepPackageId/confirm-entry-complete", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    const body = confirmEntryCompleteSchema.parse(req.body ?? {});
+    res.json(
+      await confirmEntryComplete({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId,
+        note: body.note ?? null,
+        completedByMembershipId:
+          body.completedByMembershipId ?? (context as any).currentMembership?.id ?? null
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.get("/listing-prep-packages", async (req, res, next) => {
   try {
     const context = getCostCalculationReadContext(req);
@@ -1272,6 +1294,21 @@ router.get("/listing-prep-packages/:listingPrepPackageId/entry-completion-summar
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getEntryCompletionSummary({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/closeout-summary", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getCloseoutSummary({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

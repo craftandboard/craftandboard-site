@@ -2908,6 +2908,8 @@ export interface ChannelMappingPresetItem {
   entryCriticalOrderingSnapshot: Record<string, unknown> | null;
   entryCompletionCueTemplateSnapshot: Record<string, unknown> | null;
   handoffPacketFormatSnapshot: Record<string, unknown> | null;
+  completionConfirmationPromptSnapshot: Record<string, unknown> | null;
+  closeoutSummaryFormatSnapshot: Record<string, unknown> | null;
   notes: string | null;
   presetSnapshot: Record<string, unknown> | null;
   createdAt: string;
@@ -3551,6 +3553,14 @@ export interface ListingPrepPackageRecord {
   entryCompletionSummarySnapshot: Record<string, unknown> | null;
   handoffPacketVersion: string | null;
   shareCopyPackagingSummary: Record<string, unknown> | null;
+  entryCompletedAt: string | null;
+  entryCompletedByMembershipId: string | null;
+  entryCompletionNote: string | null;
+  entryCompletionConfirmed: boolean;
+  closeoutSummarySnapshot: Record<string, unknown> | null;
+  closeoutVersion: string | null;
+  completedArtifactSummarySnapshot: Record<string, unknown> | null;
+  entryCompletionState: string | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4249,6 +4259,16 @@ export async function approveCostListingPrepPackage(listingPrepPackageId: string
   );
 }
 
+export async function confirmCostListingEntryComplete(
+  listingPrepPackageId: string,
+  input: { note?: string | null }
+) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/confirm-entry-complete`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
 export async function getListingPrepManualAmazonExport(listingPrepPackageId: string) {
   return readJson<{
     ok: true;
@@ -4452,6 +4472,20 @@ export async function getListingPrepEntryCompletionSummary(listingPrepPackageId:
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/entry-completion-summary`);
+}
+
+export async function getListingPrepCloseoutSummary(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    closeoutSummary: Record<string, unknown> | null;
+    completedArtifactSummary: Record<string, unknown> | null;
+    entryCompletionState: string | null;
+    entryCompletedAt: string | null;
+    entryCompletionConfirmed: boolean;
+    closeoutVersion: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/closeout-summary`);
 }
 
 export interface LeadListItem {

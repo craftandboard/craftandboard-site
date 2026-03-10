@@ -19,6 +19,7 @@ import {
   createPackagingCostRule,
   createShippingCostRule,
   createShippingZoneRule,
+  confirmCostListingEntryComplete,
   evaluateCostComparisonListingReadiness,
   getListingPrepPackage,
   refreshListingPrepPackage,
@@ -88,8 +89,11 @@ import { ArtifactHandoffSummaryCard } from "./artifact-handoff-summary-card";
 import { ExecutionPackageCard } from "./execution-package-card";
 import { EntryCompleteCueCard } from "./entry-complete-cue-card";
 import { EntryCompletionSummaryCard } from "./entry-completion-summary-card";
+import { EntryCompleteConfirmationCard } from "./entry-complete-confirmation-card";
 import { FinalRunbookCard } from "./final-runbook-card";
 import { FinalHandoffPacketCard } from "./final-handoff-packet-card";
+import { CloseoutSummaryCard } from "./closeout-summary-card";
+import { CompletedArtifactCard } from "./completed-artifact-card";
 import { InternalShareSummaryCard } from "./internal-share-summary-card";
 import { LastChangeSummaryCard } from "./last-change-summary-card";
 import { LastStepChecklistCard } from "./last-step-checklist-card";
@@ -1526,6 +1530,31 @@ export function CostCalculatorForm() {
     });
   }
 
+  function handleConfirmEntryComplete(formData: FormData) {
+    if (!listingPrepPackage) {
+      setError("Approve a listing-prep package before confirming entry completion.");
+      return;
+    }
+
+    const note = String(formData.get("note") ?? "").trim();
+
+    startTransition(() => {
+      void confirmCostListingEntryComplete(listingPrepPackage.id, {
+        note: note.length ? note : null
+      })
+        .then((payload) => {
+          setListingPrepPackage(payload.listingPrepPackage);
+          if (activeComparisonSetId) {
+            return loadComparisonSet(activeComparisonSetId);
+          }
+        })
+        .then(() => setSuccess("Entry completion confirmed and closeout summary saved."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to confirm entry completion.")
+        );
+    });
+  }
+
   if (loading) {
     return <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-8 text-slate-300">Loading Hugo cost engine…</div>;
   }
@@ -1600,6 +1629,7 @@ export function CostCalculatorForm() {
           <button type="button" onClick={handleApplyChannelPreset} disabled={isPending || !listingPrepPackage || !form.channelMappingPresetId} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Apply channel preset</button>
           <button type="button" onClick={handleValidateMarketplaceFields} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Validate marketplace fields</button>
           <button type="button" onClick={handleApproveListingPrepPackage} disabled={isPending || !listingPrepPackage} className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Approve package</button>
+          <button type="button" onClick={() => handleConfirmEntryComplete(new FormData())} disabled={isPending || !listingPrepPackage} className="rounded-full border border-emerald-300/30 bg-emerald-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Quick confirm entry complete</button>
         </div>
       </section>
 
@@ -1640,6 +1670,11 @@ export function CostCalculatorForm() {
             onSubmit={handlePriceFloorOverride}
             busy={isPending}
           />
+          <EntryCompleteConfirmationCard
+            listingPrepPackage={listingPrepPackage}
+            onSubmit={handleConfirmEntryComplete}
+            busy={isPending}
+          />
           <LaunchExportSummaryCard comparison={comparison} />
           <ManualAmazonExportCard listingPrepPackage={listingPrepPackage} />
           <ManualListingWorksheetCard listingPrepPackage={listingPrepPackage} />
@@ -1649,6 +1684,8 @@ export function CostCalculatorForm() {
           <FinalHandoffPacketCard listingPrepPackage={listingPrepPackage} />
           <EntryCompleteCueCard listingPrepPackage={listingPrepPackage} />
           <EntryCompletionSummaryCard listingPrepPackage={listingPrepPackage} />
+          <CloseoutSummaryCard listingPrepPackage={listingPrepPackage} />
+          <CompletedArtifactCard listingPrepPackage={listingPrepPackage} />
           <ShareCopyPackagingCard listingPrepPackage={listingPrepPackage} />
           <LastStepChecklistCard listingPrepPackage={listingPrepPackage} />
           <ManualListingCopyBlockCard listingPrepPackage={listingPrepPackage} />

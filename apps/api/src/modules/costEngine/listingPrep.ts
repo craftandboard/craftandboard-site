@@ -1840,6 +1840,7 @@ export function buildEntryCompleteCueSnapshot(input: {
   preset?: {
     entryCompletionCueTemplateSnapshot?: Record<string, unknown> | null;
   } | null;
+  entryCompletionConfirmed?: boolean;
 }) {
   const requiredMissing = Array.isArray(input.checklistSnapshot?.requiredMissingFields)
     ? (input.checklistSnapshot?.requiredMissingFields as string[])
@@ -1865,7 +1866,11 @@ export function buildEntryCompleteCueSnapshot(input: {
     ...warningReview
   ];
   const entryCompletionStatus =
-    blockingWarnings.length > 0 || requiredMissing.length > 0
+    input.entryCompletionConfirmed
+      ? Boolean(input.overrideSnapshot?.overrideApproved)
+        ? "ENTRY_COMPLETE_WITH_OVERRIDE"
+        : "ENTRY_COMPLETE"
+      : blockingWarnings.length > 0 || requiredMissing.length > 0
       ? "ENTRY_BLOCKED"
       : input.readyNowSummarySnapshot?.readyNowBoolean || input.readyNowSummarySnapshot?.readyWithOverrideBoolean
         ? "ENTRY_READY"
@@ -1877,16 +1882,22 @@ export function buildEntryCompleteCueSnapshot(input: {
     entryCompletionStatus,
     entryReadyBoolean: entryCompletionStatus === "ENTRY_READY",
     entryInProgressBoolean: entryCompletionStatus === "ENTRY_IN_PROGRESS",
-    entryCompleteBoolean: false,
+    entryCompleteBoolean:
+      entryCompletionStatus === "ENTRY_COMPLETE" ||
+      entryCompletionStatus === "ENTRY_COMPLETE_WITH_OVERRIDE",
     entryBlockedBoolean: entryCompletionStatus === "ENTRY_BLOCKED",
     entryCriticalChecks,
     entryRemainingChecks,
     summary:
-      entryCompletionStatus === "ENTRY_READY"
-        ? "Manual entry can begin once the final checks are acknowledged."
-        : entryCompletionStatus === "ENTRY_IN_PROGRESS"
-          ? "Manual entry is close, but a few review items still remain."
-          : "Manual entry should not begin until blocking issues are cleared."
+      entryCompletionStatus === "ENTRY_COMPLETE_WITH_OVERRIDE"
+        ? "Manual entry is complete and override awareness was retained at closeout."
+        : entryCompletionStatus === "ENTRY_COMPLETE"
+          ? "Manual entry is complete and the artifact has a retained closeout summary."
+          : entryCompletionStatus === "ENTRY_READY"
+            ? "Manual entry can begin once the final checks are acknowledged."
+            : entryCompletionStatus === "ENTRY_IN_PROGRESS"
+              ? "Manual entry is close, but a few review items still remain."
+              : "Manual entry should not begin until blocking issues are cleared."
   };
 }
 
@@ -1920,7 +1931,10 @@ export function buildEntryCompletionSummarySnapshot(input: {
         : ["copy-first", "share-ready", "final-review", "entry-complete"]) ?? [],
     lastStepCompletionNotes: finalNotes,
     summary:
-      blockedChecks.length > 0
+      input.entryCompleteCueSnapshot?.entryCompletionStatus === "ENTRY_COMPLETE" ||
+      input.entryCompleteCueSnapshot?.entryCompletionStatus === "ENTRY_COMPLETE_WITH_OVERRIDE"
+        ? "Entry completion has been confirmed."
+        : blockedChecks.length > 0
         ? "Entry completion still has blocked checks."
         : remainingChecks.length > 0
           ? "Entry completion is in progress."
@@ -2003,6 +2017,125 @@ export function buildFinalHandoffPacketSnapshot(input: {
       input.entryCompleteCueSnapshot?.summary ??
       input.currentApprovedArtifactSummary?.summary ??
       "Final handoff packet is available for internal manual listing use."
+  };
+}
+
+export function buildEntryCompletionState(input: {
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  overrideSnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  readyNowSummarySnapshot?: Record<string, unknown> | null;
+  entryCompletionConfirmed?: boolean;
+}) {
+  const blockingWarnings = (input.warningSnapshot ?? []).filter((warning) => warning.severity === "BLOCKING");
+  if (input.entryCompletionConfirmed) {
+    return Boolean(input.overrideSnapshot?.overrideApproved)
+      ? "ENTRY_COMPLETE_WITH_OVERRIDE"
+      : "ENTRY_COMPLETE";
+  }
+  if (!input.currentApprovedArtifact || input.approvalState === "BLOCKED" || blockingWarnings.length > 0) {
+    return "ENTRY_BLOCKED";
+  }
+  if (
+    Boolean(input.readyNowSummarySnapshot?.readyNowBoolean) ||
+    Boolean(input.readyNowSummarySnapshot?.readyWithOverrideBoolean)
+  ) {
+    return "ENTRY_READY";
+  }
+  return "ENTRY_IN_PROGRESS";
+}
+
+export function buildCloseoutSummarySnapshot(input: {
+  packageId: string;
+  packageName?: string | null;
+  approvalState: string;
+  entryCompletionState: string;
+  entryCompletedAt?: string | Date | null;
+  entryCompletedByMembershipId?: string | null;
+  entryCompletionNote?: string | null;
+  warningSnapshot?: WarningItem[] | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+  shareCopyPackagingSummary?: Record<string, unknown> | null;
+  shortShareTextSnapshot?: Record<string, unknown> | null;
+  preset?: {
+    closeoutSummaryFormatSnapshot?: Record<string, unknown> | null;
+  } | null;
+  versions?: Record<string, unknown> | null;
+}) {
+  const warningMessages = (input.warningSnapshot ?? []).map((warning) => warning.message);
+  const completedAt =
+    input.entryCompletedAt instanceof Date
+      ? input.entryCompletedAt.toISOString()
+      : (input.entryCompletedAt as string | null | undefined) ?? null;
+  return {
+    closeoutVersion: "closeout-v1",
+    packageIdentity: {
+      packageId: input.packageId,
+      packageName: input.packageName ?? null
+    },
+    approvalState: input.approvalState,
+    entryCompletionState: input.entryCompletionState,
+    entryCompletedAt: completedAt,
+    entryCompletedByMembershipId: input.entryCompletedByMembershipId ?? null,
+    entryCompletionNote: input.entryCompletionNote ?? null,
+    whatWasUsedSummary:
+      input.packageName
+        ? `${input.packageName} was used for manual listing entry.`
+        : "This listing-prep package was used for manual listing entry.",
+    warningsAtCloseout: warningMessages,
+    overrideAtCloseout: input.overrideSnapshot ?? null,
+    artifactVersionSummary: input.versions ?? {},
+    shareSummary: input.shareCopyPackagingSummary ?? null,
+    shortShareText:
+      input.shortShareTextSnapshot?.text ?? input.shortShareTextSnapshot?.summary ?? null,
+    channelCloseoutNotes:
+      input.preset?.closeoutSummaryFormatSnapshot?.notes ?? [],
+    summary:
+      input.entryCompletionState === "ENTRY_COMPLETE_WITH_OVERRIDE"
+        ? "Manual listing entry was completed with override awareness retained at closeout."
+        : input.entryCompletionState === "ENTRY_COMPLETE"
+          ? "Manual listing entry was completed and closeout summary is retained."
+          : "Closeout summary is prepared, but entry completion has not been confirmed yet."
+  };
+}
+
+export function buildCompletedArtifactSummarySnapshot(input: {
+  currentApprovedArtifact: boolean;
+  approvalState: string;
+  entryCompletionState: string;
+  entryCompletedAt?: string | Date | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+  versions?: Record<string, unknown> | null;
+}) {
+  const completedAt =
+    input.entryCompletedAt instanceof Date
+      ? input.entryCompletedAt.toISOString()
+      : (input.entryCompletedAt as string | null | undefined) ?? null;
+  return {
+    completedArtifactState:
+      input.entryCompletionState === "ENTRY_COMPLETE_WITH_OVERRIDE" || input.entryCompletionState === "ENTRY_COMPLETE"
+        ? "COMPLETED"
+        : input.entryCompletionState === "ENTRY_BLOCKED"
+          ? "BLOCKED"
+          : "ACTIVE",
+    isStillCurrent: input.currentApprovedArtifact,
+    wasCompletedWithOverride: Boolean(input.overrideSnapshot?.overrideApproved),
+    completedAt,
+    approvalState: input.approvalState,
+    artifactVersionSummary: input.versions ?? {},
+    summary:
+      input.entryCompletionState === "ENTRY_COMPLETE_WITH_OVERRIDE"
+        ? input.currentApprovedArtifact
+          ? "Current artifact completed with override awareness."
+          : "Historical artifact completed with override awareness."
+        : input.entryCompletionState === "ENTRY_COMPLETE"
+          ? input.currentApprovedArtifact
+            ? "Current artifact completed cleanly."
+            : "Historical artifact completed cleanly."
+          : input.currentApprovedArtifact
+            ? "Artifact is still the current package in use."
+            : "Artifact is historical and not the current package."
   };
 }
 

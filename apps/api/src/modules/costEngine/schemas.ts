@@ -388,6 +388,8 @@ export const createChannelMappingPresetSchema = z.object({
   entryCriticalOrderingSnapshot: z.unknown().nullable().optional(),
   entryCompletionCueTemplateSnapshot: z.unknown().nullable().optional(),
   handoffPacketFormatSnapshot: z.unknown().nullable().optional(),
+  completionConfirmationPromptSnapshot: z.unknown().nullable().optional(),
+  closeoutSummaryFormatSnapshot: z.unknown().nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
   presetSnapshot: z.unknown().nullable().optional()
 });
@@ -449,6 +451,11 @@ export const applyDefaultChannelPresetSchema = z.object({
 });
 
 export const approveListingPrepPackageSchema = z.object({});
+
+export const confirmEntryCompleteSchema = z.object({
+  note: z.string().trim().max(4000).nullable().optional(),
+  completedByMembershipId: z.string().trim().min(1).nullable().optional()
+});
 
 export const listShelfCostCalculationsQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()

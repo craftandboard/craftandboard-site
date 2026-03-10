@@ -52,6 +52,7 @@ const serviceMocks = vi.hoisted(() => ({
   getLaunchGuardrailProfile: vi.fn(),
   getListingPrepPackage: vi.fn(),
   getListingPrepManualAmazonExport: vi.fn(),
+  getCloseoutSummary: vi.fn(),
   getMarketplaceMappingTemplate: vi.fn(),
   getComparisonSetRecommendation: vi.fn(),
   getComparisonSetHandoffSummary: vi.fn(),
@@ -77,6 +78,7 @@ const serviceMocks = vi.hoisted(() => ({
   evaluateMarketplaceFieldValidation: vi.fn(),
   applyChannelMappingPresetToPackage: vi.fn(),
   approveListingPrepPackage: vi.fn(),
+  confirmEntryComplete: vi.fn(),
   requestPriceFloorOverride: vi.fn(),
   refreshListingPrepPackage: vi.fn(),
   saveShelfCostCalculation: vi.fn(),
@@ -140,6 +142,7 @@ beforeEach(async () => {
   serviceMocks.getLaunchGuardrailProfile.mockResolvedValue({ ok: true, launchGuardrailProfile: { id: "guard_1" } });
   serviceMocks.getListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.getListingPrepManualAmazonExport.mockResolvedValue({ ok: true, manualAmazonExport: { exportContractVersion: "manual-amazon-v1" }, approvalState: "APPROVED", currentApprovedArtifact: true });
+  serviceMocks.getCloseoutSummary.mockResolvedValue({ ok: true, closeoutSummary: { closeoutVersion: "closeout-v1" }, completedArtifactSummary: { completedArtifactState: "COMPLETED" }, entryCompletionState: "ENTRY_COMPLETE", entryCompletedAt: "2026-03-10T00:00:00.000Z", entryCompletionConfirmed: true, closeoutVersion: "closeout-v1", approvalState: "APPROVED", currentApprovedArtifact: true });
   serviceMocks.getMarketplaceMappingTemplate.mockResolvedValue({ ok: true, marketplaceMappingTemplate: { id: "mapping_1" } });
   serviceMocks.getComparisonSetRecommendation.mockResolvedValue({ ok: true, recommendation: null });
   serviceMocks.getComparisonSetHandoffSummary.mockResolvedValue({ ok: true, handoffSummary: null, selectedLaunchScenarioId: null, riskSummary: null, selectedLaunchReadinessStatus: null, selectedLaunchWarningSnapshot: null, exportSummary: null });
@@ -165,6 +168,7 @@ beforeEach(async () => {
   serviceMocks.evaluateMarketplaceFieldValidation.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.applyChannelMappingPresetToPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.approveListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
+  serviceMocks.confirmEntryComplete.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.requestPriceFloorOverride.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.refreshListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.saveShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
@@ -540,10 +544,34 @@ describe("cost engine routes", () => {
     });
   });
 
+  it("confirms entry completion for a listing-prep package", async () => {
+    const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/confirm-entry-complete`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ note: "Manual Amazon entry completed." })
+    });
+    expect(response.status).toBe(200);
+    expect(serviceMocks.confirmEntryComplete).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1",
+      note: "Manual Amazon entry completed.",
+      completedByMembershipId: "membership_local_brandon"
+    });
+  });
+
   it("returns the manual Amazon export contract for a listing-prep package", async () => {
     const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/manual-amazon-export`);
     expect(response.status).toBe(200);
     expect(serviceMocks.getListingPrepManualAmazonExport).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1"
+    });
+  });
+
+  it("returns the closeout summary for a listing-prep package", async () => {
+    const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/closeout-summary`);
+    expect(response.status).toBe(200);
+    expect(serviceMocks.getCloseoutSummary).toHaveBeenCalledWith({
       organizationId: "org_local_craft_board",
       listingPrepPackageId: "package_1"
     });

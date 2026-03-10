@@ -65,12 +65,14 @@ import {
   createLaunchTemplate,
   buildListingPrepPackage,
   approveListingPrepPackage,
+  confirmEntryComplete,
   applyChannelMappingPresetToPackage,
   evaluateMarketplaceFieldValidation,
   evaluateComparisonSetListingReadiness,
   getComparisonSetExportSummary,
   getChannelMappingPreset,
   getListingPrepPackage,
+  getCloseoutSummary,
   getListingPrepManualAmazonExport,
   getMarketplaceMappingTemplate,
   getShelfCostCalculation,
@@ -1066,6 +1068,97 @@ describe("cost engine service", () => {
     expect(payload.approvalState).toBe("APPROVED");
     expect(payload.currentApprovedArtifact).toBe(true);
     expect((payload.manualAmazonExport as Record<string, unknown>).exportContractVersion).toBe("manual-amazon-v1");
+  });
+
+  it("returns the retained closeout summary for a completed listing-prep package", async () => {
+    repositoryMocks.getListingPrepPackageRecord.mockResolvedValueOnce({
+      id: "package_1",
+      organizationId: "org_local_craft_board",
+      closeoutSummarySnapshot: { closeoutVersion: "closeout-v1" },
+      completedArtifactSummarySnapshot: { completedArtifactState: "COMPLETED" },
+      entryCompletionState: "ENTRY_COMPLETE",
+      entryCompletedAt: new Date("2026-03-10T00:00:00.000Z"),
+      entryCompletionConfirmed: true,
+      closeoutVersion: "closeout-v1",
+      approvalState: "APPROVED",
+      currentApprovedArtifact: true
+    });
+
+    const payload = await getCloseoutSummary({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1"
+    });
+
+    expect(payload.entryCompletionConfirmed).toBe(true);
+    expect((payload.closeoutSummary as Record<string, unknown>).closeoutVersion).toBe("closeout-v1");
+  });
+
+  it("confirms entry completion and retains a closeout summary", async () => {
+    const listingPrepPackageRecord = {
+      id: "package_1",
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "compare_1",
+      calculationScenarioId: "scenario_1",
+      name: "Balanced listing prep",
+      status: "APPROVED",
+      listingReadinessStatus: "READY",
+      exportSnapshot: {},
+      marketplaceFieldSnapshot: {},
+      validationSnapshot: { validationStatus: "VALID" },
+      warningSnapshot: [],
+      overrideSnapshot: { overrideRequested: false, overrideApproved: false },
+      approvalState: "APPROVED",
+      operatorChecklistSnapshot: { requiredMissingFields: [] },
+      readyNowSummarySnapshot: { readyNowBoolean: true },
+      shareCopyPackagingSummary: { summary: "Share this package internally if questions come up." },
+      shortShareTextSnapshot: { text: "Shelf package ready." },
+      handoffPacketVersion: "handoff-packet-v1",
+      exportContractVersion: "manual-amazon-v1",
+      worksheetVersion: "manual-listing-v1",
+      operatorWorksheetVersion: "operator-listing-v1",
+      quickCopyVersion: "quick-copy-v1",
+      runbookVersion: "manual-runbook-v1",
+      executionPackageVersion: "execution-package-v1",
+      currentApprovedArtifact: true,
+      entryCompletionConfirmed: false,
+      channelMappingPreset: {
+        closeoutSummaryFormatSnapshot: { notes: ["Retain this summary for the Amazon manual listing record."] }
+      },
+      createdAt: new Date("2026-03-10T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-10T00:00:00.000Z")
+    };
+
+    repositoryMocks.getListingPrepPackageRecord
+      .mockResolvedValueOnce(listingPrepPackageRecord)
+      .mockResolvedValueOnce({
+        ...listingPrepPackageRecord,
+        entryCompletionConfirmed: true,
+        entryCompletionState: "ENTRY_COMPLETE",
+        closeoutSummarySnapshot: { closeoutVersion: "closeout-v1" },
+        completedArtifactSummarySnapshot: { completedArtifactState: "COMPLETED" }
+      });
+    repositoryMocks.updateListingPrepPackageRecord.mockResolvedValue({ count: 1 });
+    repositoryMocks.updateCalculationScenarioRecord.mockResolvedValue({ count: 1 });
+    repositoryMocks.updateCalculationComparisonSetRecord.mockResolvedValue({ count: 1 });
+
+    const payload = await confirmEntryComplete({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1",
+      note: "Entered manually on Amazon."
+    });
+
+    expect(repositoryMocks.updateListingPrepPackageRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        listingPrepPackageId: "package_1",
+        data: expect.objectContaining({
+          entryCompletionConfirmed: true,
+          entryCompletionState: "ENTRY_COMPLETE",
+          entryCompletionNote: "Entered manually on Amazon."
+        })
+      })
+    );
+    expect(payload.listingPrepPackage.entryCompletionConfirmed).toBe(true);
+    expect(payload.listingPrepPackage.entryCompletionState).toBe("ENTRY_COMPLETE");
   });
 
   it("reranks a saved comparison set and updates the recommendation snapshot", async () => {

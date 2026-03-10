@@ -2616,6 +2616,7 @@ model CalculationScenario {
   latestRunbookSummarySnapshot Json?
   latestExecutionSummarySnapshot Json?
   latestHandoffPacketSummarySnapshot Json?
+  latestCloseoutSummarySnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
@@ -2659,6 +2660,8 @@ model CalculationComparisonSet {
   selectedExecutionPackageSummarySnapshot Json?
   selectedHandoffPacketVersion String?
   selectedHandoffPacketSummarySnapshot Json?
+  selectedCloseoutVersion String?
+  selectedCloseoutSummarySnapshot Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2738,6 +2741,14 @@ model ListingPrepPackage {
   entryCompletionSummarySnapshot Json?
   handoffPacketVersion String?
   shareCopyPackagingSummary Json?
+  entryCompletedAt       DateTime?
+  entryCompletedByMembershipId String?
+  entryCompletionNote    String?
+  entryCompletionConfirmed Boolean                 @default(false)
+  closeoutSummarySnapshot Json?
+  closeoutVersion        String?
+  completedArtifactSummarySnapshot Json?
+  entryCompletionState   String?
   currentApprovedArtifact Boolean                 @default(false)
   notes                  String?
   approvedAt             DateTime?
@@ -2769,6 +2780,9 @@ model ListingPrepPackage {
   @@index([organizationId, executionPackageVersion])
   @@index([organizationId, handoffPacketVersion])
   @@index([organizationId, entryCompletionStatus])
+  @@index([organizationId, entryCompletionConfirmed])
+  @@index([organizationId, entryCompletionState])
+  @@index([organizationId, closeoutVersion])
 }
 
 model MarketplaceMappingTemplate {
@@ -2837,6 +2851,8 @@ model ChannelMappingPreset {
   entryCriticalOrderingSnapshot Json?
   entryCompletionCueTemplateSnapshot Json?
   handoffPacketFormatSnapshot Json?
+  completionConfirmationPromptSnapshot Json?
+  closeoutSummaryFormatSnapshot Json?
   notes                String?
   presetSnapshot       Json?
   createdAt            DateTime                 @default(now())

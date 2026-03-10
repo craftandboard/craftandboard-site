@@ -104,6 +104,12 @@
 93. Verify the last-change summary card shows the latest meaningful approval/preset/override context without noisy history
 94. Edit a channel mapping preset to change final runbook ordering, completion-cue checks, or share-summary formatting
 95. Refresh the listing-prep package and confirm runbook, completion-cue, share-summary, and last-change snapshots update and persist
+96. Verify the execution package card makes the active package, copy-first values, share-ready summary, and warning/override context easy to scan
+97. Verify the last-step checklist card clearly separates final checks, blocking checks, review checks, and pricing-critical checks
+98. Verify the ready-now summary card clearly explains `READY_NOW`, `READY_WITH_OVERRIDE`, `NEEDS_REVIEW`, or `BLOCKED`
+99. Verify the share-ready summary card provides a concise internal handoff message and short share text
+100. Edit a channel mapping preset to change final check ordering, pricing-critical prompts, or share packaging summary
+101. Refresh the listing-prep package and confirm execution-package, last-step, ready-now, and share-ready snapshots update and persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -135,3 +141,6 @@
 - A user can treat the final runbook as the current step-by-step manual listing artifact instead of stitching together multiple cards mentally
 - A user can tell immediately whether they are ready to enter now, ready with override awareness, still need review, or are blocked
 - A user can hand the package to another internal operator with a concise share summary instead of re-explaining the package status manually
+- A user can tell what to copy first, what to verify last, and what to share internally from one tighter execution package instead of stitching several cards together
+- A user can distinguish blocking checks from review checks during the last manual listing pass
+- A user can see a concise ready-now reason and next-step instruction without inferring it from lower-level readiness fields

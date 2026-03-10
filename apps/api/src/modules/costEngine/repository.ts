@@ -736,6 +736,8 @@ export async function createCalculationComparisonSetRecord(input: {
   selectedLaunchWarningSnapshot?: unknown;
   selectedQuickCopySummarySnapshot?: unknown;
   selectedFinalReviewPromptSnapshot?: unknown;
+  selectedExecutionPackageVersion?: string | null;
+  selectedExecutionPackageSummarySnapshot?: unknown;
   selectedListingPrepPackageId?: string | null;
   listingPrepSummarySnapshot?: unknown;
   selectedListingPrepReadySnapshot?: unknown;
@@ -760,6 +762,10 @@ export async function createCalculationComparisonSetRecord(input: {
       selectedLaunchWarningSnapshot: normalizeMetadata(input.selectedLaunchWarningSnapshot),
       selectedQuickCopySummarySnapshot: normalizeMetadata(input.selectedQuickCopySummarySnapshot),
       selectedFinalReviewPromptSnapshot: normalizeMetadata(input.selectedFinalReviewPromptSnapshot),
+      selectedExecutionPackageVersion: input.selectedExecutionPackageVersion ?? undefined,
+      selectedExecutionPackageSummarySnapshot: normalizeMetadata(
+        input.selectedExecutionPackageSummarySnapshot
+      ),
       selectedListingPrepPackageId: input.selectedListingPrepPackageId ?? undefined,
       listingPrepSummarySnapshot: normalizeMetadata(input.listingPrepSummarySnapshot),
       selectedListingPrepReadySnapshot: normalizeMetadata(input.selectedListingPrepReadySnapshot),
@@ -943,6 +949,12 @@ export async function createListingPrepPackageRecord(input: {
   shortShareTextSnapshot?: unknown;
   runbookVersion?: string | null;
   lastChangeSummarySnapshot?: unknown;
+  executionPackageSnapshot?: unknown;
+  lastStepChecklistSnapshot?: unknown;
+  readyNowSummarySnapshot?: unknown;
+  shareReadySummarySnapshot?: unknown;
+  executionPackageVersion?: string | null;
+  copyShareErgonomicsSummary?: unknown;
   currentApprovedArtifact?: boolean;
   notes?: string | null;
   approvedAt?: Date | null;
@@ -999,6 +1011,12 @@ export async function createListingPrepPackageRecord(input: {
       shortShareTextSnapshot: normalizeMetadata(input.shortShareTextSnapshot),
       runbookVersion: input.runbookVersion ?? undefined,
       lastChangeSummarySnapshot: normalizeMetadata(input.lastChangeSummarySnapshot),
+      executionPackageSnapshot: normalizeMetadata(input.executionPackageSnapshot),
+      lastStepChecklistSnapshot: normalizeMetadata(input.lastStepChecklistSnapshot),
+      readyNowSummarySnapshot: normalizeMetadata(input.readyNowSummarySnapshot),
+      shareReadySummarySnapshot: normalizeMetadata(input.shareReadySummarySnapshot),
+      executionPackageVersion: input.executionPackageVersion ?? undefined,
+      copyShareErgonomicsSummary: normalizeMetadata(input.copyShareErgonomicsSummary),
       currentApprovedArtifact: input.currentApprovedArtifact ?? false,
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
@@ -1163,6 +1181,9 @@ export async function createChannelMappingPresetRecord(input: {
   finalReviewOrderingSnapshot?: unknown;
   completionCueTemplateSnapshot?: unknown;
   shareSummaryFormatSnapshot?: unknown;
+  finalCheckOrderingSnapshot?: unknown;
+  pricingCriticalPromptSnapshot?: unknown;
+  sharePackagingFormatSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -1199,6 +1220,9 @@ export async function createChannelMappingPresetRecord(input: {
       finalReviewOrderingSnapshot: normalizeMetadata(input.finalReviewOrderingSnapshot),
       completionCueTemplateSnapshot: normalizeMetadata(input.completionCueTemplateSnapshot),
       shareSummaryFormatSnapshot: normalizeMetadata(input.shareSummaryFormatSnapshot),
+      finalCheckOrderingSnapshot: normalizeMetadata(input.finalCheckOrderingSnapshot),
+      pricingCriticalPromptSnapshot: normalizeMetadata(input.pricingCriticalPromptSnapshot),
+      sharePackagingFormatSnapshot: normalizeMetadata(input.sharePackagingFormatSnapshot),
       notes: input.notes ?? null,
       presetSnapshot: normalizeMetadata(input.presetSnapshot)
     }

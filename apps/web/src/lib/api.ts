@@ -2902,6 +2902,9 @@ export interface ChannelMappingPresetItem {
   finalReviewOrderingSnapshot: Record<string, unknown> | null;
   completionCueTemplateSnapshot: Record<string, unknown> | null;
   shareSummaryFormatSnapshot: Record<string, unknown> | null;
+  finalCheckOrderingSnapshot: Record<string, unknown> | null;
+  pricingCriticalPromptSnapshot: Record<string, unknown> | null;
+  sharePackagingFormatSnapshot: Record<string, unknown> | null;
   notes: string | null;
   presetSnapshot: Record<string, unknown> | null;
   createdAt: string;
@@ -3408,6 +3411,7 @@ export interface CalculationScenarioRecord {
   latestOperatorPromptSummarySnapshot: Record<string, unknown> | null;
   latestQuickCopySummarySnapshot: Record<string, unknown> | null;
   latestRunbookSummarySnapshot: Record<string, unknown> | null;
+  latestExecutionSummarySnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3447,6 +3451,8 @@ export interface ComparisonSetRecord {
   selectedFinalReviewPromptSnapshot: Record<string, unknown> | null;
   selectedRunbookVersion: string | null;
   selectedRunbookSummarySnapshot: Record<string, unknown> | null;
+  selectedExecutionPackageVersion: string | null;
+  selectedExecutionPackageSummarySnapshot: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3527,6 +3533,12 @@ export interface ListingPrepPackageRecord {
   shortShareTextSnapshot: Record<string, unknown> | null;
   runbookVersion: string | null;
   lastChangeSummarySnapshot: Record<string, unknown> | null;
+  executionPackageSnapshot: Record<string, unknown> | null;
+  lastStepChecklistSnapshot: Record<string, unknown> | null;
+  readyNowSummarySnapshot: Record<string, unknown> | null;
+  shareReadySummarySnapshot: Record<string, unknown> | null;
+  executionPackageVersion: string | null;
+  copyShareErgonomicsSummary: Record<string, unknown> | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4356,6 +4368,43 @@ export async function getListingPrepInternalShareSummary(listingPrepPackageId: s
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/internal-share-summary`);
+}
+
+export async function getListingPrepExecutionPackage(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    executionPackage: Record<string, unknown> | null;
+    lastStepChecklist: Record<string, unknown> | null;
+    readyNowSummary: Record<string, unknown> | null;
+    shareReadySummary: Record<string, unknown> | null;
+    copyShareErgonomicsSummary: Record<string, unknown> | null;
+    executionPackageVersion: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/execution-package`);
+}
+
+export async function getListingPrepLastStepChecklist(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    lastStepChecklist: Record<string, unknown> | null;
+    readyNowSummary: Record<string, unknown> | null;
+    finalReviewPrompts: Record<string, unknown> | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/last-step-checklist`);
+}
+
+export async function getListingPrepReadyNowSummary(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    readyNowSummary: Record<string, unknown> | null;
+    completionCue: Record<string, unknown> | null;
+    shareReadySummary: Record<string, unknown> | null;
+    executionPackageSummary: Record<string, unknown> | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/ready-now-summary`);
 }
 
 export interface LeadListItem {

@@ -1608,6 +1608,228 @@ export function buildFinalRunbookSnapshot(input: {
   };
 }
 
+export function buildLastStepChecklistSnapshot(input: {
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  overrideSnapshot?: Record<string, unknown> | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  preset?: {
+    finalCheckOrderingSnapshot?: Record<string, unknown> | null;
+    pricingCriticalPromptSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const requiredMissing = Array.isArray(input.checklistSnapshot?.requiredMissingFields)
+    ? (input.checklistSnapshot.requiredMissingFields as string[])
+    : [];
+  const optionalIncomplete = Array.isArray(input.checklistSnapshot?.optionalIncompleteFields)
+    ? (input.checklistSnapshot.optionalIncompleteFields as string[])
+    : [];
+  const warnings = input.warningSnapshot ?? [];
+  const blockingWarnings = warnings.filter((warning) => warning.severity === "BLOCKING");
+  const pricingCriticalChecks = Array.isArray(input.preset?.pricingCriticalPromptSnapshot?.checks)
+    ? (input.preset?.pricingCriticalPromptSnapshot?.checks as string[])
+    : [
+        "Confirm the approved launch price is the exact value you will enter.",
+        "Confirm minimum and safer-margin prices are still visible for last-minute validation."
+      ];
+
+  const finalOrder = Array.isArray(input.preset?.finalCheckOrderingSnapshot?.groups)
+    ? (input.preset?.finalCheckOrderingSnapshot?.groups as string[])
+    : ["copy-first", "pricing-critical", "warnings", "final-confirmation"];
+
+  const lastChecks = [
+    ...(input.currentApprovedArtifact
+      ? ["Use the current approved artifact only."]
+      : ["This is not the current approved artifact. Stop and confirm the active package before entry."]),
+    ...(Boolean(input.overrideSnapshot?.overrideApproved)
+      ? ["This package is approved with an override. Re-read the override reason before final entry."]
+      : []),
+    ...(requiredMissing.length ? [`Resolve required fields first: ${requiredMissing.join(", ")}.`] : []),
+    ...(optionalIncomplete.length ? [`Review optional weak fields: ${optionalIncomplete.join(", ")}.`] : []),
+    ...pricingCriticalChecks
+  ];
+
+  return {
+    finalCheckOrdering: finalOrder,
+    lastChecks,
+    blockingChecks: [
+      ...blockingWarnings.map((warning) => warning.message),
+      ...(requiredMissing.length ? [`Required fields still missing: ${requiredMissing.join(", ")}.`] : [])
+    ],
+    reviewChecks: [
+      ...(optionalIncomplete.length ? [`Optional fields still need review: ${optionalIncomplete.join(", ")}.`] : []),
+      ...warnings.filter((warning) => warning.severity !== "BLOCKING").map((warning) => warning.message)
+    ],
+    pricingCriticalChecks,
+    summary:
+      blockingWarnings.length > 0 || requiredMissing.length > 0
+        ? "Last-step checklist still has blocking items."
+        : input.currentApprovedArtifact
+          ? "Last-step checklist is ready for the final manual listing pass."
+          : "Last-step checklist is available, but this is not the current package to use."
+  };
+}
+
+export function buildReadyNowSummarySnapshot(input: {
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  overrideSnapshot?: Record<string, unknown> | null;
+  lastStepChecklistSnapshot?: Record<string, unknown> | null;
+  completionCueSnapshot?: Record<string, unknown> | null;
+}) {
+  const blockingChecks = Array.isArray(input.lastStepChecklistSnapshot?.blockingChecks)
+    ? (input.lastStepChecklistSnapshot?.blockingChecks as string[])
+    : [];
+  const reviewChecks = Array.isArray(input.lastStepChecklistSnapshot?.reviewChecks)
+    ? (input.lastStepChecklistSnapshot?.reviewChecks as string[])
+    : [];
+  const readyNowBoolean =
+    input.currentApprovedArtifact &&
+    input.approvalState === "APPROVED" &&
+    blockingChecks.length === 0;
+  const readyWithOverrideBoolean =
+    input.currentApprovedArtifact &&
+    input.approvalState === "APPROVED_WITH_OVERRIDE" &&
+    blockingChecks.length === 0;
+  const blockedBoolean = input.approvalState === "BLOCKED" || blockingChecks.length > 0;
+  const needsReviewBoolean = !readyNowBoolean && !readyWithOverrideBoolean && !blockedBoolean;
+
+  return {
+    readyNowBoolean,
+    readyWithOverrideBoolean,
+    needsReviewBoolean,
+    blockedBoolean,
+    stateLabel: readyNowBoolean
+      ? "READY_NOW"
+      : readyWithOverrideBoolean
+        ? "READY_WITH_OVERRIDE"
+        : blockedBoolean
+          ? "BLOCKED"
+          : "NEEDS_REVIEW",
+    why:
+      input.completionCueSnapshot?.summary ??
+      (readyNowBoolean
+        ? "All last-step checks are clear for manual listing entry."
+        : readyWithOverrideBoolean
+          ? "The package is usable, but the override must stay visible during entry."
+          : blockedBoolean
+            ? "Blocking checks still prevent this package from being used."
+            : "Review checks still remain before this package should be used."),
+    whatToDoNext:
+      readyNowBoolean || readyWithOverrideBoolean
+        ? "Copy the required values, then work through the last-step checklist."
+        : blockedBoolean
+          ? "Resolve blocking checks before manual listing entry."
+          : "Review the remaining weak fields and warnings before entry.",
+    blockingChecks,
+    reviewChecks
+  };
+}
+
+export function buildShareReadySummarySnapshot(input: {
+  packageName?: string | null;
+  currentApprovedArtifact: boolean;
+  quickCopySummarySnapshot?: Record<string, unknown> | null;
+  artifactHandoffSummarySnapshot?: Record<string, unknown> | null;
+  internalShareSummarySnapshot?: Record<string, unknown> | null;
+  preset?: {
+    sharePackagingFormatSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const packagingFormat = (input.preset?.sharePackagingFormatSnapshot ?? null) as Record<string, unknown> | null;
+  return {
+    shortShareText:
+      input.internalShareSummarySnapshot?.shortShareText ??
+      `${input.packageName ?? "Listing prep package"} | ${input.currentApprovedArtifact ? "Use now" : "Reference only"}`,
+    internalShareBlocks:
+      input.internalShareSummarySnapshot?.shareBlockSections ?? [],
+    whatToUseNowSummary:
+      input.artifactHandoffSummarySnapshot?.summary ??
+      (input.currentApprovedArtifact
+        ? "Use this package now for manual listing prep."
+        : "Do not use this package as the current artifact."),
+    shareFormatLabel: packagingFormat?.label ?? "share-ready-v1",
+    summary:
+      input.currentApprovedArtifact
+        ? "Share-ready summary is clean enough for internal handoff."
+        : "Share-ready summary is available, but this package is not the one to use now."
+  };
+}
+
+export function buildExecutionPackageSnapshot(input: {
+  packageId: string;
+  packageName?: string | null;
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  quickCopySummarySnapshot?: Record<string, unknown> | null;
+  shareReadySummarySnapshot?: Record<string, unknown> | null;
+  lastStepChecklistSnapshot?: Record<string, unknown> | null;
+  readyNowSummarySnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+}) {
+  return {
+    executionPackageVersion: "execution-package-v1",
+    header: {
+      packageId: input.packageId,
+      packageName: input.packageName ?? null,
+      approvalState: input.approvalState,
+      currentApprovedArtifact: input.currentApprovedArtifact
+    },
+    copyFirst: input.quickCopySummarySnapshot ?? null,
+    shareReady: input.shareReadySummarySnapshot ?? null,
+    lastStep: input.lastStepChecklistSnapshot ?? null,
+    readyNow: input.readyNowSummarySnapshot ?? null,
+    warningOverride: {
+      warnings: input.warningSnapshot ?? [],
+      overrideSummary: input.overrideSnapshot ?? null
+    },
+    executionPackageSummary:
+      input.readyNowSummarySnapshot?.why ??
+      (input.currentApprovedArtifact
+        ? "Execution package is ready for the operator."
+        : "Execution package exists, but it is not the current artifact.")
+  };
+}
+
+export function buildCopyShareErgonomicsSummary(input: {
+  quickCopySummarySnapshot?: Record<string, unknown> | null;
+  shareReadySummarySnapshot?: Record<string, unknown> | null;
+  lastStepChecklistSnapshot?: Record<string, unknown> | null;
+  readyNowSummarySnapshot?: Record<string, unknown> | null;
+}) {
+  const priorityCopyBlocks = Array.isArray(input.quickCopySummarySnapshot?.priorityCopyBlocks)
+    ? (input.quickCopySummarySnapshot?.priorityCopyBlocks as unknown[])
+    : [];
+  const promptCount =
+    (Array.isArray(input.lastStepChecklistSnapshot?.lastChecks)
+      ? (input.lastStepChecklistSnapshot?.lastChecks as unknown[]).length
+      : 0) +
+    (Array.isArray(input.lastStepChecklistSnapshot?.reviewChecks)
+      ? (input.lastStepChecklistSnapshot?.reviewChecks as unknown[]).length
+      : 0);
+  const criticalFieldCount = Array.isArray(input.lastStepChecklistSnapshot?.pricingCriticalChecks)
+    ? (input.lastStepChecklistSnapshot?.pricingCriticalChecks as unknown[]).length
+    : 0;
+  const missingCriticalFieldCount = Array.isArray(input.lastStepChecklistSnapshot?.blockingChecks)
+    ? (input.lastStepChecklistSnapshot?.blockingChecks as unknown[]).length
+    : 0;
+
+  return {
+    copyGroupCount: priorityCopyBlocks.length,
+    promptCount,
+    criticalFieldCount,
+    missingCriticalFieldCount,
+    readyToUseBoolean: Boolean(input.readyNowSummarySnapshot?.readyNowBoolean || input.readyNowSummarySnapshot?.readyWithOverrideBoolean),
+    shareReadySummary: input.shareReadySummarySnapshot?.summary ?? null,
+    summary:
+      input.readyNowSummarySnapshot?.readyNowBoolean || input.readyNowSummarySnapshot?.readyWithOverrideBoolean
+        ? "Copy/share packaging is streamlined enough for live operator use."
+        : "Copy/share packaging still needs review before it is friction-free."
+  };
+}
+
 export function buildWorksheetSummarySnapshot(input: {
   worksheet?: Record<string, unknown> | null;
   presetSelectionSummary?: Record<string, unknown> | null;

@@ -15,10 +15,13 @@ import {
   buildCopyExportSnapshot,
   buildCurrentApprovedArtifactSummary,
   buildCompletionCueSnapshot,
+  buildCopyShareErgonomicsSummary,
+  buildExecutionPackageSnapshot,
   buildFinalReviewPromptSnapshot,
   buildFinalRunbookSnapshot,
   buildArtifactHandoffSummarySnapshot,
   buildInternalShareSummarySnapshot,
+  buildLastStepChecklistSnapshot,
   buildLaunchContextSnapshot,
   buildLastChangeSummarySnapshot,
   buildManualAmazonExportSnapshot,
@@ -29,6 +32,8 @@ import {
   buildPlainTextWorksheet,
   buildPresetSelectionSummary,
   buildQuickCopySummarySnapshot,
+  buildReadyNowSummarySnapshot,
+  buildShareReadySummarySnapshot,
   buildShortShareTextSnapshot,
   buildShortPlainTextSummary,
   applyMarketplaceMappingTemplate,
@@ -275,6 +280,9 @@ function mapChannelMappingPreset(record: any) {
     finalReviewOrderingSnapshot: record.finalReviewOrderingSnapshot ?? null,
     completionCueTemplateSnapshot: record.completionCueTemplateSnapshot ?? null,
     shareSummaryFormatSnapshot: record.shareSummaryFormatSnapshot ?? null,
+    finalCheckOrderingSnapshot: record.finalCheckOrderingSnapshot ?? null,
+    pricingCriticalPromptSnapshot: record.pricingCriticalPromptSnapshot ?? null,
+    sharePackagingFormatSnapshot: record.sharePackagingFormatSnapshot ?? null,
     notes: record.notes ?? null,
     presetSnapshot: record.presetSnapshot ?? null
   };
@@ -796,6 +804,41 @@ function buildListingArtifactsForScenario(input: {
         }
       : null
   });
+  const lastStepChecklistSnapshot = buildLastStepChecklistSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    preset: input.channelPreset
+      ? {
+          finalCheckOrderingSnapshot:
+            input.channelPreset.finalCheckOrderingSnapshot ?? null,
+          pricingCriticalPromptSnapshot:
+            input.channelPreset.pricingCriticalPromptSnapshot ?? null
+        }
+      : null
+  });
+  const readyNowSummarySnapshot = buildReadyNowSummarySnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    overrideSnapshot,
+    lastStepChecklistSnapshot,
+    completionCueSnapshot
+  });
+  const shareReadySummarySnapshot = buildShareReadySummarySnapshot({
+    packageName: `${input.scenarioRecord.name} listing prep`,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    quickCopySummarySnapshot,
+    artifactHandoffSummarySnapshot,
+    internalShareSummarySnapshot,
+    preset: input.channelPreset
+      ? {
+          sharePackagingFormatSnapshot:
+            input.channelPreset.sharePackagingFormatSnapshot ?? null
+        }
+      : null
+  });
   const lastChangeSummarySnapshot = buildLastChangeSummarySnapshot({
     approvalHistorySnapshot,
     overrideHistorySnapshot,
@@ -820,6 +863,25 @@ function buildListingArtifactsForScenario(input: {
             input.channelPreset.finalReviewOrderingSnapshot ?? null
         }
       : null
+  });
+  const executionPackageVersion = "execution-package-v1";
+  const executionPackageSnapshot = buildExecutionPackageSnapshot({
+    packageId: input.packageId ?? "pending-package",
+    packageName: `${input.scenarioRecord.name} listing prep`,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    quickCopySummarySnapshot,
+    shareReadySummarySnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot,
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    overrideSnapshot
+  });
+  const copyShareErgonomicsSummary = buildCopyShareErgonomicsSummary({
+    quickCopySummarySnapshot,
+    shareReadySummarySnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot
   });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
     worksheet: operatorWorksheetSnapshot,
@@ -881,6 +943,12 @@ function buildListingArtifactsForScenario(input: {
     shortShareTextSnapshot,
     runbookVersion,
     lastChangeSummarySnapshot,
+    executionPackageSnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot,
+    shareReadySummarySnapshot,
+    executionPackageVersion,
+    copyShareErgonomicsSummary,
     channelPresetSelectionSummary: input.presetSelectionSummary ?? null
   };
 }
@@ -991,6 +1059,7 @@ function mapScenario(record: any) {
     latestOperatorPromptSummarySnapshot: record.latestOperatorPromptSummarySnapshot ?? null,
     latestQuickCopySummarySnapshot: record.latestQuickCopySummarySnapshot ?? null,
     latestRunbookSummarySnapshot: record.latestRunbookSummarySnapshot ?? null,
+    latestExecutionSummarySnapshot: record.latestExecutionSummarySnapshot ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -1037,6 +1106,9 @@ function mapComparisonSet(record: any) {
       record.selectedFinalReviewPromptSnapshot ?? null,
     selectedRunbookVersion: record.selectedRunbookVersion ?? null,
     selectedRunbookSummarySnapshot: record.selectedRunbookSummarySnapshot ?? null,
+    selectedExecutionPackageVersion: record.selectedExecutionPackageVersion ?? null,
+    selectedExecutionPackageSummarySnapshot:
+      record.selectedExecutionPackageSummarySnapshot ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -1102,6 +1174,12 @@ function mapListingPrepPackage(record: any) {
     shortShareTextSnapshot: record.shortShareTextSnapshot ?? null,
     runbookVersion: record.runbookVersion ?? null,
     lastChangeSummarySnapshot: record.lastChangeSummarySnapshot ?? null,
+    executionPackageSnapshot: record.executionPackageSnapshot ?? null,
+    lastStepChecklistSnapshot: record.lastStepChecklistSnapshot ?? null,
+    readyNowSummarySnapshot: record.readyNowSummarySnapshot ?? null,
+    shareReadySummarySnapshot: record.shareReadySummarySnapshot ?? null,
+    executionPackageVersion: record.executionPackageVersion ?? null,
+    copyShareErgonomicsSummary: record.copyShareErgonomicsSummary ?? null,
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
     notes: record.notes ?? null,
     approvedAt: record.approvedAt?.toISOString() ?? null,
@@ -1658,6 +1736,9 @@ export async function createChannelMappingPreset(input: {
   finalReviewOrderingSnapshot?: unknown;
   completionCueTemplateSnapshot?: unknown;
   shareSummaryFormatSnapshot?: unknown;
+  finalCheckOrderingSnapshot?: unknown;
+  pricingCriticalPromptSnapshot?: unknown;
+  sharePackagingFormatSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -2349,12 +2430,13 @@ export async function saveComparisonSet(input: {
         listingReadinessStatus: selectedArtifacts.listingReadinessStatus,
         listingReadinessSnapshot: selectedArtifacts.listingReadinessSnapshot,
         marketplaceFieldSnapshot: selectedArtifacts.marketplaceFieldSnapshot,
-        strongerAlertSnapshot: selectedArtifacts.strongerAlertSnapshot,
-        exportSnapshot: selectedArtifacts.exportSnapshot,
-        handoffSnapshot: selectedArtifacts.handoffSummary,
-        latestQuickCopySummarySnapshot: selectedArtifacts.quickCopySummarySnapshot
-      })
-    });
+      strongerAlertSnapshot: selectedArtifacts.strongerAlertSnapshot,
+      exportSnapshot: selectedArtifacts.exportSnapshot,
+      handoffSnapshot: selectedArtifacts.handoffSummary,
+      latestQuickCopySummarySnapshot: selectedArtifacts.quickCopySummarySnapshot,
+      latestExecutionSummarySnapshot: selectedArtifacts.executionPackageSnapshot
+    })
+  });
   }
 
   const set = await createCalculationComparisonSetRecord({
@@ -2373,7 +2455,10 @@ export async function saveComparisonSet(input: {
     selectedLaunchReadinessStatus: selectedArtifacts?.listingReadinessStatus ?? null,
     selectedLaunchWarningSnapshot: selectedArtifacts?.strongerAlertSnapshot?.warnings ?? null,
     selectedQuickCopySummarySnapshot: selectedArtifacts?.quickCopySummarySnapshot ?? null,
-    selectedFinalReviewPromptSnapshot: selectedArtifacts?.finalReviewPromptSnapshot ?? null
+    selectedFinalReviewPromptSnapshot: selectedArtifacts?.finalReviewPromptSnapshot ?? null,
+    selectedExecutionPackageVersion: selectedArtifacts?.executionPackageVersion ?? null,
+    selectedExecutionPackageSummarySnapshot:
+      selectedArtifacts?.executionPackageSnapshot ?? null
   });
 
   for (const [index, scenarioRecord] of scenarioRecords.entries()) {
@@ -2761,7 +2846,10 @@ export async function getComparisonSetExportSummary(input: {
     selectedOperatorWorksheetSummarySnapshot:
       set.selectedOperatorWorksheetSummarySnapshot ?? null,
     selectedRunbookVersion: set.selectedRunbookVersion ?? null,
-    selectedRunbookSummarySnapshot: set.selectedRunbookSummarySnapshot ?? null
+    selectedRunbookSummarySnapshot: set.selectedRunbookSummarySnapshot ?? null,
+    selectedExecutionPackageVersion: set.selectedExecutionPackageVersion ?? null,
+    selectedExecutionPackageSummarySnapshot:
+      set.selectedExecutionPackageSummarySnapshot ?? null
   };
 }
 
@@ -2883,6 +2971,12 @@ export async function buildListingPrepPackage(input: {
     shortShareTextSnapshot: artifacts.shortShareTextSnapshot,
     runbookVersion: artifacts.runbookVersion,
     lastChangeSummarySnapshot: artifacts.lastChangeSummarySnapshot,
+    executionPackageSnapshot: artifacts.executionPackageSnapshot,
+    lastStepChecklistSnapshot: artifacts.lastStepChecklistSnapshot,
+    readyNowSummarySnapshot: artifacts.readyNowSummarySnapshot,
+    shareReadySummarySnapshot: artifacts.shareReadySummarySnapshot,
+    executionPackageVersion: artifacts.executionPackageVersion,
+    copyShareErgonomicsSummary: artifacts.copyShareErgonomicsSummary,
     currentApprovedArtifact: false,
     notes: input.notes ?? null,
     approvedAt: null
@@ -2902,6 +2996,7 @@ export async function buildListingPrepPackage(input: {
       latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
       latestQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
       latestRunbookSummarySnapshot: artifacts.finalRunbookSnapshot,
+      latestExecutionSummarySnapshot: artifacts.executionPackageSnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: artifacts.operatorPromptSnapshot?.summary ?? null,
         criticalPrompts: artifacts.operatorPromptSnapshot?.criticalPrompts ?? [],
@@ -2944,7 +3039,9 @@ export async function buildListingPrepPackage(input: {
       selectedQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
       selectedFinalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot,
       selectedRunbookVersion: artifacts.runbookVersion,
-      selectedRunbookSummarySnapshot: artifacts.finalRunbookSnapshot
+      selectedRunbookSummarySnapshot: artifacts.finalRunbookSnapshot,
+      selectedExecutionPackageVersion: artifacts.executionPackageVersion,
+      selectedExecutionPackageSummarySnapshot: artifacts.executionPackageSnapshot
     })
   });
 
@@ -3077,6 +3174,18 @@ export async function refreshListingPrepPackage(input: {
       artifactHandoffSummarySnapshot: artifacts.artifactHandoffSummarySnapshot,
       shortPlainTextSummarySnapshot: artifacts.shortPlainTextSummarySnapshot,
       quickCopyVersion: artifacts.quickCopyVersion,
+      finalRunbookSnapshot: artifacts.finalRunbookSnapshot,
+      completionCueSnapshot: artifacts.completionCueSnapshot,
+      internalShareSummarySnapshot: artifacts.internalShareSummarySnapshot,
+      shortShareTextSnapshot: artifacts.shortShareTextSnapshot,
+      runbookVersion: artifacts.runbookVersion,
+      lastChangeSummarySnapshot: artifacts.lastChangeSummarySnapshot,
+      executionPackageSnapshot: artifacts.executionPackageSnapshot,
+      lastStepChecklistSnapshot: artifacts.lastStepChecklistSnapshot,
+      readyNowSummarySnapshot: artifacts.readyNowSummarySnapshot,
+      shareReadySummarySnapshot: artifacts.shareReadySummarySnapshot,
+      executionPackageVersion: artifacts.executionPackageVersion,
+      copyShareErgonomicsSummary: artifacts.copyShareErgonomicsSummary,
       channelMappingPresetId: presetResolution.preset?.id ?? null,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
@@ -3093,6 +3202,8 @@ export async function refreshListingPrepPackage(input: {
       latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
       latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
       latestQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
+      latestRunbookSummarySnapshot: artifacts.finalRunbookSnapshot,
+      latestExecutionSummarySnapshot: artifacts.executionPackageSnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: artifacts.operatorPromptSnapshot?.summary ?? null,
         criticalPrompts: artifacts.operatorPromptSnapshot?.criticalPrompts ?? [],
@@ -3135,7 +3246,11 @@ export async function refreshListingPrepPackage(input: {
         selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot,
         selectedWorksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary,
         selectedQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
-        selectedFinalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot
+        selectedFinalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot,
+        selectedRunbookVersion: artifacts.runbookVersion,
+        selectedRunbookSummarySnapshot: artifacts.finalRunbookSnapshot,
+        selectedExecutionPackageVersion: artifacts.executionPackageVersion,
+        selectedExecutionPackageSummarySnapshot: artifacts.executionPackageSnapshot
       })
     });
   }
@@ -3441,6 +3556,59 @@ export async function evaluateMarketplaceFieldValidation(input: {
         }
       : null
   });
+  const lastStepChecklistSnapshot = buildLastStepChecklistSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    preset: record.channelMappingPreset
+      ? {
+          finalCheckOrderingSnapshot:
+            record.channelMappingPreset.finalCheckOrderingSnapshot ?? null,
+          pricingCriticalPromptSnapshot:
+            record.channelMappingPreset.pricingCriticalPromptSnapshot ?? null
+        }
+      : null
+  });
+  const readyNowSummarySnapshot = buildReadyNowSummarySnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    overrideSnapshot,
+    lastStepChecklistSnapshot,
+    completionCueSnapshot
+  });
+  const shareReadySummarySnapshot = buildShareReadySummarySnapshot({
+    packageName: record.name,
+    currentApprovedArtifact: false,
+    quickCopySummarySnapshot,
+    artifactHandoffSummarySnapshot,
+    internalShareSummarySnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          sharePackagingFormatSnapshot:
+            record.channelMappingPreset.sharePackagingFormatSnapshot ?? null
+        }
+      : null
+  });
+  const executionPackageSnapshot = buildExecutionPackageSnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    quickCopySummarySnapshot,
+    shareReadySummarySnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    overrideSnapshot
+  });
+  const copyShareErgonomicsSummary = buildCopyShareErgonomicsSummary({
+    quickCopySummarySnapshot,
+    shareReadySummarySnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot
+  });
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
     listingPrepPackageId: input.listingPrepPackageId,
@@ -3475,6 +3643,12 @@ export async function evaluateMarketplaceFieldValidation(input: {
       shortShareTextSnapshot,
       runbookVersion,
       lastChangeSummarySnapshot,
+      executionPackageSnapshot,
+      lastStepChecklistSnapshot,
+      readyNowSummarySnapshot,
+      shareReadySummarySnapshot,
+      executionPackageVersion: record.executionPackageVersion ?? "execution-package-v1",
+      copyShareErgonomicsSummary,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
       approvedAt: null
@@ -3831,6 +4005,59 @@ export async function requestPriceFloorOverride(input: {
         }
       : null
   });
+  const lastStepChecklistSnapshot = buildLastStepChecklistSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    preset: record.channelMappingPreset
+      ? {
+          finalCheckOrderingSnapshot:
+            record.channelMappingPreset.finalCheckOrderingSnapshot ?? null,
+          pricingCriticalPromptSnapshot:
+            record.channelMappingPreset.pricingCriticalPromptSnapshot ?? null
+        }
+      : null
+  });
+  const readyNowSummarySnapshot = buildReadyNowSummarySnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    overrideSnapshot,
+    lastStepChecklistSnapshot,
+    completionCueSnapshot
+  });
+  const shareReadySummarySnapshot = buildShareReadySummarySnapshot({
+    packageName: record.name,
+    currentApprovedArtifact: false,
+    quickCopySummarySnapshot,
+    artifactHandoffSummarySnapshot,
+    internalShareSummarySnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          sharePackagingFormatSnapshot:
+            record.channelMappingPreset.sharePackagingFormatSnapshot ?? null
+        }
+      : null
+  });
+  const executionPackageSnapshot = buildExecutionPackageSnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    quickCopySummarySnapshot,
+    shareReadySummarySnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    overrideSnapshot
+  });
+  const copyShareErgonomicsSummary = buildCopyShareErgonomicsSummary({
+    quickCopySummarySnapshot,
+    shareReadySummarySnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot
+  });
 
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -3868,6 +4095,12 @@ export async function requestPriceFloorOverride(input: {
       shortShareTextSnapshot,
       runbookVersion,
       lastChangeSummarySnapshot,
+      executionPackageSnapshot,
+      lastStepChecklistSnapshot,
+      readyNowSummarySnapshot,
+      shareReadySummarySnapshot,
+      executionPackageVersion: record.executionPackageVersion ?? "execution-package-v1",
+      copyShareErgonomicsSummary,
       currentApprovedArtifact: false,
       approvedAt: null,
       approvedByMembershipId: input.approvedByMembershipId ?? null
@@ -3887,6 +4120,7 @@ export async function requestPriceFloorOverride(input: {
       latestWorksheetSummarySnapshot: worksheetSummarySnapshot,
       latestQuickCopySummarySnapshot: quickCopySummarySnapshot,
       latestRunbookSummarySnapshot: finalRunbookSnapshot,
+      latestExecutionSummarySnapshot: executionPackageSnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: operatorPromptSnapshot.summary ?? null,
         criticalPrompts: operatorPromptSnapshot.criticalPrompts ?? [],
@@ -3929,7 +4163,9 @@ export async function requestPriceFloorOverride(input: {
         selectedQuickCopySummarySnapshot: quickCopySummarySnapshot,
         selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot,
         selectedRunbookVersion: runbookVersion,
-        selectedRunbookSummarySnapshot: finalRunbookSnapshot
+        selectedRunbookSummarySnapshot: finalRunbookSnapshot,
+        selectedExecutionPackageVersion: record.executionPackageVersion ?? "execution-package-v1",
+        selectedExecutionPackageSummarySnapshot: executionPackageSnapshot
       })
     });
   }
@@ -4316,6 +4552,59 @@ export async function approveListingPrepPackage(input: {
         }
       : null
   });
+  const lastStepChecklistSnapshot = buildLastStepChecklistSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
+    checklistSnapshot: operatorChecklistSnapshot,
+    warningSnapshot: Array.isArray(record.warningSnapshot) ? (record.warningSnapshot as any) : [],
+    preset: record.channelMappingPreset
+      ? {
+          finalCheckOrderingSnapshot:
+            record.channelMappingPreset.finalCheckOrderingSnapshot ?? null,
+          pricingCriticalPromptSnapshot:
+            record.channelMappingPreset.pricingCriticalPromptSnapshot ?? null
+        }
+      : null
+  });
+  const readyNowSummarySnapshot = buildReadyNowSummarySnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
+    lastStepChecklistSnapshot,
+    completionCueSnapshot
+  });
+  const shareReadySummarySnapshot = buildShareReadySummarySnapshot({
+    packageName: record.name,
+    currentApprovedArtifact: true,
+    quickCopySummarySnapshot,
+    artifactHandoffSummarySnapshot,
+    internalShareSummarySnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          sharePackagingFormatSnapshot:
+            record.channelMappingPreset.sharePackagingFormatSnapshot ?? null
+        }
+      : null
+  });
+  const executionPackageSnapshot = buildExecutionPackageSnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    quickCopySummarySnapshot,
+    shareReadySummarySnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot,
+    warningSnapshot: Array.isArray(record.warningSnapshot) ? (record.warningSnapshot as any) : [],
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null
+  });
+  const copyShareErgonomicsSummary = buildCopyShareErgonomicsSummary({
+    quickCopySummarySnapshot,
+    shareReadySummarySnapshot,
+    lastStepChecklistSnapshot,
+    readyNowSummarySnapshot
+  });
 
   await clearCurrentApprovedArtifactsForScope({
     organizationId: input.organizationId,
@@ -4355,6 +4644,12 @@ export async function approveListingPrepPackage(input: {
       shortShareTextSnapshot,
       runbookVersion,
       lastChangeSummarySnapshot,
+      executionPackageSnapshot,
+      lastStepChecklistSnapshot,
+      readyNowSummarySnapshot,
+      shareReadySummarySnapshot,
+      executionPackageVersion: record.executionPackageVersion ?? "execution-package-v1",
+      copyShareErgonomicsSummary,
       approvedAt,
       approvedByMembershipId: input.approvedByMembershipId ?? null,
       currentApprovedArtifact: true
@@ -4369,6 +4664,7 @@ export async function approveListingPrepPackage(input: {
       latestWorksheetSummarySnapshot: worksheetSummarySnapshot,
       latestQuickCopySummarySnapshot: quickCopySummarySnapshot,
       latestRunbookSummarySnapshot: finalRunbookSnapshot,
+      latestExecutionSummarySnapshot: executionPackageSnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: operatorPromptSnapshot.summary ?? null,
         criticalPrompts: operatorPromptSnapshot.criticalPrompts ?? [],
@@ -4394,7 +4690,9 @@ export async function approveListingPrepPackage(input: {
         selectedQuickCopySummarySnapshot: quickCopySummarySnapshot,
         selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot,
         selectedRunbookVersion: runbookVersion,
-        selectedRunbookSummarySnapshot: finalRunbookSnapshot
+        selectedRunbookSummarySnapshot: finalRunbookSnapshot,
+        selectedExecutionPackageVersion: record.executionPackageVersion ?? "execution-package-v1",
+        selectedExecutionPackageSummarySnapshot: executionPackageSnapshot
       })
     });
   }
@@ -4581,6 +4879,64 @@ export async function getInternalShareSummary(input: {
     artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
     lastChangeSummary: record.lastChangeSummarySnapshot ?? null,
     runbookVersion: record.runbookVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getExecutionPackage(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    executionPackage: record.executionPackageSnapshot ?? null,
+    lastStepChecklist: record.lastStepChecklistSnapshot ?? null,
+    readyNowSummary: record.readyNowSummarySnapshot ?? null,
+    shareReadySummary: record.shareReadySummarySnapshot ?? null,
+    copyShareErgonomicsSummary: record.copyShareErgonomicsSummary ?? null,
+    executionPackageVersion: record.executionPackageVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getLastStepChecklist(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    lastStepChecklist: record.lastStepChecklistSnapshot ?? null,
+    readyNowSummary: record.readyNowSummarySnapshot ?? null,
+    finalReviewPrompts: record.finalReviewPromptSnapshot ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getReadyNowSummary(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    readyNowSummary: record.readyNowSummarySnapshot ?? null,
+    completionCue: record.completionCueSnapshot ?? null,
+    shareReadySummary: record.shareReadySummarySnapshot ?? null,
+    executionPackageSummary: record.executionPackageSnapshot ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };

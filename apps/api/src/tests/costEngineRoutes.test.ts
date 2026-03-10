@@ -38,20 +38,27 @@ const serviceMocks = vi.hoisted(() => ({
   createShippingCostRule: vi.fn(),
   updateShippingCostRule: vi.fn(),
   createAmazonFeePreset: vi.fn(),
+  createLaunchGuardrailProfile: vi.fn(),
   createLaunchTemplate: vi.fn(),
   listAmazonFeePresets: vi.fn(),
   getAmazonFeePreset: vi.fn(),
+  getLaunchGuardrailProfile: vi.fn(),
   getComparisonSetRecommendation: vi.fn(),
+  getComparisonSetHandoffSummary: vi.fn(),
   updateAmazonFeePreset: vi.fn(),
   createShippingZoneRule: vi.fn(),
   listShippingZoneRules: vi.fn(),
   getShippingZoneRule: vi.fn(),
   getLaunchTemplate: vi.fn(),
   updateShippingZoneRule: vi.fn(),
+  updateLaunchGuardrailProfile: vi.fn(),
+  listLaunchGuardrailProfiles: vi.fn(),
   listLaunchTemplates: vi.fn(),
   calculateShelfCostView: vi.fn(),
   compareShelfCostScenarios: vi.fn(),
+  evaluateComparisonSetGuardrails: vi.fn(),
   rankComparisonSet: vi.fn(),
+  selectLaunchScenario: vi.fn(),
   saveShelfCostCalculation: vi.fn(),
   listShelfCostCalculations: vi.fn(),
   getShelfCostCalculation: vi.fn(),
@@ -100,20 +107,27 @@ beforeEach(async () => {
   serviceMocks.createShippingCostRule.mockResolvedValue({ ok: true });
   serviceMocks.updateShippingCostRule.mockResolvedValue({ ok: true });
   serviceMocks.createAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.createLaunchGuardrailProfile.mockResolvedValue({ ok: true, launchGuardrailProfile: { id: "guard_1" } });
   serviceMocks.createLaunchTemplate.mockResolvedValue({ ok: true, launchTemplate: { id: "template_1" } });
   serviceMocks.listAmazonFeePresets.mockResolvedValue({ ok: true, presets: [] });
   serviceMocks.getAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.getLaunchGuardrailProfile.mockResolvedValue({ ok: true, launchGuardrailProfile: { id: "guard_1" } });
   serviceMocks.getComparisonSetRecommendation.mockResolvedValue({ ok: true, recommendation: null });
+  serviceMocks.getComparisonSetHandoffSummary.mockResolvedValue({ ok: true, handoffSummary: null, selectedLaunchScenarioId: null, riskSummary: null });
   serviceMocks.updateAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
   serviceMocks.createShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
   serviceMocks.listShippingZoneRules.mockResolvedValue({ ok: true, shippingZoneRules: [] });
   serviceMocks.getShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
   serviceMocks.getLaunchTemplate.mockResolvedValue({ ok: true, launchTemplate: { id: "template_1" } });
   serviceMocks.updateShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
+  serviceMocks.updateLaunchGuardrailProfile.mockResolvedValue({ ok: true, launchGuardrailProfile: { id: "guard_1" } });
+  serviceMocks.listLaunchGuardrailProfiles.mockResolvedValue({ ok: true, launchGuardrailProfiles: [] });
   serviceMocks.listLaunchTemplates.mockResolvedValue({ ok: true, launchTemplates: [] });
   serviceMocks.calculateShelfCostView.mockResolvedValue({ ok: true, calculation: { subtotalCostCents: 1000 } });
   serviceMocks.compareShelfCostScenarios.mockResolvedValue({ ok: true, comparison: { scenarios: [] } });
+  serviceMocks.evaluateComparisonSetGuardrails.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
   serviceMocks.rankComparisonSet.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
+  serviceMocks.selectLaunchScenario.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
   serviceMocks.saveShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
   serviceMocks.listShelfCostCalculations.mockResolvedValue({ ok: true, calculations: [] });
   serviceMocks.getShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
@@ -225,6 +239,21 @@ describe("cost engine routes", () => {
     });
   });
 
+  it("creates launch guardrail profiles in org scope", async () => {
+    const response = await fetch(`${baseUrl}/cost-profiles/profile_1/launch-guardrail-profiles`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Balanced guardrails", minimumMarginPct: 20 })
+    });
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createLaunchGuardrailProfile).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Balanced guardrails",
+      minimumMarginPct: 20
+    });
+  });
+
   it("compares cost scenarios", async () => {
     const response = await fetch(`${baseUrl}/cost-calculations/compare`, {
       method: "POST",
@@ -292,7 +321,9 @@ describe("cost engine routes", () => {
     expect(response.status).toBe(200);
     expect(serviceMocks.rankComparisonSet).toHaveBeenCalledWith({
       organizationId: "org_local_craft_board",
-      comparisonSetId: "set_1"
+      comparisonSetId: "set_1",
+      guardrailProfileId: null,
+      selectedScenarioId: null
     });
   });
 

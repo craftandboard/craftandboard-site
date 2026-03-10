@@ -7,6 +7,7 @@ import {
   createAmazonFeePreset,
   createCostProfile,
   createEdgeBandCostRule,
+  createLaunchGuardrailProfile,
   createLaunchTemplate,
   createMaterialCostRule,
   createPackagingCostRule,
@@ -16,15 +17,19 @@ import {
   getCostComparisonSets,
   getCostProfile,
   getCostProfiles,
+  getLaunchGuardrailProfiles,
   getShelfCostCalculations,
+  selectCostLaunchScenario,
   saveCostComparisonSet,
   saveShelfCostCalculation,
   updateAmazonFeePreset,
   updateCostProfile,
+  updateLaunchGuardrailProfile,
   updateLaunchTemplate,
   updatePackagingCostRule,
   updateShippingCostRule,
   updateShippingZoneRule,
+  type LaunchGuardrailProfileItem,
   type LaunchTemplateItem,
   type ComparisonSetListItem,
   type CostCalculationInput,
@@ -40,7 +45,10 @@ import { CostAssumptionsPanel } from "./cost-assumptions-panel";
 import { AmazonFeePresetEditor } from "./amazon-fee-preset-editor";
 import { CostBreakdownCard } from "./cost-breakdown-card";
 import { CostHistoryList } from "./cost-history-list";
+import { LaunchCandidateHandoffCard } from "./launch-candidate-handoff-card";
+import { LaunchGuardrailProfileEditor } from "./launch-guardrail-profile-editor";
 import { LaunchRecommendationCard } from "./launch-recommendation-card";
+import { LaunchRiskSummaryCard } from "./launch-risk-summary-card";
 import { LaunchTemplateEditor } from "./launch-template-editor";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { CostProfileEditor } from "./cost-profile-editor";
@@ -80,8 +88,10 @@ export function CostCalculatorForm() {
   const [profiles, setProfiles] = useState<CostProfileSummaryItem[]>([]);
   const [selectedProfileId, setSelectedProfileId] = useState("");
   const [selectedProfile, setSelectedProfile] = useState<CostProfileDetail | null>(null);
+  const [guardrailProfiles, setGuardrailProfiles] = useState<LaunchGuardrailProfileItem[]>([]);
   const [calculations, setCalculations] = useState<ShelfCostCalculationRecord[]>([]);
   const [comparisonSets, setComparisonSets] = useState<ComparisonSetListItem[]>([]);
+  const [activeComparisonSetId, setActiveComparisonSetId] = useState<string | null>(null);
   const [preview, setPreview] = useState<CostCalculationPreview | null>(null);
   const [result, setResult] = useState<CostCalculationResult | null>(null);
   const [comparison, setComparison] = useState<CostComparisonResult | null>(null);
@@ -115,6 +125,7 @@ export function CostCalculatorForm() {
     damageReservePct: "",
     shippingBufferPct: "",
     shippingBufferCents: "",
+    guardrailProfileId: "",
     comparisonName: "Launch pricing comparison",
     comparisonNotes: ""
   });
@@ -128,15 +139,17 @@ export function CostCalculatorForm() {
       setLoading(true);
       setError(null);
       try {
-        const [profilesPayload, calculationsPayload, comparisonSetsPayload] = await Promise.all([
+        const [profilesPayload, calculationsPayload, comparisonSetsPayload, guardrailsPayload] = await Promise.all([
           getCostProfiles(),
           getShelfCostCalculations(),
-          getCostComparisonSets()
+          getCostComparisonSets(),
+          getLaunchGuardrailProfiles()
         ]);
         const nextProfiles = profilesPayload?.profiles ?? [];
         setProfiles(nextProfiles);
         setCalculations(calculationsPayload?.calculations ?? []);
         setComparisonSets(comparisonSetsPayload?.comparisonSets ?? []);
+        setGuardrailProfiles(guardrailsPayload?.launchGuardrailProfiles ?? []);
         const nextProfileId =
           preferredProfileId ??
           selectedProfileId ??
@@ -226,7 +239,9 @@ export function CostCalculatorForm() {
         current.shippingBufferCents ||
         (selectedProfile.defaultShippingBufferCents !== null
           ? String(selectedProfile.defaultShippingBufferCents)
-          : "")
+          : ""),
+      guardrailProfileId:
+        current.guardrailProfileId || selectedProfile.launchGuardrailProfiles[0]?.id || ""
     }));
   }, [selectedProfile]);
 
@@ -238,9 +253,10 @@ export function CostCalculatorForm() {
       shipping: selectedProfile?.shippingRules ?? [],
       feePresets: selectedProfile?.amazonFeePresets ?? [],
       shippingZones: selectedProfile?.shippingZoneRules ?? [],
-      launchTemplates: selectedProfile?.launchTemplates ?? []
+      launchTemplates: selectedProfile?.launchTemplates ?? [],
+      launchGuardrailProfiles: selectedProfile?.launchGuardrailProfiles ?? guardrailProfiles
     }),
-    [selectedProfile]
+    [guardrailProfiles, selectedProfile]
   );
 
   function updateField(name: keyof typeof form, value: string) {
@@ -412,6 +428,7 @@ export function CostCalculatorForm() {
             name: form.comparisonName || null,
             notes: form.comparisonNotes || null,
             baseSpec: buildPayload(),
+            guardrailProfileId: form.guardrailProfileId || null,
             scenarios
           });
           setComparison(payload.comparison);
@@ -429,12 +446,15 @@ export function CostCalculatorForm() {
     startTransition(() => {
       void (async () => {
         try {
-          await saveCostComparisonSet({
+          const payload = await saveCostComparisonSet({
             name: form.comparisonName || "Shelf comparison",
             notes: form.comparisonNotes || null,
             baseSpec: buildPayload(),
+            guardrailProfileId: form.guardrailProfileId || null,
+            selectedScenarioId: comparison?.selectedLaunchScenarioId ?? null,
             scenarios
           });
+          setActiveComparisonSetId(payload.comparisonSet.id);
           await refreshAll(selectedProfileId);
           setSuccess("Scenario comparison saved.");
         } catch (caught) {
@@ -453,6 +473,7 @@ export function CostCalculatorForm() {
             throw new Error("Comparison set not found.");
           }
           const comparisonSet = payload.comparisonSet;
+          setActiveComparisonSetId(comparisonSet.id);
           const baseSpec = comparisonSet.baseShelfSpecSnapshot as unknown as CostCalculationInput;
           setForm((current) => ({
             ...current,
@@ -482,7 +503,8 @@ export function CostCalculatorForm() {
             returnReservePct: baseSpec.returnReservePct ? String(baseSpec.returnReservePct) : "",
             damageReservePct: baseSpec.damageReservePct ? String(baseSpec.damageReservePct) : "",
             shippingBufferPct: baseSpec.shippingBufferPct ? String(baseSpec.shippingBufferPct) : "",
-            shippingBufferCents: baseSpec.shippingBufferCents ? String(baseSpec.shippingBufferCents) : ""
+            shippingBufferCents: baseSpec.shippingBufferCents ? String(baseSpec.shippingBufferCents) : "",
+            guardrailProfileId: comparisonSet.scenarios[0]?.scenario.guardrailProfileId ?? ""
           }));
           setScenarios(
             comparisonSet.scenarios.map((entry) => {
@@ -522,6 +544,9 @@ export function CostCalculatorForm() {
             baseSpec,
             baselineScenarioId: comparisonSet.scenarios[0]?.scenario.id ?? "scenario-1",
             ranking: (comparisonSet.rankingSnapshot as CostComparisonResult["ranking"]) ?? undefined,
+            selectedLaunchScenarioId: comparisonSet.selectedLaunchScenarioId ?? null,
+            selectedLaunchSummary: comparisonSet.selectedLaunchSummary ?? null,
+            riskSummary: comparisonSet.riskSummary ?? null,
             scenarios: comparisonSet.scenarios.map((entry, index) => ({
               id: entry.scenario.id,
               name: entry.scenario.name,
@@ -548,7 +573,19 @@ export function CostCalculatorForm() {
               },
               rankingScore: entry.scenario.rankingScore,
               rankingSummary: entry.scenario.rankingSummary,
+              guardrailProfileId: entry.scenario.guardrailProfileId,
+              guardrailProfileName: entry.scenario.guardrailProfileName,
+              riskScore: entry.scenario.riskScore,
+              riskLevel: entry.scenario.riskLevel,
+              guardrailSnapshot: entry.scenario.guardrailSnapshot,
+              warningSnapshot: entry.scenario.warningSnapshot,
+              handoffSnapshot: entry.scenario.handoffSnapshot,
               isRecommendedLaunchScenario: entry.scenario.isRecommendedLaunchScenario,
+              isLaunchApprovedCandidate: entry.scenario.isLaunchApprovedCandidate,
+              riskSummary:
+                typeof (entry.scenario.guardrailSnapshot as Record<string, unknown> | null)?.["summary"] === "string"
+                  ? String((entry.scenario.guardrailSnapshot as Record<string, unknown>)["summary"])
+                  : null,
               deltas:
                 index === 0
                   ? {
@@ -896,6 +933,51 @@ export function CostCalculatorForm() {
     });
   }
 
+  function handleCreateLaunchGuardrailProfile(formData: FormData) {
+    if (!selectedProfileId) return;
+    startTransition(() => {
+      void createLaunchGuardrailProfile(selectedProfileId, {
+        name: String(formData.get("name") ?? ""),
+        status: String(formData.get("status") ?? "ACTIVE") as "ACTIVE" | "ARCHIVED",
+        minimumMarginPct: Number(formData.get("minimumMarginPct") ?? 0),
+        minimumBufferAboveBreakEvenPct: toOptionalNumber(formData.get("minimumBufferAboveBreakEvenPct")) ?? null,
+        maximumFeeBurdenPct: toOptionalNumber(formData.get("maximumFeeBurdenPct")) ?? null,
+        maximumShippingBurdenPct: toOptionalNumber(formData.get("maximumShippingBurdenPct")) ?? null,
+        maximumReserveBurdenPct: toOptionalNumber(formData.get("maximumReserveBurdenPct")) ?? null,
+        maximumAllowedTargetToFloorGapPct:
+          toOptionalNumber(formData.get("maximumAllowedTargetToFloorGapPct")) ?? null,
+        notes: String(formData.get("notes") ?? "") || null
+      })
+        .then(() => refreshAll(selectedProfileId))
+        .then(() => setSuccess("Launch guardrail profile added."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to add launch guardrail profile.")
+        );
+    });
+  }
+
+  function handleUpdateLaunchGuardrailProfile(guardrailProfileId: string, formData: FormData) {
+    startTransition(() => {
+      void updateLaunchGuardrailProfile(guardrailProfileId, {
+        name: String(formData.get("name") ?? ""),
+        status: String(formData.get("status") ?? "ACTIVE"),
+        minimumMarginPct: Number(formData.get("minimumMarginPct") ?? 0),
+        minimumBufferAboveBreakEvenPct: toOptionalNumber(formData.get("minimumBufferAboveBreakEvenPct")) ?? null,
+        maximumFeeBurdenPct: toOptionalNumber(formData.get("maximumFeeBurdenPct")) ?? null,
+        maximumShippingBurdenPct: toOptionalNumber(formData.get("maximumShippingBurdenPct")) ?? null,
+        maximumReserveBurdenPct: toOptionalNumber(formData.get("maximumReserveBurdenPct")) ?? null,
+        maximumAllowedTargetToFloorGapPct:
+          toOptionalNumber(formData.get("maximumAllowedTargetToFloorGapPct")) ?? null,
+        notes: String(formData.get("notes") ?? "") || null
+      })
+        .then(() => refreshAll(selectedProfileId))
+        .then(() => setSuccess("Launch guardrail profile updated."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to update launch guardrail profile.")
+        );
+    });
+  }
+
   function handleApplyLaunchTemplate(index: number, templateId: string) {
     if (!templateId) return;
     const template = options.launchTemplates.find((item) => item.id === templateId);
@@ -920,6 +1002,26 @@ export function CostCalculatorForm() {
       )
     );
     setSuccess(`Applied ${template.name} to scenario ${index + 1}.`);
+  }
+
+  function handleSelectLaunchScenario(scenarioId: string) {
+    const comparisonSetId = activeComparisonSetId;
+    if (!comparisonSetId) {
+      setError("Save a comparison set before selecting a launch candidate.");
+      return;
+    }
+
+    startTransition(() => {
+      void selectCostLaunchScenario(comparisonSetId, {
+        scenarioId,
+        guardrailProfileId: form.guardrailProfileId || null
+      })
+        .then((payload) => loadComparisonSet(payload.comparisonSet.id))
+        .then(() => setSuccess("Launch candidate selected."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to select launch candidate.")
+        );
+    });
   }
 
   if (loading) {
@@ -973,6 +1075,7 @@ export function CostCalculatorForm() {
           <label className="text-sm text-slate-300">Shipping rule<select value={form.shippingCode} onChange={(event) => updateField("shippingCode", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">No shipping rule</option>{options.shipping.map((rule) => <option key={rule.id} value={rule.shippingCode}>{rule.shippingName}</option>)}</select></label>
           <label className="text-sm text-slate-300">Amazon fee preset<select value={form.amazonFeePresetId} onChange={(event) => updateField("amazonFeePresetId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">Profile/default marketplace rules</option>{options.feePresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
           <label className="text-sm text-slate-300">Shipping zone<select value={form.shippingZoneRuleId} onChange={(event) => updateField("shippingZoneRuleId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">Base shipping only</option>{options.shippingZones.map((rule) => <option key={rule.id} value={rule.id}>{rule.name}</option>)}</select></label>
+          <label className="text-sm text-slate-300">Guardrail profile<select value={form.guardrailProfileId} onChange={(event) => updateField("guardrailProfileId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">No guardrails</option>{options.launchGuardrailProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
           <label className="text-sm text-slate-300">Weight (lb)<input value={form.weightLb} onChange={(event) => updateField("weightLb", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
           <label className="text-sm text-slate-300">Labor minutes<input value={form.laborMinutes} onChange={(event) => updateField("laborMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
           <label className="text-sm text-slate-300">Machine minutes<input value={form.machineMinutes} onChange={(event) => updateField("machineMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
@@ -994,6 +1097,8 @@ export function CostCalculatorForm() {
           <CostBreakdownCard preview={preview} result={result} />
           <CostPricingRecommendationCard preview={preview} result={result} />
           <LaunchRecommendationCard comparison={comparison} />
+          <LaunchRiskSummaryCard comparison={comparison} />
+          <LaunchCandidateHandoffCard comparison={comparison} />
           <CostScenarioBuilder
             scenarios={scenarios}
             feePresets={options.feePresets}
@@ -1008,7 +1113,7 @@ export function CostCalculatorForm() {
             onRemove={(index) => setScenarios((current) => current.filter((_, currentIndex) => currentIndex !== index))}
             onApplyTemplate={handleApplyLaunchTemplate}
           />
-          <ScenarioRankingTable comparison={comparison} />
+          <ScenarioRankingTable comparison={comparison} onSelectScenario={handleSelectLaunchScenario} />
           <CostScenarioComparisonCard comparison={comparison} />
         </div>
 
@@ -1078,6 +1183,12 @@ export function CostCalculatorForm() {
         shippingRules={selectedProfile?.shippingRules ?? []}
         onCreate={handleCreateLaunchTemplate}
         onUpdate={handleUpdateLaunchTemplate}
+      />
+
+      <LaunchGuardrailProfileEditor
+        profiles={selectedProfile?.launchGuardrailProfiles ?? guardrailProfiles}
+        onCreate={handleCreateLaunchGuardrailProfile}
+        onUpdate={handleUpdateLaunchGuardrailProfile}
       />
     </div>
   );

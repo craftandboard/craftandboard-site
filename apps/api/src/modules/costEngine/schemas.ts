@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   COST_PROFILE_STATUSES,
+  LAUNCH_RISK_LEVELS,
   LAUNCH_STRATEGIES,
   SHELF_COST_EDGE_BAND_PATTERNS
 } from "./contracts.js";
@@ -13,6 +14,7 @@ const optionalNullableIdSchema = z.string().trim().min(1).nullable().optional();
 export const costProfileStatusSchema = z.enum(COST_PROFILE_STATUSES);
 export const shelfCostEdgeBandPatternSchema = z.enum(SHELF_COST_EDGE_BAND_PATTERNS);
 export const launchStrategySchema = z.enum(LAUNCH_STRATEGIES);
+export const launchRiskLevelSchema = z.enum(LAUNCH_RISK_LEVELS);
 
 export const costProfileIdParamsSchema = z.object({
   costProfileId: z.string().trim().min(1)
@@ -52,6 +54,10 @@ export const comparisonSetIdParamsSchema = z.object({
 
 export const templateIdParamsSchema = z.object({
   templateId: z.string().trim().min(1)
+});
+
+export const guardrailProfileIdParamsSchema = z.object({
+  guardrailProfileId: z.string().trim().min(1)
 });
 
 export const createCostProfileSchema = z.object({
@@ -259,6 +265,8 @@ export const compareShelfCostScenariosSchema = z.object({
   name: z.string().trim().max(160).nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
   baseSpec: calculationInputBaseSchema,
+  guardrailProfileId: optionalNullableIdSchema,
+  selectedScenarioId: optionalNullableIdSchema,
   scenarios: z.array(compareScenarioInputSchema).min(1)
 });
 
@@ -266,6 +274,8 @@ export const saveComparisonSetSchema = z.object({
   name: z.string().trim().min(1).max(160),
   notes: z.string().trim().max(4000).nullable().optional(),
   baseSpec: calculationInputBaseSchema,
+  guardrailProfileId: optionalNullableIdSchema,
+  selectedScenarioId: optionalNullableIdSchema,
   scenarios: z.array(compareScenarioInputSchema).min(1)
 });
 
@@ -285,6 +295,38 @@ export const updateLaunchTemplateSchema = createLaunchTemplateSchema.partial().r
   (value) => Object.keys(value).length > 0,
   { message: "At least one launch template field must be provided." }
 );
+
+export const createLaunchGuardrailProfileSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  status: costProfileStatusSchema.optional(),
+  minimumMarginPct: percentSchema,
+  minimumBufferAboveBreakEvenPct: percentSchema.nullable().optional(),
+  maximumFeeBurdenPct: percentSchema.nullable().optional(),
+  maximumShippingBurdenPct: percentSchema.nullable().optional(),
+  maximumReserveBurdenPct: percentSchema.nullable().optional(),
+  maximumAllowedTargetToFloorGapPct: percentSchema.nullable().optional(),
+  notes: z.string().trim().max(4000).nullable().optional(),
+  metadata: z.unknown().optional()
+});
+
+export const updateLaunchGuardrailProfileSchema = createLaunchGuardrailProfileSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one guardrail field must be provided." }
+);
+
+export const listLaunchGuardrailProfilesQuerySchema = z.object({
+  costProfileId: z.string().trim().min(1).optional()
+});
+
+export const evaluateGuardrailsSchema = z.object({
+  guardrailProfileId: z.string().trim().min(1),
+  selectedScenarioId: z.string().trim().min(1).nullable().optional()
+});
+
+export const selectLaunchScenarioSchema = z.object({
+  scenarioId: z.string().trim().min(1),
+  guardrailProfileId: z.string().trim().min(1).nullable().optional()
+});
 
 export const listShelfCostCalculationsQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()

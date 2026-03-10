@@ -7,6 +7,7 @@ const repositoryMocks = vi.hoisted(() => ({
   createComparisonSetScenarioRecord: vi.fn(),
   createCostProfileRecord: vi.fn(),
   createEdgeBandCostRuleRecord: vi.fn(),
+  createLaunchGuardrailProfileRecord: vi.fn(),
   createLaunchTemplateRecord: vi.fn(),
   createMaterialCostRuleRecord: vi.fn(),
   createPackagingCostRuleRecord: vi.fn(),
@@ -16,12 +17,14 @@ const repositoryMocks = vi.hoisted(() => ({
   getAmazonFeePresetRecord: vi.fn(),
   getCalculationComparisonSetRecord: vi.fn(),
   getCostProfileRecord: vi.fn(),
+  getLaunchGuardrailProfileRecord: vi.fn(),
   getLaunchTemplateRecord: vi.fn(),
   getShelfCostCalculationRecord: vi.fn(),
   getShippingZoneRuleRecord: vi.fn(),
   listAmazonFeePresetsForOrganization: vi.fn(),
   listCalculationComparisonSetsForOrganization: vi.fn(),
   listCostProfilesForOrganization: vi.fn(),
+  listLaunchGuardrailProfilesForOrganization: vi.fn(),
   listLaunchTemplatesForOrganization: vi.fn(),
   listShelfCostCalculationsForOrganization: vi.fn(),
   listShippingZoneRulesForOrganization: vi.fn(),
@@ -29,6 +32,8 @@ const repositoryMocks = vi.hoisted(() => ({
   updateCostProfileRecord: vi.fn(),
   updateEdgeBandCostRuleRecord: vi.fn(),
   updateCalculationComparisonSetRecord: vi.fn(),
+  updateCalculationScenarioRecord: vi.fn(),
+  updateLaunchGuardrailProfileRecord: vi.fn(),
   updateLaunchTemplateRecord: vi.fn(),
   updateMaterialCostRuleRecord: vi.fn(),
   updatePackagingCostRuleRecord: vi.fn(),
@@ -41,8 +46,10 @@ vi.mock("../modules/costEngine/repository.js", () => repositoryMocks);
 import {
   calculateShelfCostView,
   compareShelfCostScenarios,
+  createLaunchGuardrailProfile,
   createLaunchTemplate,
   getShelfCostCalculation,
+  listLaunchGuardrailProfiles,
   rankComparisonSet,
   listCostProfiles,
   listLaunchTemplates,
@@ -202,7 +209,8 @@ function makeProfile() {
         updatedAt: new Date("2026-03-10T00:00:00.000Z")
       }
     ],
-    launchTemplates: []
+    launchTemplates: [],
+    launchGuardrailProfiles: []
   };
 }
 
@@ -211,6 +219,9 @@ describe("cost engine service", () => {
     vi.clearAllMocks();
     repositoryMocks.getCostProfileRecord.mockResolvedValue(makeProfile());
     repositoryMocks.listCostProfilesForOrganization.mockResolvedValue([makeProfile()]);
+    repositoryMocks.updateCalculationScenarioRecord.mockResolvedValue({ count: 1 });
+    repositoryMocks.updateCalculationComparisonSetRecord.mockResolvedValue({ count: 1 });
+    repositoryMocks.getLaunchGuardrailProfileRecord.mockResolvedValue(null);
   });
 
   it("lists cost profiles in org scope", async () => {
@@ -355,6 +366,60 @@ describe("cost engine service", () => {
     expect(listed.launchTemplates).toHaveLength(1);
   });
 
+  it("creates and lists launch guardrail profiles", async () => {
+    repositoryMocks.createLaunchGuardrailProfileRecord.mockResolvedValueOnce({ id: "guard_1" });
+    repositoryMocks.getLaunchGuardrailProfileRecord.mockResolvedValueOnce({
+      id: "guard_1",
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Balanced guardrails",
+      status: "ACTIVE",
+      minimumMarginPct: { toNumber: () => 20 },
+      minimumBufferAboveBreakEvenPct: { toNumber: () => 10 },
+      maximumFeeBurdenPct: { toNumber: () => 28 },
+      maximumShippingBurdenPct: { toNumber: () => 18 },
+      maximumReserveBurdenPct: { toNumber: () => 8 },
+      maximumAllowedTargetToFloorGapPct: { toNumber: () => 20 },
+      notes: null,
+      metadata: null,
+      createdAt: new Date("2026-03-10T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-10T00:00:00.000Z")
+    });
+    repositoryMocks.listLaunchGuardrailProfilesForOrganization.mockResolvedValueOnce([
+      {
+        id: "guard_1",
+        organizationId: "org_local_craft_board",
+        costProfileId: "profile_1",
+        name: "Balanced guardrails",
+        status: "ACTIVE",
+        minimumMarginPct: { toNumber: () => 20 },
+        minimumBufferAboveBreakEvenPct: { toNumber: () => 10 },
+        maximumFeeBurdenPct: { toNumber: () => 28 },
+        maximumShippingBurdenPct: { toNumber: () => 18 },
+        maximumReserveBurdenPct: { toNumber: () => 8 },
+        maximumAllowedTargetToFloorGapPct: { toNumber: () => 20 },
+        notes: null,
+        metadata: null,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      }
+    ]);
+
+    const created = await createLaunchGuardrailProfile({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Balanced guardrails",
+      minimumMarginPct: 20
+    });
+    const listed = await listLaunchGuardrailProfiles({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1"
+    });
+
+    expect(created.launchGuardrailProfile.id).toBe("guard_1");
+    expect(listed.launchGuardrailProfiles).toHaveLength(1);
+  });
+
   it("saves comparison sets with scenario records", async () => {
     repositoryMocks.createCalculationComparisonSetRecord.mockResolvedValueOnce({ id: "compare_1" });
     repositoryMocks.createCalculationScenarioRecord
@@ -484,6 +549,26 @@ describe("cost engine service", () => {
         comparisonSummary: { recommendedScenarioId: "scenario_1" },
         recommendedScenarioId: "scenario_1",
         recommendedScenario: { id: "scenario_1", name: "Balanced" },
+        selectedLaunchScenarioId: "scenario_1",
+        selectedLaunchScenario: { id: "scenario_1", name: "Balanced" },
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z"),
+        scenarios: []
+      })
+      .mockResolvedValueOnce({
+        id: "compare_1",
+        organizationId: "org_local_craft_board",
+        name: "Launch compare",
+        notes: null,
+        baseShelfSpecSnapshot: {},
+        rankingSnapshot: { recommendation: { recommendedScenarioId: "scenario_1" } },
+        comparisonSummary: { recommendedScenarioId: "scenario_1" },
+        riskSummary: null,
+        selectedLaunchSummary: null,
+        recommendedScenarioId: "scenario_1",
+        recommendedScenario: { id: "scenario_1", name: "Balanced" },
+        selectedLaunchScenarioId: "scenario_1",
+        selectedLaunchScenario: { id: "scenario_1", name: "Balanced" },
         createdAt: new Date("2026-03-10T00:00:00.000Z"),
         updatedAt: new Date("2026-03-10T00:00:00.000Z"),
         scenarios: []

@@ -14,6 +14,7 @@ import {
   createAmazonFeePreset,
   createCostProfile,
   createEdgeBandCostRule,
+  createLaunchGuardrailProfile,
   createLaunchTemplate,
   createMaterialCostRule,
   createPackagingCostRule,
@@ -21,23 +22,29 @@ import {
   createShippingZoneRule,
   getAmazonFeePreset,
   getComparisonSet,
+  getComparisonSetHandoffSummary,
   getCostProfile,
   getComparisonSetRecommendation,
+  getLaunchGuardrailProfile,
   getLaunchTemplate,
   getShelfCostCalculation,
   getShippingZoneRule,
   listAmazonFeePresets,
   listComparisonSets,
   listCostProfiles,
+  listLaunchGuardrailProfiles,
   listLaunchTemplates,
   listShelfCostCalculations,
   listShippingZoneRules,
   saveComparisonSet,
   saveShelfCostCalculation,
   rankComparisonSet,
+  selectLaunchScenario,
+  evaluateComparisonSetGuardrails,
   updateAmazonFeePreset,
   updateCostProfile,
   updateEdgeBandCostRule,
+  updateLaunchGuardrailProfile,
   updateLaunchTemplate,
   updateMaterialCostRule,
   updatePackagingCostRule,
@@ -53,12 +60,14 @@ import {
   createAmazonFeePresetSchema,
   createCostProfileSchema,
   createEdgeBandCostRuleSchema,
+  createLaunchGuardrailProfileSchema,
   createLaunchTemplateSchema,
   createMaterialCostRuleSchema,
   createPackagingCostRuleSchema,
   createShippingCostRuleSchema,
   createShippingZoneRuleSchema,
   listAmazonFeePresetsQuerySchema,
+  listLaunchGuardrailProfilesQuerySchema,
   listShelfCostCalculationsQuerySchema,
   listShippingZoneRulesQuerySchema,
   materialRuleIdParamsSchema,
@@ -71,6 +80,7 @@ import {
   updateAmazonFeePresetSchema,
   updateCostProfileSchema,
   updateEdgeBandCostRuleSchema,
+  updateLaunchGuardrailProfileSchema,
   updateLaunchTemplateSchema,
   updateMaterialCostRuleSchema,
   updatePackagingCostRuleSchema,
@@ -78,6 +88,10 @@ import {
   updateShippingZoneRuleSchema,
   zoneRuleIdParamsSchema,
   templateIdParamsSchema
+  ,
+  guardrailProfileIdParamsSchema,
+  evaluateGuardrailsSchema,
+  selectLaunchScenarioSchema
 } from "../modules/costEngine/schemas.js";
 
 const router = Router();
@@ -102,7 +116,8 @@ function handleCostEngineRouteError(error: unknown, res: any, next: any) {
       "Amazon fee preset not found.",
       "Shipping zone rule not found.",
       "Cost comparison set not found.",
-      "Launch template not found."
+      "Launch template not found.",
+      "Launch guardrail profile not found."
     ]);
     res.status(notFoundErrors.has(error.message) ? 404 : 400).json({ ok: false, error: error.message });
     return;
@@ -489,6 +504,70 @@ router.patch("/launch-templates/:templateId", async (req, res, next) => {
   }
 });
 
+router.post("/cost-profiles/:costProfileId/launch-guardrail-profiles", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createLaunchGuardrailProfileSchema.parse(req.body);
+    res.status(201).json(
+      await createLaunchGuardrailProfile({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/launch-guardrail-profiles", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const query = listLaunchGuardrailProfilesQuerySchema.parse(req.query);
+    res.json(
+      await listLaunchGuardrailProfiles({
+        organizationId: context.currentOrganization.id,
+        costProfileId: query.costProfileId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/launch-guardrail-profiles/:guardrailProfileId", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const params = guardrailProfileIdParamsSchema.parse(req.params);
+    res.json(
+      await getLaunchGuardrailProfile({
+        organizationId: context.currentOrganization.id,
+        guardrailProfileId: params.guardrailProfileId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/launch-guardrail-profiles/:guardrailProfileId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = guardrailProfileIdParamsSchema.parse(req.params);
+    const body = updateLaunchGuardrailProfileSchema.parse(req.body);
+    res.json(
+      await updateLaunchGuardrailProfile({
+        organizationId: context.currentOrganization.id,
+        guardrailProfileId: params.guardrailProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.post("/cost-calculations/calculate", async (req, res, next) => {
   try {
     const context = getCostCalculationWriteContext(req);
@@ -596,10 +675,49 @@ router.post("/cost-comparison-sets/:comparisonSetId/rank", async (req, res, next
   try {
     const context = getCostCalculationWriteContext(req);
     const params = comparisonSetIdParamsSchema.parse(req.params);
+    const body = evaluateGuardrailsSchema.partial().parse(req.body ?? {});
     res.json(
       await rankComparisonSet({
         organizationId: context.currentOrganization.id,
-        comparisonSetId: params.comparisonSetId
+        comparisonSetId: params.comparisonSetId,
+        guardrailProfileId: body.guardrailProfileId ?? null,
+        selectedScenarioId: body.selectedScenarioId ?? null
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-comparison-sets/:comparisonSetId/guardrails", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    const body = evaluateGuardrailsSchema.parse(req.body);
+    res.json(
+      await evaluateComparisonSetGuardrails({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId,
+        guardrailProfileId: body.guardrailProfileId,
+        selectedScenarioId: body.selectedScenarioId ?? null
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-comparison-sets/:comparisonSetId/select-launch-scenario", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    const body = selectLaunchScenarioSchema.parse(req.body);
+    res.json(
+      await selectLaunchScenario({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId,
+        scenarioId: body.scenarioId,
+        guardrailProfileId: body.guardrailProfileId ?? null
       })
     );
   } catch (error) {
@@ -613,6 +731,21 @@ router.get("/cost-comparison-sets/:comparisonSetId/recommendation", async (req, 
     const params = comparisonSetIdParamsSchema.parse(req.params);
     res.json(
       await getComparisonSetRecommendation({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-comparison-sets/:comparisonSetId/handoff-summary", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    res.json(
+      await getComparisonSetHandoffSummary({
         organizationId: context.currentOrganization.id,
         comparisonSetId: params.comparisonSetId
       })

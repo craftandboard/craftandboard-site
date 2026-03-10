@@ -1,12 +1,20 @@
 "use client";
 
 import type { CostComparisonResult } from "../lib/api";
-import { formatMoney, getLaunchStrategyLabel, getRankingLabel } from "../lib/cost-engine";
+import {
+  formatMoney,
+  getLaunchStrategyLabel,
+  getRankingLabel,
+  getRiskLevelLabel,
+  getRiskLevelTone
+} from "../lib/cost-engine";
 
 export function ScenarioRankingTable({
-  comparison
+  comparison,
+  onSelectScenario
 }: {
   comparison: CostComparisonResult | null;
+  onSelectScenario?: (scenarioId: string) => void;
 }) {
   if (!comparison?.scenarios.length) {
     return null;
@@ -28,8 +36,10 @@ export function ScenarioRankingTable({
               <th className="px-4 py-3 text-left">Scenario</th>
               <th className="px-4 py-3 text-left">Strategy</th>
               <th className="px-4 py-3 text-right">Score</th>
+              <th className="px-4 py-3 text-left">Risk</th>
               <th className="px-4 py-3 text-right">Target</th>
               <th className="px-4 py-3 text-right">Floor</th>
+              <th className="px-4 py-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-white/10">
@@ -48,11 +58,27 @@ export function ScenarioRankingTable({
                 <td className="px-4 py-3 text-right font-semibold text-white">
                   {scenario.rankingScore?.toFixed(1) ?? "0.0"}
                 </td>
+                <td className="px-4 py-3">
+                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRiskLevelTone(scenario.riskLevel)}`}>
+                    {getRiskLevelLabel(scenario.riskLevel)}
+                  </span>
+                </td>
                 <td className="px-4 py-3 text-right">
                   {formatMoney(scenario.result.breakdown.recommendedTargetSellPriceCents)}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {formatMoney(scenario.result.breakdown.recommendedMinSellPriceCents)}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  {onSelectScenario ? (
+                    <button
+                      type="button"
+                      onClick={() => onSelectScenario(scenario.id)}
+                      className="rounded-full border border-white/10 px-3 py-1 text-xs font-semibold text-white"
+                    >
+                      {scenario.isLaunchApprovedCandidate ? "Selected" : "Select"}
+                    </button>
+                  ) : null}
                 </td>
               </tr>
             ))}

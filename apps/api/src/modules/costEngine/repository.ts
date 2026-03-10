@@ -114,6 +114,10 @@ export async function getCostProfileRecord(input: {
           defaultShippingRule: true
         },
         orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
+      },
+      launchGuardrailProfiles: {
+        where: { status: "ACTIVE" },
+        orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
       }
     }
   });
@@ -640,7 +644,14 @@ export async function createCalculationScenarioRecord(input: {
   launchStrategy?: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN" | null;
   rankingScore?: number | null;
   rankingSummary?: unknown;
+  guardrailProfileId?: string | null;
+  riskScore?: number | null;
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH" | null;
+  guardrailSnapshot?: unknown;
+  warningSnapshot?: unknown;
+  handoffSnapshot?: unknown;
   isRecommendedLaunchScenario?: boolean;
+  isLaunchApprovedCandidate?: boolean;
   assumptionsSnapshot: unknown;
   resultSnapshot: unknown;
 }) {
@@ -657,7 +668,14 @@ export async function createCalculationScenarioRecord(input: {
       launchStrategy: input.launchStrategy ?? undefined,
       rankingScore: input.rankingScore ?? undefined,
       rankingSummary: normalizeMetadata(input.rankingSummary),
+      guardrailProfileId: input.guardrailProfileId ?? undefined,
+      riskScore: input.riskScore ?? undefined,
+      riskLevel: input.riskLevel ?? undefined,
+      guardrailSnapshot: normalizeMetadata(input.guardrailSnapshot),
+      warningSnapshot: normalizeMetadata(input.warningSnapshot),
+      handoffSnapshot: normalizeMetadata(input.handoffSnapshot),
       isRecommendedLaunchScenario: input.isRecommendedLaunchScenario ?? false,
+      isLaunchApprovedCandidate: input.isLaunchApprovedCandidate ?? false,
       assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
       resultSnapshot: normalizeMetadata(input.resultSnapshot)
     }
@@ -670,8 +688,11 @@ export async function createCalculationComparisonSetRecord(input: {
   baseShelfSpecSnapshot: unknown;
   notes?: string | null;
   recommendedScenarioId?: string | null;
+  selectedLaunchScenarioId?: string | null;
   rankingSnapshot?: unknown;
   comparisonSummary?: unknown;
+  selectedLaunchSummary?: unknown;
+  riskSummary?: unknown;
 }) {
   return prismaClient.calculationComparisonSet.create({
     data: {
@@ -680,9 +701,26 @@ export async function createCalculationComparisonSetRecord(input: {
       baseShelfSpecSnapshot: normalizeMetadata(input.baseShelfSpecSnapshot),
       notes: input.notes ?? null,
       recommendedScenarioId: input.recommendedScenarioId ?? undefined,
+      selectedLaunchScenarioId: input.selectedLaunchScenarioId ?? undefined,
       rankingSnapshot: normalizeMetadata(input.rankingSnapshot),
-      comparisonSummary: normalizeMetadata(input.comparisonSummary)
+      comparisonSummary: normalizeMetadata(input.comparisonSummary),
+      selectedLaunchSummary: normalizeMetadata(input.selectedLaunchSummary),
+      riskSummary: normalizeMetadata(input.riskSummary)
     }
+  });
+}
+
+export async function updateCalculationScenarioRecord(input: {
+  organizationId: string;
+  scenarioId: string;
+  data: Record<string, unknown>;
+}) {
+  return prismaClient.calculationScenario.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      id: input.scenarioId
+    },
+    data: input.data
   });
 }
 
@@ -725,13 +763,15 @@ export async function listCalculationComparisonSetsForOrganization(organizationI
           calculationScenario: {
             include: {
               amazonFeePreset: true,
-              shippingZoneRule: true
+              shippingZoneRule: true,
+              guardrailProfile: true
             }
           }
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
       },
-      recommendedScenario: true
+      recommendedScenario: true,
+      selectedLaunchScenario: true
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }]
   });
@@ -752,13 +792,15 @@ export async function getCalculationComparisonSetRecord(input: {
           calculationScenario: {
             include: {
               amazonFeePreset: true,
-              shippingZoneRule: true
+              shippingZoneRule: true,
+              guardrailProfile: true
             }
           }
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
       },
-      recommendedScenario: true
+      recommendedScenario: true,
+      selectedLaunchScenario: true
     }
   });
 }
@@ -839,6 +881,77 @@ export async function updateLaunchTemplateRecord(input: {
     where: {
       organizationId: input.organizationId,
       id: input.templateId
+    },
+    data: input.data
+  });
+}
+
+export async function createLaunchGuardrailProfileRecord(input: {
+  organizationId: string;
+  costProfileId?: string | null;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  minimumMarginPct: number;
+  minimumBufferAboveBreakEvenPct?: number | null;
+  maximumFeeBurdenPct?: number | null;
+  maximumShippingBurdenPct?: number | null;
+  maximumReserveBurdenPct?: number | null;
+  maximumAllowedTargetToFloorGapPct?: number | null;
+  notes?: string | null;
+  metadata?: unknown;
+}) {
+  return prismaClient.launchGuardrailProfile.create({
+    data: {
+      organizationId: input.organizationId,
+      costProfileId: input.costProfileId ?? undefined,
+      name: input.name,
+      status: input.status ?? "ACTIVE",
+      minimumMarginPct: input.minimumMarginPct,
+      minimumBufferAboveBreakEvenPct: input.minimumBufferAboveBreakEvenPct ?? undefined,
+      maximumFeeBurdenPct: input.maximumFeeBurdenPct ?? undefined,
+      maximumShippingBurdenPct: input.maximumShippingBurdenPct ?? undefined,
+      maximumReserveBurdenPct: input.maximumReserveBurdenPct ?? undefined,
+      maximumAllowedTargetToFloorGapPct: input.maximumAllowedTargetToFloorGapPct ?? undefined,
+      notes: input.notes ?? null,
+      metadata: normalizeMetadata(input.metadata)
+    }
+  });
+}
+
+export async function listLaunchGuardrailProfilesForOrganization(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  return prismaClient.launchGuardrailProfile.findMany({
+    where: {
+      organizationId: input.organizationId,
+      ...(input.costProfileId ? { costProfileId: input.costProfileId } : {})
+    },
+    orderBy: [{ status: "asc" }, { updatedAt: "desc" }, { id: "desc" }]
+  });
+}
+
+export async function getLaunchGuardrailProfileRecord(input: {
+  organizationId: string;
+  guardrailProfileId: string;
+}) {
+  return prismaClient.launchGuardrailProfile.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      id: input.guardrailProfileId
+    }
+  });
+}
+
+export async function updateLaunchGuardrailProfileRecord(input: {
+  organizationId: string;
+  guardrailProfileId: string;
+  data: Record<string, unknown>;
+}) {
+  return prismaClient.launchGuardrailProfile.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      id: input.guardrailProfileId
     },
     data: input.data
   });

@@ -171,3 +171,29 @@ export function getRankingLabel(index: number) {
   if (index === 1) return "Runner-up";
   return `Rank ${index + 1}`;
 }
+
+export function getRiskLevelLabel(level: string | null | undefined) {
+  switch (level) {
+    case "LOW":
+      return "Low risk";
+    case "MEDIUM":
+      return "Medium risk";
+    case "HIGH":
+      return "High risk";
+    default:
+      return "Not evaluated";
+  }
+}
+
+export function getRiskLevelTone(level: string | null | undefined) {
+  switch (level) {
+    case "LOW":
+      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+    case "MEDIUM":
+      return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+    case "HIGH":
+      return "border-rose-400/30 bg-rose-400/10 text-rose-100";
+    default:
+      return "border-white/10 bg-white/5 text-slate-200";
+  }
+}

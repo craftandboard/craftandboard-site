@@ -38,9 +38,17 @@
 27. Apply a launch template to a scenario and verify the scenario fields populate
 28. Verify the comparison shows a ranked winner, a safer-margin candidate, and a most aggressive candidate
 29. Verify launch price, floor price, and safer-margin price render clearly
-30. Reload the saved comparison set and confirm the ranking and recommendation persist
-31. Change one assumption or input and recalculate
-32. Confirm the result changes and remains explainable
+30. Create a launch guardrail profile
+31. Edit the guardrail profile and confirm the threshold values update
+32. Run a comparison with a selected guardrail profile
+33. Verify warnings and risk level badges render for fragile scenarios
+34. Verify a ranked winner can still appear as risky
+35. Select a launch scenario explicitly from the ranking table
+36. Verify the launch handoff summary card shows chosen scenario, prices, burdens, and warnings
+37. Save the comparison set
+38. Reload the saved comparison set and confirm ranking, risk summary, selected launch candidate, and handoff summary persist
+39. Change one assumption or input and recalculate
+40. Confirm the result changes and remains explainable
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -49,3 +57,4 @@
 - A user can explain why the target Amazon sell price is above the bare production subtotal
 - A user can explain why one fee preset or shipping zone produces a safer or riskier launch price
 - A user can explain why the recommended launch scenario outranks the alternatives
+- A user can explain why the selected launch scenario is safe enough or still fragile before handing it into a future listing phase

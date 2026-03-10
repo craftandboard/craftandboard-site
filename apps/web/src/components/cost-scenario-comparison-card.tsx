@@ -1,7 +1,12 @@
 "use client";
 
 import type { CostComparisonResult } from "../lib/api";
-import { formatMoney, getLaunchStrategyLabel } from "../lib/cost-engine";
+import {
+  formatMoney,
+  getLaunchStrategyLabel,
+  getRiskLevelLabel,
+  getRiskLevelTone
+} from "../lib/cost-engine";
 
 export function CostScenarioComparisonCard({
   comparison
@@ -33,7 +38,17 @@ export function CostScenarioComparisonCard({
                 </span>
               ) : null}
             </div>
-            <p className="mt-1 text-xs text-slate-400">{getLaunchStrategyLabel(scenario.launchStrategy)}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <p className="text-xs text-slate-400">{getLaunchStrategyLabel(scenario.launchStrategy)}</p>
+              <span className={`rounded-full border px-2 py-1 text-[11px] font-semibold ${getRiskLevelTone(scenario.riskLevel)}`}>
+                {getRiskLevelLabel(scenario.riskLevel)}
+              </span>
+              {scenario.isLaunchApprovedCandidate ? (
+                <span className="rounded-full border border-emerald-300/30 bg-emerald-300/15 px-2 py-1 text-[11px] font-semibold text-emerald-100">
+                  Selected for handoff
+                </span>
+              ) : null}
+            </div>
             <p className="mt-2 text-xs uppercase tracking-[0.2em] text-slate-400">Break-even</p>
             <p className="mt-1 text-lg font-semibold text-white">
               {formatMoney(scenario.result.breakdown.breakEvenPriceCents)}
@@ -73,6 +88,7 @@ export function CostScenarioComparisonCard({
               {scenario.rankingSummary && "recommendationNote" in scenario.rankingSummary ? (
                 <p className="mt-2 text-slate-400">{String(scenario.rankingSummary.recommendationNote)}</p>
               ) : null}
+              {scenario.riskSummary ? <p className="mt-2 text-slate-300">{scenario.riskSummary}</p> : null}
             </div>
           </div>
         ))}

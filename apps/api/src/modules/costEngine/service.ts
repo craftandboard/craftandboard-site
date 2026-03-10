@@ -1,5 +1,10 @@
 import { calculateShelfCost, compareScenarioResults } from "./calculator.js";
 import { resolveCostEngineAssumptions } from "./assumptions.js";
+import {
+  buildLaunchCandidateHandoff,
+  buildScenarioRiskSummary,
+  evaluateScenarioGuardrails
+} from "./guardrails.js";
 import { decimalToNumber } from "./normalization.js";
 import {
   createAmazonFeePresetRecord,
@@ -8,6 +13,7 @@ import {
   createComparisonSetScenarioRecord,
   createCostProfileRecord,
   createEdgeBandCostRuleRecord,
+  createLaunchGuardrailProfileRecord,
   createLaunchTemplateRecord,
   createMaterialCostRuleRecord,
   createPackagingCostRuleRecord,
@@ -17,19 +23,23 @@ import {
   getAmazonFeePresetRecord,
   getCalculationComparisonSetRecord,
   getCostProfileRecord,
+  getLaunchGuardrailProfileRecord,
   getLaunchTemplateRecord,
   getShelfCostCalculationRecord,
   getShippingZoneRuleRecord,
   listAmazonFeePresetsForOrganization,
   listCalculationComparisonSetsForOrganization,
   listCostProfilesForOrganization,
+  listLaunchGuardrailProfilesForOrganization,
   listLaunchTemplatesForOrganization,
   listShelfCostCalculationsForOrganization,
   listShippingZoneRulesForOrganization,
   updateAmazonFeePresetRecord,
   updateCalculationComparisonSetRecord,
+  updateCalculationScenarioRecord,
   updateCostProfileRecord,
   updateEdgeBandCostRuleRecord,
+  updateLaunchGuardrailProfileRecord,
   updateLaunchTemplateRecord,
   updateMaterialCostRuleRecord,
   updatePackagingCostRuleRecord,
@@ -40,6 +50,61 @@ import { rankComparisonScenarios } from "./ranking.js";
 import type { LaunchStrategy } from "./contracts.js";
 
 type AnyRecord = Record<string, unknown>;
+type GuardrailedScenario = {
+  id: string;
+  name: string;
+  launchStrategy: LaunchStrategy | null;
+  assumptionsSnapshot: Record<string, unknown>;
+  result: ReturnType<typeof calculateShelfCost>;
+  changedAssumptions: {
+    packagingCode: string | null;
+    shippingCode: string | null;
+    amazonFeePresetId: string | null;
+    shippingZoneRuleId: string | null;
+    targetMarginPct: number | null;
+    growthMarginPct: number | null;
+    launchStrategy: LaunchStrategy | null;
+  };
+  rankingScore: number | null;
+  rankingSummary: AnyRecord | null;
+  isRecommendedLaunchScenario: boolean;
+  deltas: AnyRecord;
+  guardrailProfileId?: string | null;
+  guardrailProfileName?: string | null;
+  riskScore?: number | null;
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH" | null;
+  guardrailSnapshot?: AnyRecord | null;
+  warningSnapshot?: AnyRecord[] | null;
+  riskSummary?: string | null;
+  handoffSnapshot?: AnyRecord | null;
+  isLaunchApprovedCandidate?: boolean;
+};
+
+type GuardrailedComparison = {
+  name: string | null;
+  notes: string | null;
+  baseSpec: AnyRecord;
+  baselineScenarioId: string;
+  ranking: {
+    scenarios: Array<{
+      scenarioId: string;
+      rankingScore: number;
+      rankingSummary: AnyRecord;
+    }>;
+    recommendation: {
+      recommendedScenarioId: string;
+      recommendedLaunchPriceCents: number;
+      recommendedFloorPriceCents: number;
+      recommendedSaferMarginPriceCents: number;
+      bestLaunchScenarioLabel: string;
+      safestMarginScenarioLabel: string;
+      mostAggressiveScenarioLabel: string;
+      recommendationSummary: string;
+      tradeoffSummary: AnyRecord;
+    } | null;
+  };
+  scenarios: GuardrailedScenario[];
+};
 
 function mapRuleDates<T extends { createdAt: Date; updatedAt: Date }>(record: T) {
   return {
@@ -87,6 +152,22 @@ function mapLaunchTemplate(record: any) {
     launchStrategy: record.launchStrategy,
     notes: record.notes ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot ?? null
+  };
+}
+
+function mapLaunchGuardrailProfile(record: any) {
+  return {
+    ...mapRuleDates(record),
+    orgId: record.organizationId,
+    costProfileId: record.costProfileId ?? null,
+    minimumMarginPct: decimalToNumber(record.minimumMarginPct) ?? 0,
+    minimumBufferAboveBreakEvenPct: decimalToNumber(record.minimumBufferAboveBreakEvenPct),
+    maximumFeeBurdenPct: decimalToNumber(record.maximumFeeBurdenPct),
+    maximumShippingBurdenPct: decimalToNumber(record.maximumShippingBurdenPct),
+    maximumReserveBurdenPct: decimalToNumber(record.maximumReserveBurdenPct),
+    maximumAllowedTargetToFloorGapPct: decimalToNumber(record.maximumAllowedTargetToFloorGapPct),
+    notes: record.notes ?? null,
+    metadata: record.metadata ?? null
   };
 }
 
@@ -164,6 +245,7 @@ function mapCostProfile(profile: any) {
     amazonFeePresets: (profile.amazonFeePresets ?? []).map(mapAmazonFeePreset),
     shippingZoneRules: (profile.shippingZoneRules ?? []).map(mapShippingZoneRule),
     launchTemplates: (profile.launchTemplates ?? []).map(mapLaunchTemplate),
+    launchGuardrailProfiles: (profile.launchGuardrailProfiles ?? []).map(mapLaunchGuardrailProfile),
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString()
   };
@@ -258,9 +340,17 @@ function mapScenario(record: any) {
     shippingRuleName: record.shippingRule?.shippingName ?? null,
     shelfCostCalculationId: record.shelfCostCalculationId ?? null,
     launchStrategy: record.launchStrategy ?? null,
+    guardrailProfileId: record.guardrailProfileId ?? null,
+    guardrailProfileName: record.guardrailProfile?.name ?? null,
     rankingScore: decimalToNumber(record.rankingScore),
     rankingSummary: record.rankingSummary ?? null,
+    riskScore: decimalToNumber(record.riskScore),
+    riskLevel: record.riskLevel ?? null,
+    guardrailSnapshot: record.guardrailSnapshot ?? null,
+    warningSnapshot: record.warningSnapshot ?? null,
+    handoffSnapshot: record.handoffSnapshot ?? null,
     isRecommendedLaunchScenario: Boolean(record.isRecommendedLaunchScenario),
+    isLaunchApprovedCandidate: Boolean(record.isLaunchApprovedCandidate),
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -277,8 +367,12 @@ function mapComparisonSet(record: any) {
     baseShelfSpecSnapshot: record.baseShelfSpecSnapshot,
     recommendedScenarioId: record.recommendedScenarioId ?? null,
     recommendedScenarioName: record.recommendedScenario?.name ?? null,
+    selectedLaunchScenarioId: record.selectedLaunchScenarioId ?? null,
+    selectedLaunchScenarioName: record.selectedLaunchScenario?.name ?? null,
     rankingSnapshot: record.rankingSnapshot ?? null,
     comparisonSummary: record.comparisonSummary ?? null,
+    selectedLaunchSummary: record.selectedLaunchSummary ?? null,
+    riskSummary: record.riskSummary ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -288,6 +382,14 @@ function mapComparisonSet(record: any) {
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString()
   };
+}
+
+function getScenarioRiskSummaryText(snapshot: unknown) {
+  const guardrailSnapshot = snapshot as Record<string, unknown> | null;
+  if (guardrailSnapshot && typeof guardrailSnapshot.summary === "string") {
+    return String(guardrailSnapshot.summary);
+  }
+  return null;
 }
 
 export async function createCostProfile(input: {
@@ -728,6 +830,175 @@ export async function updateLaunchTemplate(input: {
   return { ok: true, launchTemplate: mapLaunchTemplate(updated) };
 }
 
+export async function createLaunchGuardrailProfile(input: {
+  organizationId: string;
+  costProfileId?: string | null;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  minimumMarginPct: number;
+  minimumBufferAboveBreakEvenPct?: number | null;
+  maximumFeeBurdenPct?: number | null;
+  maximumShippingBurdenPct?: number | null;
+  maximumReserveBurdenPct?: number | null;
+  maximumAllowedTargetToFloorGapPct?: number | null;
+  notes?: string | null;
+  metadata?: unknown;
+}) {
+  const record = await createLaunchGuardrailProfileRecord(input);
+  const hydrated = await getLaunchGuardrailProfileRecord({
+    organizationId: input.organizationId,
+    guardrailProfileId: record.id
+  });
+
+  return { ok: true, launchGuardrailProfile: mapLaunchGuardrailProfile(hydrated) };
+}
+
+export async function listLaunchGuardrailProfiles(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  const records = await listLaunchGuardrailProfilesForOrganization(input);
+  return { ok: true, launchGuardrailProfiles: records.map(mapLaunchGuardrailProfile) };
+}
+
+export async function getLaunchGuardrailProfile(input: {
+  organizationId: string;
+  guardrailProfileId: string;
+}) {
+  const record = await getLaunchGuardrailProfileRecord(input);
+  if (!record) {
+    throw new Error("Launch guardrail profile not found.");
+  }
+
+  return { ok: true, launchGuardrailProfile: mapLaunchGuardrailProfile(record) };
+}
+
+export async function updateLaunchGuardrailProfile(input: {
+  organizationId: string;
+  guardrailProfileId: string;
+} & AnyRecord) {
+  const existing = await getLaunchGuardrailProfileRecord({
+    organizationId: input.organizationId,
+    guardrailProfileId: input.guardrailProfileId
+  });
+  if (!existing) {
+    throw new Error("Launch guardrail profile not found.");
+  }
+
+  await updateLaunchGuardrailProfileRecord({
+    organizationId: input.organizationId,
+    guardrailProfileId: input.guardrailProfileId,
+    data: normalizeUpdateData({
+      ...input,
+      organizationId: undefined,
+      guardrailProfileId: undefined
+    })
+  });
+
+  const updated = await getLaunchGuardrailProfileRecord({
+    organizationId: input.organizationId,
+    guardrailProfileId: input.guardrailProfileId
+  });
+  return { ok: true, launchGuardrailProfile: mapLaunchGuardrailProfile(updated) };
+}
+
+function applyGuardrailsToComparison(params: {
+  comparison: GuardrailedComparison;
+  guardrailProfile: ReturnType<typeof mapLaunchGuardrailProfile>;
+  selectedScenarioId?: string | null;
+}) {
+  const targetPrices = params.comparison.scenarios.map((scenario) => (
+    scenario.result.breakdown.recommendedTargetSellPriceCents
+  ));
+  const comparisonContext = {
+    lowestTargetSellPriceCents: Math.min(...targetPrices),
+    highestTargetSellPriceCents: Math.max(...targetPrices),
+    recommendedScenarioId: params.comparison.ranking?.recommendation?.recommendedScenarioId ?? null
+  };
+
+  const scenarios: GuardrailedScenario[] = params.comparison.scenarios.map((scenario: GuardrailedScenario) => {
+    const evaluation = evaluateScenarioGuardrails({
+      scenario: {
+        id: scenario.id,
+        name: scenario.name,
+        launchStrategy: scenario.launchStrategy ?? null,
+        assumptionsSnapshot: scenario.assumptionsSnapshot,
+        result: scenario.result
+      },
+      guardrailProfile: params.guardrailProfile,
+      comparisonContext
+    });
+
+    return {
+      ...scenario,
+      guardrailProfileId: params.guardrailProfile.id,
+      guardrailProfileName: params.guardrailProfile.name,
+      riskScore: evaluation.riskScore,
+      riskLevel: evaluation.riskLevel,
+      guardrailSnapshot: evaluation.guardrailSnapshot,
+      warningSnapshot: evaluation.warnings,
+      riskSummary: evaluation.summary,
+      handoffSnapshot: null,
+      isLaunchApprovedCandidate:
+        evaluation.riskLevel !== "HIGH" &&
+        (params.selectedScenarioId ? params.selectedScenarioId === scenario.id : scenario.isRecommendedLaunchScenario)
+    };
+  });
+
+  const selectedScenarioId =
+    params.selectedScenarioId ??
+    scenarios.find((scenario) => scenario.isLaunchApprovedCandidate)?.id ??
+    params.comparison.ranking?.recommendation?.recommendedScenarioId ??
+    null;
+
+  const selectedScenario = scenarios.find((scenario) => scenario.id === selectedScenarioId) ?? null;
+  const selectedHandoff = selectedScenario
+    ? buildLaunchCandidateHandoff({
+        scenario: {
+          ...selectedScenario,
+          costProfileId: String(params.comparison.baseSpec.costProfileId ?? ""),
+          amazonFeePresetName: selectedScenario.result.amazonFees?.presetName ?? null,
+          shippingZoneRuleName: selectedScenario.result.shipping.shippingZoneName ?? null,
+          packagingRuleName: null,
+          shippingRuleName: null
+        },
+        riskSummary: {
+          riskScore: selectedScenario.riskScore ?? 0,
+          riskLevel: selectedScenario.riskLevel ?? "LOW",
+          warnings: (selectedScenario.warningSnapshot as any[]) ?? [],
+          summary: selectedScenario.riskSummary ?? ""
+        }
+      })
+    : null;
+
+  const selectedScenarios: GuardrailedScenario[] = scenarios.map((scenario: GuardrailedScenario) =>
+    scenario.id === selectedScenarioId
+      ? { ...scenario, handoffSnapshot: selectedHandoff, isLaunchApprovedCandidate: true }
+      : { ...scenario, isLaunchApprovedCandidate: false }
+  );
+
+  return {
+    scenarios: selectedScenarios,
+    selectedLaunchScenarioId: selectedScenarioId,
+    selectedLaunchSummary: selectedHandoff,
+    riskSummary: buildScenarioRiskSummary({
+      scenarios: selectedScenarios.map((scenario: GuardrailedScenario) => ({
+        id: scenario.id,
+        name: scenario.name,
+        riskScore: scenario.riskScore ?? null,
+        riskLevel: scenario.riskLevel ?? null,
+        warnings: ((scenario.warningSnapshot as any[]) ?? []).map((warning) => ({
+          code: String(warning.code ?? ""),
+          severity: warning.severity,
+          message: String(warning.message ?? "")
+        }))
+      })),
+      recommendedScenarioId: params.comparison.ranking?.recommendation?.recommendedScenarioId ?? null,
+      selectedLaunchScenarioId: selectedScenarioId
+    })
+  };
+}
+
 type CostCalculationViewInput = {
   organizationId: string;
   costProfileId: string;
@@ -904,7 +1175,9 @@ export async function compareShelfCostScenarios(input: {
   notes?: string | null;
   baseSpec: CostCalculationViewInput;
   scenarios: ScenarioInput[];
-}) {
+  guardrailProfileId?: string | null;
+  selectedScenarioId?: string | null;
+}): Promise<{ ok: true; comparison: GuardrailedComparison & AnyRecord }> {
   if (!input.scenarios.length) {
     throw new Error("At least one scenario is required.");
   }
@@ -980,38 +1253,72 @@ export async function compareShelfCostScenarios(input: {
     }))
   );
 
+  const comparison: GuardrailedComparison = {
+    name: input.name ?? null,
+    notes: input.notes ?? null,
+    baseSpec: input.baseSpec,
+    baselineScenarioId: deltaComparison.baselineScenarioId,
+    ranking: {
+      scenarios: ranking.ranked.map((entry) => ({
+        scenarioId: entry.id,
+        rankingScore: entry.rankingScore,
+        rankingSummary: entry.rankingSummary
+      })),
+      recommendation: ranking.recommendation
+    },
+    scenarios: scenarioResults.map((scenario) => {
+      const deltaEntry = deltaComparison.scenarios.find((entry) => entry.id === scenario.id);
+      const rankingEntry = ranking.ranked.find((entry) => entry.id === scenario.id);
+      return {
+        ...scenario,
+        rankingScore: rankingEntry?.rankingScore ?? null,
+        rankingSummary: rankingEntry?.rankingSummary ?? null,
+        isRecommendedLaunchScenario:
+          ranking.recommendation?.recommendedScenarioId === scenario.id,
+        deltas: deltaEntry?.deltas ?? {
+          subtotalCostCents: 0,
+          breakEvenPriceCents: 0,
+          recommendedMinSellPriceCents: 0,
+          recommendedTargetSellPriceCents: 0
+        }
+      };
+    })
+  };
+
+  let guardrailProfile = null;
+  let riskSummary = null;
+  let selectedLaunchSummary = null;
+  let selectedLaunchScenarioId = null;
+
+  if (input.guardrailProfileId) {
+    const record = await getLaunchGuardrailProfileRecord({
+      organizationId: input.organizationId,
+      guardrailProfileId: input.guardrailProfileId
+    });
+    if (!record) {
+      throw new Error("Launch guardrail profile not found.");
+    }
+
+    guardrailProfile = mapLaunchGuardrailProfile(record);
+    const evaluated: ReturnType<typeof applyGuardrailsToComparison> = applyGuardrailsToComparison({
+      comparison,
+      guardrailProfile,
+      selectedScenarioId: input.selectedScenarioId ?? null
+    });
+    comparison.scenarios = evaluated.scenarios as typeof comparison.scenarios;
+    riskSummary = evaluated.riskSummary;
+    selectedLaunchSummary = evaluated.selectedLaunchSummary;
+    selectedLaunchScenarioId = evaluated.selectedLaunchScenarioId;
+  }
+
   return {
     ok: true,
     comparison: {
-      name: input.name ?? null,
-      notes: input.notes ?? null,
-      baseSpec: input.baseSpec,
-      baselineScenarioId: deltaComparison.baselineScenarioId,
-      ranking: {
-        scenarios: ranking.ranked.map((entry) => ({
-          scenarioId: entry.id,
-          rankingScore: entry.rankingScore,
-          rankingSummary: entry.rankingSummary
-        })),
-        recommendation: ranking.recommendation
-      },
-      scenarios: scenarioResults.map((scenario) => {
-        const deltaEntry = deltaComparison.scenarios.find((entry) => entry.id === scenario.id);
-        const rankingEntry = ranking.ranked.find((entry) => entry.id === scenario.id);
-        return {
-          ...scenario,
-          rankingScore: rankingEntry?.rankingScore ?? null,
-          rankingSummary: rankingEntry?.rankingSummary ?? null,
-          isRecommendedLaunchScenario:
-            ranking.recommendation?.recommendedScenarioId === scenario.id,
-          deltas: deltaEntry?.deltas ?? {
-            subtotalCostCents: 0,
-            breakEvenPriceCents: 0,
-            recommendedMinSellPriceCents: 0,
-            recommendedTargetSellPriceCents: 0
-          }
-        };
-      })
+      ...comparison,
+      guardrailProfile,
+      selectedLaunchScenarioId,
+      selectedLaunchSummary,
+      riskSummary
     }
   };
 }
@@ -1022,6 +1329,8 @@ export async function saveComparisonSet(input: {
   notes?: string | null;
   baseSpec: CostCalculationViewInput;
   scenarios: ScenarioInput[];
+  guardrailProfileId?: string | null;
+  selectedScenarioId?: string | null;
 }) {
   const comparison = await compareShelfCostScenarios(input);
   const scenarioRecords = [];
@@ -1039,7 +1348,14 @@ export async function saveComparisonSet(input: {
       launchStrategy: scenario.launchStrategy ?? null,
       rankingScore: scenario.rankingScore ?? null,
       rankingSummary: scenario.rankingSummary ?? null,
+      guardrailProfileId: scenario.guardrailProfileId ?? null,
+      riskScore: scenario.riskScore ?? null,
+      riskLevel: scenario.riskLevel ?? null,
+      guardrailSnapshot: scenario.guardrailSnapshot ?? null,
+      warningSnapshot: scenario.warningSnapshot ?? null,
+      handoffSnapshot: scenario.handoffSnapshot ?? null,
       isRecommendedLaunchScenario: Boolean(scenario.isRecommendedLaunchScenario),
+      isLaunchApprovedCandidate: Boolean(scenario.isLaunchApprovedCandidate),
       assumptionsSnapshot: scenario.assumptionsSnapshot,
       resultSnapshot: scenario.result
     });
@@ -1047,14 +1363,18 @@ export async function saveComparisonSet(input: {
   }
 
   const recommendedScenarioRecord = scenarioRecords.find((scenario) => scenario.isRecommendedLaunchScenario);
+  const selectedLaunchScenarioRecord = scenarioRecords.find((scenario) => scenario.isLaunchApprovedCandidate);
   const set = await createCalculationComparisonSetRecord({
     organizationId: input.organizationId,
     name: input.name,
     notes: input.notes ?? null,
     baseShelfSpecSnapshot: comparison.comparison.baseSpec,
     recommendedScenarioId: recommendedScenarioRecord?.id ?? null,
+    selectedLaunchScenarioId: selectedLaunchScenarioRecord?.id ?? null,
     rankingSnapshot: comparison.comparison.ranking,
-    comparisonSummary: comparison.comparison.ranking?.recommendation ?? null
+    comparisonSummary: comparison.comparison.ranking?.recommendation ?? null,
+    selectedLaunchSummary: comparison.comparison.selectedLaunchSummary ?? null,
+    riskSummary: comparison.comparison.riskSummary ?? null
   });
 
   for (const [index, scenarioRecord] of scenarioRecords.entries()) {
@@ -1076,6 +1396,8 @@ export async function saveComparisonSet(input: {
 export async function rankComparisonSet(input: {
   organizationId: string;
   comparisonSetId: string;
+  guardrailProfileId?: string | null;
+  selectedScenarioId?: string | null;
 }) {
   const comparisonSet = await getCalculationComparisonSetRecord(input);
   if (!comparisonSet) {
@@ -1092,13 +1414,130 @@ export async function rankComparisonSet(input: {
   );
 
   const recommendedScenarioId = ranking.recommendation?.recommendedScenarioId ?? null;
+  let selectedLaunchScenarioId: string | null = input.selectedScenarioId ?? null;
+  let selectedLaunchSummary: AnyRecord | null = null;
+  let riskSummary: AnyRecord | null = null;
+  let guardrailProfile = null;
+
+  if (input.guardrailProfileId) {
+    const record = await getLaunchGuardrailProfileRecord({
+      organizationId: input.organizationId,
+      guardrailProfileId: input.guardrailProfileId
+    });
+    if (!record) {
+      throw new Error("Launch guardrail profile not found.");
+    }
+    guardrailProfile = mapLaunchGuardrailProfile(record);
+  }
+
+  for (const entry of comparisonSet.scenarios ?? []) {
+    const scenario = entry.calculationScenario;
+    const rankingEntry = ranking.ranked.find((item) => item.id === scenario.id);
+    const guardrailEvaluation = guardrailProfile
+      ? evaluateScenarioGuardrails({
+          scenario: {
+            id: scenario.id,
+            name: scenario.name,
+            launchStrategy: scenario.launchStrategy ?? null,
+            assumptionsSnapshot: scenario.assumptionsSnapshot,
+            result: scenario.resultSnapshot
+          },
+          guardrailProfile,
+          comparisonContext: {
+            lowestTargetSellPriceCents: Math.min(
+              ...ranking.ranked.map((item) => item.result.breakdown.recommendedTargetSellPriceCents)
+            ),
+            highestTargetSellPriceCents: Math.max(
+              ...ranking.ranked.map((item) => item.result.breakdown.recommendedTargetSellPriceCents)
+            ),
+            recommendedScenarioId
+          }
+        })
+      : null;
+
+    await updateCalculationScenarioRecord({
+      organizationId: input.organizationId,
+      scenarioId: scenario.id,
+      data: normalizeUpdateData({
+        rankingScore: rankingEntry?.rankingScore ?? null,
+        rankingSummary: rankingEntry?.rankingSummary ?? null,
+        isRecommendedLaunchScenario: scenario.id === recommendedScenarioId,
+        guardrailProfileId: guardrailProfile?.id ?? null,
+        riskScore: guardrailEvaluation?.riskScore ?? null,
+        riskLevel: guardrailEvaluation?.riskLevel ?? null,
+        guardrailSnapshot: guardrailEvaluation?.guardrailSnapshot ?? null,
+        warningSnapshot: guardrailEvaluation?.warnings ?? null,
+        isLaunchApprovedCandidate: false
+      })
+    });
+  }
+
+  if (!selectedLaunchScenarioId) {
+    const safestRankedScenario = ranking.ranked.find((item) => item.id === recommendedScenarioId) ?? ranking.ranked[0];
+    selectedLaunchScenarioId = safestRankedScenario?.id ?? null;
+  }
+
+  const refreshedAfterScenarioUpdate = await getCalculationComparisonSetRecord(input);
+  const selectedScenarioRecord =
+    (refreshedAfterScenarioUpdate?.scenarios ?? []).find(
+      (entry: any) => entry.calculationScenario.id === selectedLaunchScenarioId
+    )?.calculationScenario ?? null;
+
+  if (selectedScenarioRecord) {
+    const warnings = Array.isArray(selectedScenarioRecord.warningSnapshot)
+      ? selectedScenarioRecord.warningSnapshot
+      : [];
+    selectedLaunchSummary = buildLaunchCandidateHandoff({
+      scenario: {
+        ...mapScenario(selectedScenarioRecord),
+        result: selectedScenarioRecord.resultSnapshot
+      } as any,
+      riskSummary: {
+        riskScore: decimalToNumber(selectedScenarioRecord.riskScore) ?? 0,
+        riskLevel: selectedScenarioRecord.riskLevel ?? "LOW",
+        warnings,
+        summary:
+          selectedScenarioRecord.riskLevel === "HIGH"
+            ? "Selected launch candidate is still guardrail-risky."
+            : "Selected launch candidate clears the current guardrail profile."
+      }
+    });
+    await updateCalculationScenarioRecord({
+      organizationId: input.organizationId,
+      scenarioId: selectedScenarioRecord.id,
+      data: {
+        isLaunchApprovedCandidate: true,
+        handoffSnapshot: selectedLaunchSummary
+      }
+    });
+  }
+
+  if (refreshedAfterScenarioUpdate) {
+    riskSummary = buildScenarioRiskSummary({
+      scenarios: (refreshedAfterScenarioUpdate.scenarios ?? []).map((entry: any) => ({
+        id: entry.calculationScenario.id,
+        name: entry.calculationScenario.name,
+        riskScore: decimalToNumber(entry.calculationScenario.riskScore),
+        riskLevel: entry.calculationScenario.riskLevel ?? null,
+        warnings: Array.isArray(entry.calculationScenario.warningSnapshot)
+          ? entry.calculationScenario.warningSnapshot
+          : []
+      })),
+      recommendedScenarioId,
+      selectedLaunchScenarioId
+    });
+  }
+
   await updateCalculationComparisonSetRecord({
     organizationId: input.organizationId,
     comparisonSetId: input.comparisonSetId,
     data: {
       recommendedScenarioId: recommendedScenarioId ?? undefined,
+      selectedLaunchScenarioId: selectedLaunchScenarioId ?? undefined,
       rankingSnapshot: ranking,
-      comparisonSummary: ranking.recommendation ?? undefined
+      comparisonSummary: ranking.recommendation ?? undefined,
+      selectedLaunchSummary: selectedLaunchSummary ?? undefined,
+      riskSummary: riskSummary ?? undefined
     }
   });
 
@@ -1117,10 +1556,14 @@ export async function getComparisonSetRecommendation(input: {
 
   return {
     ok: true,
-    recommendation:
-      comparisonSet.comparisonSummary ??
-      comparisonSet.rankingSnapshot?.recommendation ??
-      null
+    recommendation: {
+      ...(comparisonSet.comparisonSummary ??
+        comparisonSet.rankingSnapshot?.recommendation ??
+        {}),
+      selectedLaunchScenarioId: comparisonSet.selectedLaunchScenarioId ?? null,
+      selectedLaunchSummary: comparisonSet.selectedLaunchSummary ?? null,
+      riskSummary: comparisonSet.riskSummary ?? null
+    }
   };
 }
 
@@ -1136,7 +1579,10 @@ export async function listComparisonSets(input: { organizationId: string }) {
       scenarioCount: record.scenarios.length,
       recommendedScenarioId: record.recommendedScenarioId ?? null,
       recommendedScenarioName: record.recommendedScenario?.name ?? null,
+      selectedLaunchScenarioId: record.selectedLaunchScenarioId ?? null,
+      selectedLaunchScenarioName: record.selectedLaunchScenario?.name ?? null,
       comparisonSummary: record.comparisonSummary ?? null,
+      riskSummary: record.riskSummary ?? null,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString()
     }))
@@ -1153,4 +1599,44 @@ export async function getComparisonSet(input: {
   }
 
   return { ok: true, comparisonSet: mapComparisonSet(set) };
+}
+
+export async function evaluateComparisonSetGuardrails(input: {
+  organizationId: string;
+  comparisonSetId: string;
+  guardrailProfileId: string;
+  selectedScenarioId?: string | null;
+}) {
+  return rankComparisonSet(input);
+}
+
+export async function selectLaunchScenario(input: {
+  organizationId: string;
+  comparisonSetId: string;
+  scenarioId: string;
+  guardrailProfileId?: string | null;
+}) {
+  return rankComparisonSet({
+    organizationId: input.organizationId,
+    comparisonSetId: input.comparisonSetId,
+    selectedScenarioId: input.scenarioId,
+    guardrailProfileId: input.guardrailProfileId ?? null
+  });
+}
+
+export async function getComparisonSetHandoffSummary(input: {
+  organizationId: string;
+  comparisonSetId: string;
+}) {
+  const set = await getCalculationComparisonSetRecord(input);
+  if (!set) {
+    throw new Error("Cost comparison set not found.");
+  }
+
+  return {
+    ok: true,
+    handoffSummary: set.selectedLaunchSummary ?? null,
+    selectedLaunchScenarioId: set.selectedLaunchScenarioId ?? null,
+    riskSummary: set.riskSummary ?? null
+  };
 }

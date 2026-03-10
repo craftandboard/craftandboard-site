@@ -30,7 +30,7 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
             {profile.materialRules.length} material rules · {profile.edgeBandRules.length} edge band rules ·{" "}
             {profile.packagingRules.length} packaging rules · {profile.shippingRules.length} shipping rules ·{" "}
             {profile.amazonFeePresets.length} fee presets · {profile.shippingZoneRules.length} zone rules ·{" "}
-            {profile.launchTemplates.length} launch templates
+            {profile.launchTemplates.length} launch templates · {profile.launchGuardrailProfiles.length} guardrail profiles
           </p>
         </div>
         <div className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
@@ -163,6 +163,23 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
             ))}
             {profile.launchTemplates.length === 0 ? (
               <p className="text-slate-400">No launch templates yet.</p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Launch Guardrails</p>
+          <div className="mt-3 space-y-3 text-sm text-slate-200">
+            {profile.launchGuardrailProfiles.slice(0, 3).map((guardrail) => (
+              <div key={guardrail.id} className="rounded-xl border border-white/10 px-3 py-3">
+                <p className="font-medium text-white">{guardrail.name}</p>
+                <p className="mt-1 text-xs text-slate-300">
+                  Margin {formatPercent(guardrail.minimumMarginPct)} · Fee {formatPercent(guardrail.maximumFeeBurdenPct)} · Shipping {formatPercent(guardrail.maximumShippingBurdenPct)}
+                </p>
+              </div>
+            ))}
+            {profile.launchGuardrailProfiles.length === 0 ? (
+              <p className="text-slate-400">No launch guardrail profiles yet.</p>
             ) : null}
           </div>
         </div>

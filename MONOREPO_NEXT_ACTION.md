@@ -8,4 +8,4 @@ Do not do yet:
 - do not replace backend rule checks with frontend-only business logic
 
 Exact next cost-engine action:
-- open `/cost-calculator`, create at least one balanced and one safer-margin launch template, rank a saved comparison set across near-zone and far-zone launch cases, then execute `docs/cost-engine/hugo-shelf-cost-calculator-qa-checklist.md` before deciding whether the next spec should add launch-price guardrails or pause here before any Seller Central work
+- open `/cost-calculator`, create at least one launch guardrail profile, rank and select a launch candidate across near-zone and far-zone scenarios, review the handoff summary, then execute `docs/cost-engine/hugo-shelf-cost-calculator-qa-checklist.md` before deciding whether the next spec should focus on listing-handoff prep or pause here before any Seller Central work

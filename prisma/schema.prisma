@@ -31,6 +31,12 @@ enum LaunchStrategy {
   SAFER_MARGIN
 }
 
+enum LaunchRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
 enum ShelfCostEdgeBandPattern {
   NONE
   LONG_EDGES
@@ -796,6 +802,7 @@ model Organization {
   calculationComparisonSets CalculationComparisonSet[]
   comparisonSetScenarios ComparisonSetScenario[]
   launchTemplates LaunchTemplate[]
+  launchGuardrailProfiles LaunchGuardrailProfile[]
   shelfCostEstimates ShelfCostEstimate[]
   orderCostEstimates OrderCostEstimate[]
   shelfProducts ShelfProduct[]
@@ -2299,6 +2306,7 @@ model CostProfile {
   shelfCostCalculations             ShelfCostCalculation[]
   calculationScenarios             CalculationScenario[]
   launchTemplates                  LaunchTemplate[]
+  launchGuardrailProfiles          LaunchGuardrailProfile[]
 
   @@index([organizationId, isDefault])
   @@index([organizationId, status])
@@ -2540,7 +2548,14 @@ model CalculationScenario {
   launchStrategy         LaunchStrategy?
   rankingScore           Decimal?               @db.Decimal(12, 4)
   rankingSummary         Json?
+  guardrailProfileId     String?
+  riskScore              Decimal?               @db.Decimal(12, 4)
+  riskLevel              LaunchRiskLevel?
+  guardrailSnapshot      Json?
+  warningSnapshot        Json?
+  handoffSnapshot        Json?
   isRecommendedLaunchScenario Boolean           @default(false)
+  isLaunchApprovedCandidate Boolean             @default(false)
   assumptionsSnapshot    Json
   resultSnapshot         Json
   createdAt              DateTime               @default(now())
@@ -2552,12 +2567,15 @@ model CalculationScenario {
   packagingRule          PackagingCostRule?     @relation(fields: [packagingRuleId], references: [id])
   shippingRule           ShippingCostRule?      @relation(fields: [shippingRuleId], references: [id])
   shelfCostCalculation   ShelfCostCalculation?  @relation(fields: [shelfCostCalculationId], references: [id])
+  guardrailProfile       LaunchGuardrailProfile? @relation(fields: [guardrailProfileId], references: [id])
   comparisonSetScenarios ComparisonSetScenario[]
   recommendedByComparisonSets CalculationComparisonSet[] @relation("ComparisonSetRecommendation")
+  selectedByComparisonSets CalculationComparisonSet[] @relation("ComparisonSetSelectedLaunch")
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
   @@index([organizationId, rankingScore])
+  @@index([organizationId, riskLevel])
 }
 
 model CalculationComparisonSet {
@@ -2567,16 +2585,21 @@ model CalculationComparisonSet {
   baseShelfSpecSnapshot Json
   notes                String?
   recommendedScenarioId String?
+  selectedLaunchScenarioId String?
   rankingSnapshot      Json?
   comparisonSummary    Json?
+  selectedLaunchSummary Json?
+  riskSummary         Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
   scenarios            ComparisonSetScenario[]
   recommendedScenario  CalculationScenario?   @relation("ComparisonSetRecommendation", fields: [recommendedScenarioId], references: [id])
+  selectedLaunchScenario CalculationScenario? @relation("ComparisonSetSelectedLaunch", fields: [selectedLaunchScenarioId], references: [id])
 
   @@index([organizationId, createdAt])
   @@index([organizationId, recommendedScenarioId])
+  @@index([organizationId, selectedLaunchScenarioId])
 }
 
 model ComparisonSetScenario {
@@ -2617,6 +2640,30 @@ model LaunchTemplate {
 
   @@index([organizationId, costProfileId])
   @@index([organizationId, status])
+}
+
+model LaunchGuardrailProfile {
+  id                              String            @id @default(cuid())
+  organizationId                  String
+  costProfileId                   String?
+  name                            String
+  status                          CostProfileStatus @default(ACTIVE)
+  minimumMarginPct                Decimal           @db.Decimal(8, 3)
+  minimumBufferAboveBreakEvenPct  Decimal?          @db.Decimal(8, 3)
+  maximumFeeBurdenPct             Decimal?          @db.Decimal(8, 3)
+  maximumShippingBurdenPct        Decimal?          @db.Decimal(8, 3)
+  maximumReserveBurdenPct         Decimal?          @db.Decimal(8, 3)
+  maximumAllowedTargetToFloorGapPct Decimal?        @db.Decimal(8, 3)
+  notes                           String?
+  metadata                        Json?
+  createdAt                       DateTime          @default(now())
+  updatedAt                       DateTime          @updatedAt
+  organization                    Organization      @relation(fields: [organizationId], references: [id])
+  costProfile                     CostProfile?      @relation(fields: [costProfileId], references: [id])
+  calculationScenarios            CalculationScenario[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, costProfileId])
 }
 
 model CostRate {

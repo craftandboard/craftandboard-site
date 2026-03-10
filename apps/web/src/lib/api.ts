@@ -2830,6 +2830,24 @@ export interface LaunchTemplateItem {
   updatedAt: string;
 }
 
+export interface LaunchGuardrailProfileItem {
+  id: string;
+  orgId: string;
+  costProfileId: string | null;
+  name: string;
+  status: "ACTIVE" | "ARCHIVED";
+  minimumMarginPct: number;
+  minimumBufferAboveBreakEvenPct: number | null;
+  maximumFeeBurdenPct: number | null;
+  maximumShippingBurdenPct: number | null;
+  maximumReserveBurdenPct: number | null;
+  maximumAllowedTargetToFloorGapPct: number | null;
+  notes: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MaterialCostRuleItem {
   id: string;
   orgId: string;
@@ -2941,6 +2959,7 @@ export interface CostProfileDetail {
   amazonFeePresets: AmazonFeePresetItem[];
   shippingZoneRules: ShippingZoneRuleItem[];
   launchTemplates: LaunchTemplateItem[];
+  launchGuardrailProfiles: LaunchGuardrailProfileItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -3217,7 +3236,16 @@ export interface CostScenarioResult {
   };
   rankingScore: number | null;
   rankingSummary: Record<string, unknown> | null;
+  guardrailProfileId?: string | null;
+  guardrailProfileName?: string | null;
+  riskScore?: number | null;
+  riskLevel?: "LOW" | "MEDIUM" | "HIGH" | null;
+  guardrailSnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: Array<Record<string, unknown>> | null;
+  riskSummary?: string | null;
+  handoffSnapshot?: Record<string, unknown> | null;
   isRecommendedLaunchScenario: boolean;
+  isLaunchApprovedCandidate?: boolean;
   deltas: {
     subtotalCostCents: number;
     breakEvenPriceCents: number;
@@ -3249,6 +3277,10 @@ export interface CostComparisonResult {
       tradeoffSummary: Record<string, unknown>;
     } | null;
   };
+  guardrailProfile?: LaunchGuardrailProfileItem | null;
+  selectedLaunchScenarioId?: string | null;
+  selectedLaunchSummary?: Record<string, unknown> | null;
+  riskSummary?: Record<string, unknown> | null;
   scenarios: CostScenarioResult[];
 }
 
@@ -3267,9 +3299,17 @@ export interface CalculationScenarioRecord {
   shippingRuleName: string | null;
   shelfCostCalculationId: string | null;
   launchStrategy: "BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN" | null;
+  guardrailProfileId: string | null;
+  guardrailProfileName: string | null;
   rankingScore: number | null;
   rankingSummary: Record<string, unknown> | null;
+  riskScore: number | null;
+  riskLevel: "LOW" | "MEDIUM" | "HIGH" | null;
+  guardrailSnapshot: Record<string, unknown> | null;
+  warningSnapshot: Array<Record<string, unknown>> | null;
+  handoffSnapshot: Record<string, unknown> | null;
   isRecommendedLaunchScenario: boolean;
+  isLaunchApprovedCandidate: boolean;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3284,8 +3324,12 @@ export interface ComparisonSetRecord {
   baseShelfSpecSnapshot: Record<string, unknown>;
   recommendedScenarioId: string | null;
   recommendedScenarioName: string | null;
+  selectedLaunchScenarioId: string | null;
+  selectedLaunchScenarioName: string | null;
   rankingSnapshot: Record<string, unknown> | null;
   comparisonSummary: Record<string, unknown> | null;
+  selectedLaunchSummary: Record<string, unknown> | null;
+  riskSummary: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3304,7 +3348,10 @@ export interface ComparisonSetListItem {
   scenarioCount: number;
   recommendedScenarioId: string | null;
   recommendedScenarioName: string | null;
+  selectedLaunchScenarioId: string | null;
+  selectedLaunchScenarioName: string | null;
   comparisonSummary: Record<string, unknown> | null;
+  riskSummary: Record<string, unknown> | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -3598,6 +3645,51 @@ export async function createLaunchTemplate(
   );
 }
 
+export async function createLaunchGuardrailProfile(
+  costProfileId: string,
+  input: {
+    name: string;
+    status?: "ACTIVE" | "ARCHIVED";
+    minimumMarginPct: number;
+    minimumBufferAboveBreakEvenPct?: number | null;
+    maximumFeeBurdenPct?: number | null;
+    maximumShippingBurdenPct?: number | null;
+    maximumReserveBurdenPct?: number | null;
+    maximumAllowedTargetToFloorGapPct?: number | null;
+    notes?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; launchGuardrailProfile: LaunchGuardrailProfileItem }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/launch-guardrail-profiles`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function getLaunchGuardrailProfiles(input?: { costProfileId?: string }) {
+  const params = new URLSearchParams();
+  if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
+  const query = params.toString();
+  return readJson<{ ok: true; launchGuardrailProfiles: LaunchGuardrailProfileItem[] }>(
+    `/launch-guardrail-profiles${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getLaunchGuardrailProfile(guardrailProfileId: string) {
+  return readJson<{ ok: true; launchGuardrailProfile: LaunchGuardrailProfileItem }>(
+    `/launch-guardrail-profiles/${encodeURIComponent(guardrailProfileId)}`
+  );
+}
+
+export async function updateLaunchGuardrailProfile(
+  guardrailProfileId: string,
+  input: Record<string, unknown>
+) {
+  return sendJson<{ ok: true; launchGuardrailProfile: LaunchGuardrailProfileItem }>(
+    `/launch-guardrail-profiles/${encodeURIComponent(guardrailProfileId)}`,
+    { method: "PATCH", body: JSON.stringify(input) }
+  );
+}
+
 export async function getLaunchTemplates(input?: { costProfileId?: string }) {
   const params = new URLSearchParams();
   if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
@@ -3636,6 +3728,8 @@ export async function compareShelfCostScenarios(input: {
   name?: string | null;
   notes?: string | null;
   baseSpec: CostCalculationInput;
+  guardrailProfileId?: string | null;
+  selectedScenarioId?: string | null;
   scenarios: CostScenarioInput[];
 }) {
   return sendJson<{ ok: true; comparison: CostComparisonResult }>("/cost-calculations/compare", {
@@ -3672,6 +3766,8 @@ export async function saveCostComparisonSet(input: {
   name: string;
   notes?: string | null;
   baseSpec: CostCalculationInput;
+  guardrailProfileId?: string | null;
+  selectedScenarioId?: string | null;
   scenarios: CostScenarioInput[];
 }) {
   return sendJson<{ ok: true; comparisonSet: ComparisonSetRecord }>("/cost-comparison-sets", {
@@ -3690,10 +3786,13 @@ export async function getCostComparisonSet(comparisonSetId: string) {
   );
 }
 
-export async function rankCostComparisonSet(comparisonSetId: string) {
+export async function rankCostComparisonSet(
+  comparisonSetId: string,
+  input?: { guardrailProfileId?: string | null; selectedScenarioId?: string | null }
+) {
   return sendJson<{ ok: true; comparisonSet: ComparisonSetRecord }>(
     `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/rank`,
-    { method: "POST" }
+    { method: "POST", body: JSON.stringify(input ?? {}) }
   );
 }
 
@@ -3701,6 +3800,35 @@ export async function getCostComparisonRecommendation(comparisonSetId: string) {
   return readJson<{ ok: true; recommendation: Record<string, unknown> | null }>(
     `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/recommendation`
   );
+}
+
+export async function evaluateCostComparisonGuardrails(
+  comparisonSetId: string,
+  input: { guardrailProfileId: string; selectedScenarioId?: string | null }
+) {
+  return sendJson<{ ok: true; comparisonSet: ComparisonSetRecord }>(
+    `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/guardrails`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function selectCostLaunchScenario(
+  comparisonSetId: string,
+  input: { scenarioId: string; guardrailProfileId?: string | null }
+) {
+  return sendJson<{ ok: true; comparisonSet: ComparisonSetRecord }>(
+    `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/select-launch-scenario`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function getCostComparisonHandoffSummary(comparisonSetId: string) {
+  return readJson<{
+    ok: true;
+    handoffSummary: Record<string, unknown> | null;
+    selectedLaunchScenarioId: string | null;
+    riskSummary: Record<string, unknown> | null;
+  }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/handoff-summary`);
 }
 
 export interface LeadListItem {

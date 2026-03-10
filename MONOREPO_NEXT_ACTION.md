@@ -7,5 +7,5 @@ Do not do yet:
 - do not couple proposals directly to deposit/payment workflows
 - do not merge sales models into pricing/costing structures
 
-Exact next Phase 9 action:
-- add a provider-agnostic payment execution and reconciliation boundary before wiring any live Stripe checkout, webhook ingestion, or automatic proposal acceptance flow
+Exact next Phase 10 action:
+- add a controlled proposal-acceptance and conversion orchestration layer on top of the canonical money and provider boundary without coupling provider events directly to project creation or lead-stage automation

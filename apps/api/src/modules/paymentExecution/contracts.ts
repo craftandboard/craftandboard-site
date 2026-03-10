@@ -1,0 +1,63 @@
+export type PaymentExecutionView = {
+  id: string;
+  orgId: string;
+  proposalId: string;
+  depositRequestId: string | null;
+  paymentId: string | null;
+  provider: string;
+  mode: string;
+  status: string;
+  amountCents: number;
+  currency: string;
+  providerSessionId: string | null;
+  providerPaymentIntentId: string | null;
+  providerCustomerId: string | null;
+  providerUrl: string | null;
+  externalReference: string | null;
+  initiatedAt: string | null;
+  completedAt: string | null;
+  expiredAt: string | null;
+  canceledAt: string | null;
+  metadata: unknown;
+  createdByMembershipId: string | null;
+  updatedByMembershipId: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PaymentProviderEventView = {
+  id: string;
+  orgId: string;
+  provider: string;
+  eventType: string;
+  providerEventId: string;
+  providerObjectId: string | null;
+  executionId: string | null;
+  paymentId: string | null;
+  depositRequestId: string | null;
+  proposalId: string | null;
+  receivedAt: string;
+  processedAt: string | null;
+  processingStatus: string;
+  dedupeKey: string;
+  payload: unknown;
+  errorMessage: string | null;
+  metadata: unknown;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PaymentReconciliationLogView = {
+  id: string;
+  orgId: string;
+  provider: string;
+  executionId: string | null;
+  providerEventId: string | null;
+  paymentId: string | null;
+  depositRequestId: string | null;
+  action: string;
+  outcome: string;
+  message: string | null;
+  details: unknown;
+  createdAt: string;
+};

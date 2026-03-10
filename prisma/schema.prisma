@@ -430,6 +430,47 @@ enum PaymentDirection {
   INBOUND
 }
 
+enum PaymentProvider {
+  STRIPE
+}
+
+enum PaymentExecutionMode {
+  HOSTED_CHECKOUT
+  PAYMENT_LINK
+  MANUAL_PROVIDER_SESSION
+}
+
+enum PaymentExecutionStatus {
+  CREATED
+  OPEN
+  COMPLETED
+  EXPIRED
+  CANCELED
+  FAILED
+}
+
+enum PaymentProviderEventProcessingStatus {
+  RECEIVED
+  PROCESSED
+  IGNORED
+  FAILED
+}
+
+enum PaymentReconciliationAction {
+  PAYMENT_MARKED_SUCCEEDED
+  PAYMENT_MARKED_FAILED
+  DEPOSIT_STATUS_SYNCED
+  EVENT_IGNORED
+  EVENT_DUPLICATE
+  EXECUTION_REFRESHED
+}
+
+enum PaymentReconciliationOutcome {
+  APPLIED
+  SKIPPED
+  FAILED
+}
+
 enum ShelfJobStatus {
   READY
   HOLD
@@ -536,6 +577,9 @@ model Organization {
   proposalLines ProposalLine[]
   depositRequests DepositRequest[]
   payments Payment[]
+  paymentExecutions PaymentExecution[]
+  paymentProviderEvents PaymentProviderEvent[]
+  paymentReconciliationLogs PaymentReconciliationLog[]
   parts     Part[]
   batches   Batch[]
   bundles   ProductionBundle[]
@@ -770,6 +814,8 @@ model Proposal {
   lines          ProposalLine[]
   depositRequests DepositRequest[]
   payments       Payment[]
+  paymentExecutions PaymentExecution[]
+  paymentProviderEvents PaymentProviderEvent[]
 
   @@index([organizationId, projectId])
   @@index([organizationId, leadId])
@@ -836,6 +882,9 @@ model DepositRequest {
   organization          Organization         @relation(fields: [organizationId], references: [id])
   proposal              Proposal             @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   payments              Payment[]
+  paymentExecutions     PaymentExecution[]
+  paymentProviderEvents PaymentProviderEvent[]
+  reconciliationLogs    PaymentReconciliationLog[]
 
   @@index([organizationId, proposalId])
   @@index([organizationId, status])
@@ -864,11 +913,106 @@ model Payment {
   organization          Organization     @relation(fields: [organizationId], references: [id])
   proposal              Proposal         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   depositRequest        DepositRequest?  @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
+  paymentExecutions     PaymentExecution[]
+  paymentProviderEvents PaymentProviderEvent[]
+  reconciliationLogs    PaymentReconciliationLog[]
 
   @@index([organizationId, proposalId])
   @@index([organizationId, status])
   @@index([organizationId, externalReference])
   @@index([depositRequestId])
+}
+
+model PaymentExecution {
+  id                      String                 @id @default(cuid())
+  organizationId          String
+  proposalId              String
+  depositRequestId        String?
+  paymentId               String?
+  provider                PaymentProvider
+  mode                    PaymentExecutionMode
+  status                  PaymentExecutionStatus @default(CREATED)
+  amountCents             Int
+  currency                String                @default("USD")
+  providerSessionId       String?
+  providerPaymentIntentId String?
+  providerCustomerId      String?
+  providerUrl             String?
+  externalReference       String?
+  initiatedAt             DateTime?
+  completedAt             DateTime?
+  expiredAt               DateTime?
+  canceledAt              DateTime?
+  metadata                Json?
+  createdByMembershipId   String?
+  updatedByMembershipId   String?
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  organization            Organization          @relation(fields: [organizationId], references: [id])
+  proposal                Proposal              @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  depositRequest          DepositRequest?       @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
+  payment                 Payment?              @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  providerEvents          PaymentProviderEvent[]
+  reconciliationLogs      PaymentReconciliationLog[]
+
+  @@index([organizationId, proposalId])
+  @@index([organizationId, paymentId])
+  @@index([organizationId, provider, providerSessionId])
+  @@index([organizationId, provider, providerPaymentIntentId])
+}
+
+model PaymentProviderEvent {
+  id               String                               @id @default(cuid())
+  organizationId   String
+  provider         PaymentProvider
+  eventType        String
+  providerEventId  String
+  providerObjectId String?
+  executionId      String?
+  paymentId        String?
+  depositRequestId String?
+  proposalId       String?
+  receivedAt       DateTime
+  processedAt      DateTime?
+  processingStatus PaymentProviderEventProcessingStatus @default(RECEIVED)
+  dedupeKey        String
+  payload          Json
+  errorMessage     String?
+  metadata         Json?
+  createdAt        DateTime                             @default(now())
+  updatedAt        DateTime                             @updatedAt
+  organization     Organization                         @relation(fields: [organizationId], references: [id])
+  proposal         Proposal?                           @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+  depositRequest   DepositRequest?                     @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
+  payment          Payment?                            @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  execution        PaymentExecution?                   @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  reconciliationLogs PaymentReconciliationLog[]
+
+  @@unique([organizationId, provider, providerEventId])
+  @@unique([organizationId, dedupeKey])
+  @@index([organizationId, processingStatus])
+}
+
+model PaymentReconciliationLog {
+  id               String                       @id @default(cuid())
+  organizationId   String
+  provider         PaymentProvider
+  executionId      String?
+  providerEventId  String?
+  paymentId        String?
+  depositRequestId String?
+  action           PaymentReconciliationAction
+  outcome          PaymentReconciliationOutcome
+  message          String?
+  details          Json?
+  createdAt        DateTime                     @default(now())
+  organization     Organization                 @relation(fields: [organizationId], references: [id])
+  execution        PaymentExecution?            @relation(fields: [executionId], references: [id], onDelete: SetNull)
+  providerEvent    PaymentProviderEvent?        @relation(fields: [providerEventId], references: [id], onDelete: SetNull)
+  payment          Payment?                     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  depositRequest   DepositRequest?              @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, executionId])
 }
 
 model ActivationToken {

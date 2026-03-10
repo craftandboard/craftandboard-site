@@ -13,6 +13,10 @@ export type ApiCapability =
   | "deposit_write"
   | "payment_read"
   | "payment_write"
+  | "payment_execution_read"
+  | "payment_execution_write"
+  | "payment_event_read"
+  | "payment_event_write"
   | "work_module_read"
   | "work_module_write"
   | "project_task_write"
@@ -57,6 +61,10 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
   deposit_write: ["OWNER", "ADMIN"],
   payment_read: ["OWNER", "ADMIN"],
   payment_write: ["OWNER", "ADMIN"],
+  payment_execution_read: ["OWNER", "ADMIN"],
+  payment_execution_write: ["OWNER", "ADMIN"],
+  payment_event_read: ["OWNER", "ADMIN"],
+  payment_event_write: ["OWNER", "ADMIN"],
   work_module_read: ["OWNER", "ADMIN"],
   work_module_write: ["OWNER", "ADMIN"],
   project_task_write: ["OWNER", "ADMIN"],
@@ -102,6 +110,10 @@ const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   deposit_write: "deposit request management",
   payment_read: "payment access",
   payment_write: "payment management",
+  payment_execution_read: "payment execution access",
+  payment_execution_write: "payment execution management",
+  payment_event_read: "payment provider event access",
+  payment_event_write: "payment provider event management",
   work_module_read: "work module access",
   work_module_write: "work module management",
   project_task_write: "project task management",

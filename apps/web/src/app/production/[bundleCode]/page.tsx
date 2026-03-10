@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProductionBundle } from "../../../lib/api";
+import { apiUrl } from "../../../lib/site-config";
 
 function previewCsvRows(csv: string) {
   return csv.split("\n").slice(0, 6).join("\n");
@@ -63,13 +64,13 @@ export default async function ProductionBundlePage({
             View Labels
           </Link>
           <a
-            href={`http://localhost:4000/manufacturing/bundles/${bundle.summary.bundleCode}/nest`}
+            href={apiUrl(`/manufacturing/bundles/${bundle.summary.bundleCode}/nest`)}
             className="rounded-full border border-white/10 px-5 py-3 text-sm text-white"
           >
             Nest Summary API
           </a>
           <a
-            href={`http://localhost:4000/manufacturing/bundles/${bundle.summary.bundleCode}/cnc`}
+            href={apiUrl(`/manufacturing/bundles/${bundle.summary.bundleCode}/cnc`)}
             className="rounded-full border border-white/10 px-5 py-3 text-sm text-white"
           >
             CNC Summary API
@@ -122,7 +123,7 @@ export default async function ProductionBundlePage({
               Preview Labels
             </Link>
             <a
-              href={`http://localhost:4000/labels/bundles/${bundle.summary.bundleCode}/html`}
+              href={apiUrl(`/labels/bundles/${bundle.summary.bundleCode}/html`)}
               target="_blank"
               rel="noreferrer"
               className="rounded-full border border-white/10 px-5 py-3 text-sm text-white"

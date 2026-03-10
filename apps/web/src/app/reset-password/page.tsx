@@ -1,5 +1,13 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ResetPasswordForm } from "../../components/reset-password-form";
+import { getAppRedirectUrl } from "../../lib/request-site";
+
+export const metadata: Metadata = {
+  title: "Reset Password",
+  description: "Set a new password for your FieldMetriq account."
+};
 
 export default async function ResetPasswordPage(props: {
   searchParams: Promise<{
@@ -7,6 +15,15 @@ export default async function ResetPasswordPage(props: {
   }>;
 }) {
   const searchParams = await props.searchParams;
+  const redirectUrl = await getAppRedirectUrl(
+    "/reset-password",
+    new URLSearchParams(searchParams.token ? { token: searchParams.token } : {})
+  );
+
+  if (redirectUrl) {
+    redirect(redirectUrl);
+  }
+
   const token = searchParams.token?.trim() ?? "";
 
   return (

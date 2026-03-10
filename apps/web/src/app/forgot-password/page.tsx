@@ -1,7 +1,21 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { ForgotPasswordForm } from "../../components/forgot-password-form";
+import { getAppRedirectUrl } from "../../lib/request-site";
 
-export default function ForgotPasswordPage() {
+export const metadata: Metadata = {
+  title: "Forgot Password",
+  description: "Request a password reset link for FieldMetriq."
+};
+
+export default async function ForgotPasswordPage() {
+  const redirectUrl = await getAppRedirectUrl("/forgot-password");
+
+  if (redirectUrl) {
+    redirect(redirectUrl);
+  }
+
   return (
     <section className="mx-auto max-w-lg rounded-[2rem] border border-white/10 bg-white/5 p-8">
       <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Password Reset</p>

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+import { MarketingHome } from "../components/marketing-home";
 import {
   getActiveContainerSessions,
   getCanonicalManufacturingBatches,
@@ -12,8 +14,38 @@ import {
   getRemnants,
   getScanEvents
 } from "../lib/api";
+import { getRequestSiteContext } from "../lib/request-site";
+import { appUrl } from "../lib/site-config";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const site = await getRequestSiteContext();
+
+  if (site.isMarketingHost) {
+    return {
+      title: "FieldMetriq",
+      description: "FieldMetriq is the operating system for field and shop workflows.",
+      alternates: {
+        canonical: "/"
+      }
+    };
+  }
+
+  return {
+    title: "FieldMetriq App",
+    description: "FieldMetriq app for operations, production, labels, costing, and inventory workflows.",
+    alternates: {
+      canonical: "/"
+    }
+  };
+}
 
 export default async function DashboardPage() {
+  const site = await getRequestSiteContext();
+
+  if (site.isMarketingHost) {
+    return <MarketingHome appHomeHref={appUrl("/")} signInHref={appUrl("/login")} />;
+  }
+
   const [
     ordersPayload,
     jobsPayload,
@@ -67,13 +99,13 @@ export default async function DashboardPage() {
         <div className="rounded-[2rem] border border-[var(--panel-border)] bg-[var(--panel)] p-8">
           <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Unified Operations</p>
           <h2 className="mt-4 text-5xl font-semibold leading-tight text-white">
-            One canonical operations surface for Craft &amp; Board.
+            One canonical operations surface for FieldMetriq.
           </h2>
           <p className="mt-4 max-w-2xl text-base text-[var(--muted)]">
-            This dashboard now favors canonical FieldMetriq entities first:
-            `SalesOrder`, `ShelfJob`, `ManufacturingPacket`, `ManufacturingBatch`,
-            and `ManufacturingPart`. Transitional tools remain available, but
-            daily operations can start from here.
+            This dashboard favors canonical FieldMetriq entities first:
+            `SalesOrder`, `ShelfJob`, `ManufacturingPacket`,
+            `ManufacturingBatch`, and `ManufacturingPart`. Transitional tools
+            remain available, but daily operations can start from here.
           </p>
         </div>
         <div className="rounded-[2rem] border border-[var(--panel-border)] bg-emerald-500/10 p-8">

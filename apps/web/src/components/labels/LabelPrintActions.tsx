@@ -1,11 +1,13 @@
 "use client";
 
+import { apiUrl } from "../../lib/site-config";
+
 export function LabelPrintActions({
   bundleCode
 }: {
   bundleCode: string;
 }) {
-  const htmlUrl = `http://localhost:4000/labels/bundles/${bundleCode}/html`;
+  const htmlUrl = apiUrl(`/labels/bundles/${bundleCode}/html`);
 
   return (
     <div className="label-print-toolbar">

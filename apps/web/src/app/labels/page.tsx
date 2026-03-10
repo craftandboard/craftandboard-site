@@ -13,9 +13,9 @@ export default async function LabelsPage() {
           First-party 2 x 4 shelf labels
         </h2>
         <p className="mt-3 max-w-3xl text-sm text-slate-300">
-          Craft &amp; Board now owns the shelf-part label workflow directly. Use a
-          production bundle to preview, print, or inspect individual labels without the
-          external paid label tool.
+          FieldMetriq now owns the shelf-part label workflow directly. Use a
+          production bundle to preview, print, or inspect individual labels
+          without the external paid label tool.
         </p>
       </section>
 

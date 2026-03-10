@@ -6,7 +6,7 @@ import { login } from "../lib/api";
 
 export function LoginForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("demo@craftboard.local");
+  const [email, setEmail] = useState("demo@fieldmetriq.local");
   const [password, setPassword] = useState("demo1234");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -71,7 +71,7 @@ export function LoginForm() {
         {submitting ? "Signing in..." : "Sign In"}
       </button>
       <p className="text-xs text-slate-400">
-        Demo accounts: `demo@craftboard.local / demo1234`, `operator@craftboard.local / operator1234`
+        Demo accounts: `demo@fieldmetriq.local / demo1234`, `operator@fieldmetriq.local / operator1234`
       </p>
     </form>
   );

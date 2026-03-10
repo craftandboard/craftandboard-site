@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ManufacturingActions } from '../../../components/manufacturing-actions';
 import { getManufacturingBundle } from '../../../lib/api';
+import { apiUrl } from '../../../lib/site-config';
 
 export default async function ManufacturingBundlePage({
   params
@@ -83,7 +84,7 @@ export default async function ManufacturingBundlePage({
               </Link>
               {currentPacket ? (
                 <a
-                  href={`http://localhost:4000${currentPacket.uri}`}
+                  href={apiUrl(currentPacket.uri)}
                   target="_blank"
                   rel="noreferrer"
                   className="rounded-full border border-white/10 px-4 py-2 text-sm text-white"
@@ -147,7 +148,7 @@ export default async function ManufacturingBundlePage({
                     {job.failureReason ? <p className="mt-1 text-xs text-red-200">Failure: {job.failureReason}</p> : null}
                   </div>
                   <a
-                    href={job.id ? `http://localhost:4000/manufacturing/cnc/${job.id}/file` : '#'}
+                    href={job.id ? apiUrl(`/manufacturing/cnc/${job.id}/file`) : '#'}
                     target="_blank"
                     rel="noreferrer"
                     className="rounded-full border border-white/10 px-4 py-2 text-xs text-white"
@@ -204,7 +205,7 @@ export default async function ManufacturingBundlePage({
                   <td className="py-3 pr-4">{artifact.version}</td>
                   <td className="py-3 pr-4">{artifact.isCurrent ? 'Current' : 'Superseded'}</td>
                   <td className="py-3 pr-4">
-                    <a href={`http://localhost:4000${artifact.uri}`} target="_blank" rel="noreferrer" className="text-emerald-300">
+                    <a href={apiUrl(artifact.uri)} target="_blank" rel="noreferrer" className="text-emerald-300">
                       {artifact.uri}
                     </a>
                   </td>

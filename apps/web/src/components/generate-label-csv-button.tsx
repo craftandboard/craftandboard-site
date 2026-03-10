@@ -3,8 +3,7 @@
 import { useRouter } from "next/navigation";
 import { startTransition, useState } from "react";
 import { generateBatchLabelCsv, type BatchExportArtifactResponse } from "../lib/api";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
+import { API_BASE_URL } from "../lib/site-config";
 
 export function GenerateLabelCsvButton(props: { batchId: string }) {
   const router = useRouter();

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getManufacturingSheet, getSheetMap } from "../../../../lib/api";
+import { apiUrl } from "../../../../lib/site-config";
 
 export default async function ManufacturingSheetPage({
   params
@@ -40,7 +41,7 @@ export default async function ManufacturingSheetPage({
         <div className="flex items-center justify-between gap-4">
           <h3 className="text-xl font-semibold text-white">Sheet Map</h3>
           <a
-            href={`http://localhost:4000/manufacturing/sheets/${sheet.id}/map?format=svg`}
+            href={apiUrl(`/manufacturing/sheets/${sheet.id}/map?format=svg`)}
             target="_blank"
             rel="noreferrer"
             className="rounded-full border border-white/10 px-4 py-2 text-sm text-white"
@@ -90,7 +91,7 @@ export default async function ManufacturingSheetPage({
             {(sheet.cncJobs ?? []).map((job) => (
               <a
                 key={job.id ?? job.code}
-                href={job.id ? `http://localhost:4000/manufacturing/cnc/${job.id}/file` : "#"}
+                href={job.id ? apiUrl(`/manufacturing/cnc/${job.id}/file`) : "#"}
                 target="_blank"
                 rel="noreferrer"
                 className="block rounded-2xl border border-white/10 px-4 py-4 text-sm text-slate-200 transition hover:border-emerald-300/40"

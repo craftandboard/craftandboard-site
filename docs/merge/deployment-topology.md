@@ -24,6 +24,7 @@
   - Postgres per environment
 
 ## Domains
+- marketing prod target: `fieldmetriq.com`
 - frontend prod target: `app.fieldmetriq.com`
 - backend prod target: `api.fieldmetriq.com`
 - optional dev targets:
@@ -32,6 +33,12 @@
 
 ## Positioning
 Craft & Board public brand/storefront may remain separate later, but operations and manufacturing software live in the shared FieldMetriq platform deployment.
+
+## Current Domain Cutover Direction
+- `fieldmetriq.com` becomes the public marketing/landing site
+- `app.fieldmetriq.com` becomes the canonical SaaS app host
+- `api.fieldmetriq.com` remains the canonical backend API host
+- `craftandboard.com` stops being the primary SaaS domain after validation and is reserved for future ecommerce use
 
 ## Current Practical Split
 - Vercel deploys `apps/web`

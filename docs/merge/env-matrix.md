@@ -2,6 +2,7 @@
 
 ## Frontend Web
 - `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_MARKETING_URL`
 - `NEXT_PUBLIC_API_BASE_URL`
 
 ## Backend API
@@ -50,6 +51,7 @@
 
 ## Vercel Only
 - `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_MARKETING_URL`
 - `NEXT_PUBLIC_API_BASE_URL`
 
 ## Railway Only
@@ -69,6 +71,13 @@
 - `AUTH_SESSION_SECRET`
 
 ## Notes
-- `apps/web` now resolves API base URL from `NEXT_PUBLIC_API_BASE_URL` first, then `API_BASE_URL`, then localhost.
+- `apps/web` now resolves API base URL from `NEXT_PUBLIC_API_BASE_URL` first, then `API_BASE_URL`, then localhost for local-only fallback.
+- Recommended production frontend values:
+  - `NEXT_PUBLIC_MARKETING_URL=https://fieldmetriq.com`
+  - `NEXT_PUBLIC_APP_URL=https://app.fieldmetriq.com`
+  - `NEXT_PUBLIC_API_BASE_URL=https://api.fieldmetriq.com`
+- Marketing and app domains are intentionally separate:
+  - `fieldmetriq.com` serves the public landing page
+  - `app.fieldmetriq.com` serves the SaaS app
 - `apps/api` now resolves `PORT_API` from Railway `PORT` when present.
 - Railway should own the database and queue runtime vars even when the frontend is deployed on Vercel.

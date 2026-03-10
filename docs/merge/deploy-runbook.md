@@ -13,6 +13,7 @@
 5. Output: Next.js default
 6. Set env:
    - `NEXT_PUBLIC_APP_URL`
+   - `NEXT_PUBLIC_MARKETING_URL`
    - `NEXT_PUBLIC_API_BASE_URL`
 
 ## 3. Railway Project Setup
@@ -38,6 +39,12 @@
 4. Vercel frontend URLs
 5. Vercel API base URL pointing to Railway API
 
+## 4A. Production Domain Roles
+- `fieldmetriq.com` -> marketing root
+- `app.fieldmetriq.com` -> SaaS app
+- `api.fieldmetriq.com` -> Railway API
+- keep `craftandboard.com` as temporary fallback only during validation
+
 ## 5. Database Setup Expectations
 - run Prisma generate during build or release workflow
 - run schema sync/migration as the environment requires before first live use
@@ -51,6 +58,8 @@
 
 ## 7. Smoke Test Checklist
 - web root loads
+- marketing root loads on `fieldmetriq.com`
+- app root loads on `app.fieldmetriq.com`
 - dashboard loads
 - orders page loads
 - costing page loads

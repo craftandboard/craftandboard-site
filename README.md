@@ -75,6 +75,18 @@ corepack prepare pnpm@9.15.5 --activate
 
 Copy `.env.example` to `.env` before starting local services.
 
+## Production Domain Model
+
+- `fieldmetriq.com` = public marketing and landing site
+- `app.fieldmetriq.com` = logged-in SaaS application
+- `api.fieldmetriq.com` = production backend API
+- `craftandboard.com` = temporary coexistence domain during cutover, then future ecommerce brand domain
+
+Cutover details:
+- [FieldMetriq domain cutover](/Users/brandon/Projects/craft-and-board/docs/merge/fieldmetriq-domain-cutover.md)
+- [Domain role map](/Users/brandon/Projects/craft-and-board/docs/merge/domain-role-map.md)
+- [FieldMetriq production smoke check](/Users/brandon/Projects/craft-and-board/docs/merge/production-smoke-check-fieldmetriq.md)
+
 ## Start the foundation
 
 Install dependencies:

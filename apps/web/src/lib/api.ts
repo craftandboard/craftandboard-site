@@ -2893,6 +2893,9 @@ export interface ChannelMappingPresetItem {
   worksheetPromptSnapshot: Record<string, unknown> | null;
   requiredFieldChecklistSnapshot: Record<string, unknown> | null;
   optionalFieldChecklistSnapshot: Record<string, unknown> | null;
+  operatorPromptTemplateSnapshot: Record<string, unknown> | null;
+  copyGroupOrderingSnapshot: Record<string, unknown> | null;
+  worksheetSectionLabelSnapshot: Record<string, unknown> | null;
   notes: string | null;
   presetSnapshot: Record<string, unknown> | null;
   createdAt: string;
@@ -3396,6 +3399,7 @@ export interface CalculationScenarioRecord {
   latestApprovalSummarySnapshot: Record<string, unknown> | null;
   latestPresetSelectionSummarySnapshot: Record<string, unknown> | null;
   latestWorksheetSummarySnapshot: Record<string, unknown> | null;
+  latestOperatorPromptSummarySnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3430,6 +3434,7 @@ export interface ComparisonSetRecord {
   selectedWorksheetSummarySnapshot: Record<string, unknown> | null;
   selectedOperatorWorksheetVersion: string | null;
   selectedOperatorWorksheetSummarySnapshot: Record<string, unknown> | null;
+  selectedWorksheetErgonomicsSummary: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3494,6 +3499,11 @@ export interface ListingPrepPackageRecord {
   operatorChecklistSnapshot: Record<string, unknown> | null;
   channelHandoffSummarySnapshot: Record<string, unknown> | null;
   currentApprovedArtifactSummary: Record<string, unknown> | null;
+  operatorPromptSnapshot: Record<string, unknown> | null;
+  copyExportSnapshot: Record<string, unknown> | null;
+  plainTextWorksheetSnapshot: Record<string, unknown> | null;
+  structuredWorksheetExportSnapshot: Record<string, unknown> | null;
+  worksheetErgonomicsSummary: Record<string, unknown> | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4206,6 +4216,7 @@ export async function getListingPrepManualWorksheet(listingPrepPackageId: string
     ok: true;
     manualListingWorksheet: Record<string, unknown> | null;
     worksheetVersion: string | null;
+    worksheetSummary: Record<string, unknown> | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/manual-listing-worksheet`);
@@ -4218,10 +4229,34 @@ export async function getListingPrepOperatorWorksheet(listingPrepPackageId: stri
     operatorChecklist: Record<string, unknown> | null;
     channelHandoffSummary: Record<string, unknown> | null;
     currentApprovedArtifactSummary: Record<string, unknown> | null;
+    operatorPromptSummary: Record<string, unknown> | null;
+    worksheetErgonomicsSummary: Record<string, unknown> | null;
     operatorWorksheetVersion: string | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/operator-worksheet`);
+}
+
+export async function getListingPrepWorksheetExport(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    worksheetExport: Record<string, unknown> | null;
+    copyExportSummary: Record<string, unknown> | null;
+    worksheetErgonomicsSummary: Record<string, unknown> | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/worksheet-export`);
+}
+
+export async function getListingPrepPlainTextWorksheet(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    plainTextWorksheet: Record<string, unknown> | null;
+    operatorPromptSummary: Record<string, unknown> | null;
+    worksheetErgonomicsSummary: Record<string, unknown> | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/plain-text-worksheet`);
 }
 
 export interface LeadListItem {

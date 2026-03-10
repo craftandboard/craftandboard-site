@@ -29,6 +29,7 @@ export function OperatorWorksheetPackageCard({
   const specs = (worksheet?.specBlock ?? {}) as Record<string, unknown>;
   const fulfillment = (worksheet?.fulfillmentBlock ?? {}) as Record<string, unknown>;
   const warningBlock = (worksheet?.warningOverrideBlock ?? {}) as Record<string, unknown>;
+  const status = (worksheet?.approvalExportStatusSummary ?? {}) as Record<string, unknown>;
   const prompts = Array.isArray(worksheet?.manualEntryPrompts) ? (worksheet?.manualEntryPrompts as string[]) : [];
 
   if (!listingPrepPackage) {
@@ -64,6 +65,20 @@ export function OperatorWorksheetPackageCard({
       <p className="mt-2 text-sm text-slate-300">
         Scan this grouped worksheet during manual Amazon listing prep instead of reading the raw package JSON.
       </p>
+      <div className="mt-4 grid gap-3 md:grid-cols-4">
+        <SectionCard title="Approval">
+          <p>{String(status.approvalState ?? listingPrepPackage.approvalState)}</p>
+        </SectionCard>
+        <SectionCard title="Worksheet version">
+          <p>{String(status.worksheetVersion ?? listingPrepPackage.worksheetVersion ?? "manual-listing-v1")}</p>
+        </SectionCard>
+        <SectionCard title="Export version">
+          <p>{String(status.exportVersion ?? listingPrepPackage.exportVersion ?? "listing-prep-v1")}</p>
+        </SectionCard>
+        <SectionCard title="Approved at">
+          <p>{status.approvedAt ? new Date(String(status.approvedAt)).toLocaleString() : "Not approved"}</p>
+        </SectionCard>
+      </div>
       <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <SectionCard title="Pricing">
           <p>Launch: {String(pricing.recommendedLaunchPrice ?? "Not set")}</p>
@@ -85,8 +100,18 @@ export function OperatorWorksheetPackageCard({
       </div>
       <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Warnings and override notes</p>
-        <p className="mt-2">{Array.isArray(warningBlock.warnings) && warningBlock.warnings.length ? JSON.stringify(warningBlock.warnings) : "No active warnings in the operator worksheet."}</p>
-        <p className="mt-2">{warningBlock.overrideSummary ? JSON.stringify(warningBlock.overrideSummary) : "No override summary attached."}</p>
+        {Array.isArray(warningBlock.warnings) && warningBlock.warnings.length ? (
+          <ul className="mt-2 space-y-2">
+            {warningBlock.warnings.map((warning) => (
+              <li key={JSON.stringify(warning)} className="rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+                {typeof warning === "string" ? warning : JSON.stringify(warning)}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="mt-2">No active warnings in the operator worksheet.</p>
+        )}
+        <p className="mt-3">{warningBlock.overrideSummary ? JSON.stringify(warningBlock.overrideSummary) : "No override summary attached."}</p>
       </div>
       {prompts.length ? (
         <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">

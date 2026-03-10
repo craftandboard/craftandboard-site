@@ -915,6 +915,11 @@ export async function createListingPrepPackageRecord(input: {
   operatorChecklistSnapshot?: unknown;
   channelHandoffSummarySnapshot?: unknown;
   currentApprovedArtifactSummary?: unknown;
+  operatorPromptSnapshot?: unknown;
+  copyExportSnapshot?: unknown;
+  plainTextWorksheetSnapshot?: unknown;
+  structuredWorksheetExportSnapshot?: unknown;
+  worksheetErgonomicsSummary?: unknown;
   currentApprovedArtifact?: boolean;
   notes?: string | null;
   approvedAt?: Date | null;
@@ -955,6 +960,11 @@ export async function createListingPrepPackageRecord(input: {
       operatorChecklistSnapshot: normalizeMetadata(input.operatorChecklistSnapshot),
       channelHandoffSummarySnapshot: normalizeMetadata(input.channelHandoffSummarySnapshot),
       currentApprovedArtifactSummary: normalizeMetadata(input.currentApprovedArtifactSummary),
+      operatorPromptSnapshot: normalizeMetadata(input.operatorPromptSnapshot),
+      copyExportSnapshot: normalizeMetadata(input.copyExportSnapshot),
+      plainTextWorksheetSnapshot: normalizeMetadata(input.plainTextWorksheetSnapshot),
+      structuredWorksheetExportSnapshot: normalizeMetadata(input.structuredWorksheetExportSnapshot),
+      worksheetErgonomicsSummary: normalizeMetadata(input.worksheetErgonomicsSummary),
       currentApprovedArtifact: input.currentApprovedArtifact ?? false,
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
@@ -1111,6 +1121,9 @@ export async function createChannelMappingPresetRecord(input: {
   worksheetPromptSnapshot?: unknown;
   requiredFieldChecklistSnapshot?: unknown;
   optionalFieldChecklistSnapshot?: unknown;
+  operatorPromptTemplateSnapshot?: unknown;
+  copyGroupOrderingSnapshot?: unknown;
+  worksheetSectionLabelSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -1139,6 +1152,9 @@ export async function createChannelMappingPresetRecord(input: {
       worksheetPromptSnapshot: normalizeMetadata(input.worksheetPromptSnapshot),
       requiredFieldChecklistSnapshot: normalizeMetadata(input.requiredFieldChecklistSnapshot),
       optionalFieldChecklistSnapshot: normalizeMetadata(input.optionalFieldChecklistSnapshot),
+      operatorPromptTemplateSnapshot: normalizeMetadata(input.operatorPromptTemplateSnapshot),
+      copyGroupOrderingSnapshot: normalizeMetadata(input.copyGroupOrderingSnapshot),
+      worksheetSectionLabelSnapshot: normalizeMetadata(input.worksheetSectionLabelSnapshot),
       notes: input.notes ?? null,
       presetSnapshot: normalizeMetadata(input.presetSnapshot)
     }

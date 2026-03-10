@@ -202,6 +202,9 @@ export function applyChannelMappingPreset(input: {
     packagingFormat?: string | null;
     pricingFormat?: string | null;
     fieldOrderingSnapshot?: Record<string, unknown> | null;
+    operatorPromptTemplateSnapshot?: Record<string, unknown> | null;
+    copyGroupOrderingSnapshot?: Record<string, unknown> | null;
+    worksheetSectionLabelSnapshot?: Record<string, unknown> | null;
     notes?: string | null;
   } | null;
   marketplaceFields: Record<string, unknown>;
@@ -969,6 +972,232 @@ export function buildOperatorWorksheetPackage(input: {
     channelHandoffNotes: input.channelHandoffSummary ?? null,
     currentApprovedArtifactSummary: input.currentApprovedArtifactSummary ?? null,
     generatedAt: new Date().toISOString()
+  };
+}
+
+export function buildOperatorPromptSnapshot(input: {
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  warningSnapshot?: WarningItem[] | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  preset?: {
+    operatorPromptTemplateSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const requiredMissing = Array.isArray(input.checklistSnapshot?.requiredMissingFields)
+    ? (input.checklistSnapshot?.requiredMissingFields as string[])
+    : [];
+  const warnings = input.warningSnapshot ?? [];
+  const criticalPrompts = [
+    ...(requiredMissing.length ? [`Resolve required fields first: ${requiredMissing.join(", ")}.`] : []),
+    ...(warnings.some((warning) => warning.severity === "BLOCKING")
+      ? ["A blocking pricing or readiness warning still needs attention before final manual entry."]
+      : []),
+    ...(Boolean(input.overrideSnapshot?.overrideApproved)
+      ? ["This package is usable, but only because an override was approved. Double-check the floor-price rationale."]
+      : [])
+  ];
+  const reviewPrompts = Array.isArray(input.preset?.operatorPromptTemplateSnapshot?.reviewPrompts)
+    ? (input.preset?.operatorPromptTemplateSnapshot?.reviewPrompts as string[])
+    : [
+        "Confirm title, dimensions, and material against the product variant being listed.",
+        "Check shipping and packaging summaries before copying values into Amazon."
+      ];
+  const completionPrompts = Array.isArray(input.preset?.operatorPromptTemplateSnapshot?.completionPrompts)
+    ? (input.preset?.operatorPromptTemplateSnapshot?.completionPrompts as string[])
+    : [
+        "Use the current approved artifact only.",
+        "After manual entry, re-check warnings and override notes once before treating the listing as final."
+      ];
+
+  return {
+    criticalPrompts,
+    reviewPrompts,
+    completionPrompts,
+    summary:
+      input.approvalState === "APPROVED" || input.approvalState === "APPROVED_WITH_OVERRIDE"
+        ? "Operator prompts are ready for manual listing work."
+        : "Operator prompts highlight what still needs review before using this package."
+  };
+}
+
+export function buildCopyExportSnapshot(input: {
+  packageId: string;
+  exportShapeSnapshot?: Record<string, unknown> | null;
+  operatorWorksheetSnapshot?: Record<string, unknown> | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  promptSnapshot?: Record<string, unknown> | null;
+  preset?: {
+    copyGroupOrderingSnapshot?: Record<string, unknown> | null;
+    worksheetSectionLabelSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const exportShape = input.exportShapeSnapshot ?? {};
+  const ordering =
+    (input.preset?.copyGroupOrderingSnapshot as Record<string, unknown> | null) ??
+    ({ groups: ["identity", "specs", "fulfillment", "pricing", "warnings", "checklist", "prompts"] } as Record<string, unknown>);
+  const labels =
+    (input.preset?.worksheetSectionLabelSnapshot as Record<string, unknown> | null) ??
+    ({
+      identity: "Package identity",
+      specs: "Product, dimensions, and material",
+      fulfillment: "Packaging and shipping",
+      pricing: "Pricing",
+      warnings: "Warnings and overrides",
+      checklist: "Checklist",
+      prompts: "Operator prompts"
+    } as Record<string, unknown>);
+
+  return {
+    packageId: input.packageId,
+    groupOrdering: ordering,
+    labels,
+    groups: {
+      identity: {
+        label: labels.identity ?? "Package identity",
+        value: {
+          productLabel: exportShape.productLabel ?? null,
+          internalSku: exportShape.internalSku ?? null,
+          scenarioName: exportShape.scenarioName ?? null
+        }
+      },
+      specs: {
+        label: labels.specs ?? "Product, dimensions, and material",
+        value: {
+          dimensionsSummary: exportShape.dimensionsSummary ?? null,
+          thicknessSummary: exportShape.thicknessSummary ?? null,
+          materialSummary: exportShape.materialSummary ?? null,
+          edgeBandSummary: exportShape.edgeBandSummary ?? null
+        }
+      },
+      fulfillment: {
+        label: labels.fulfillment ?? "Packaging and shipping",
+        value: {
+          packagingSummary: exportShape.packagingSummary ?? null,
+          shippingSummary: exportShape.shippingSummary ?? null,
+          feePresetLabel: exportShape.feePresetLabel ?? null,
+          shippingZoneLabel: exportShape.shippingZoneLabel ?? null
+        }
+      },
+      pricing: {
+        label: labels.pricing ?? "Pricing",
+        value: {
+          pricingSummary: exportShape.pricingSummary ?? null
+        }
+      },
+      warnings: {
+        label: labels.warnings ?? "Warnings and overrides",
+        value: {
+          warnings: exportShape.warningsSummary ?? [],
+          overrideSummary: exportShape.overrideSummary ?? null
+        }
+      },
+      checklist: {
+        label: labels.checklist ?? "Checklist",
+        value: input.checklistSnapshot ?? null
+      },
+      prompts: {
+        label: labels.prompts ?? "Operator prompts",
+        value: input.promptSnapshot ?? null
+      }
+    },
+    quickCopySummary: [
+      exportShape.productLabel ?? "Unnamed product",
+      exportShape.dimensionsSummary ?? "No dimensions",
+      exportShape.materialSummary ?? "No material",
+      exportShape.pricingSummary ?? "No pricing summary"
+    ].join(" | ")
+  };
+}
+
+export function buildPlainTextWorksheet(input: {
+  operatorWorksheetSnapshot?: Record<string, unknown> | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  promptSnapshot?: Record<string, unknown> | null;
+  currentApprovedArtifactSummary?: Record<string, unknown> | null;
+}) {
+  const worksheet = input.operatorWorksheetSnapshot ?? {};
+  const header = (worksheet.headerSummary ?? {}) as Record<string, unknown>;
+  const pricing = (worksheet.pricingBlock ?? {}) as Record<string, unknown>;
+  const specs = (worksheet.specBlock ?? {}) as Record<string, unknown>;
+  const fulfillment = (worksheet.fulfillmentBlock ?? {}) as Record<string, unknown>;
+  const warnings = (worksheet.warningOverrideBlock ?? {}) as Record<string, unknown>;
+  const checklist = input.checklistSnapshot ?? {};
+  const prompts = input.promptSnapshot ?? {};
+
+  const lines = [
+    `Operator Worksheet ${String(worksheet.operatorWorksheetVersion ?? "operator-listing-v1")}`,
+    `Package: ${String(header.packageName ?? "Unknown package")}`,
+    `Approval: ${String(header.approvalState ?? "Unknown")}`,
+    `Current approved artifact: ${header.currentApprovedArtifact ? "Yes" : "No"}`,
+    `Product: ${String(specs.productLabel ?? "Unknown")}`,
+    `Dimensions: ${String(specs.dimensionsSummary ?? "Unknown")}`,
+    `Material: ${String(specs.materialSummary ?? "Unknown")}`,
+    `Edge band: ${String(specs.edgeBandSummary ?? "Unknown")}`,
+    `Packaging: ${String(fulfillment.packagingSummary ?? "Unknown")}`,
+    `Shipping: ${String(fulfillment.shippingSummary ?? "Unknown")}`,
+    `Launch price: ${String(pricing.recommendedLaunchPrice ?? "Unknown")}`,
+    `Minimum price: ${String(pricing.minimumPrice ?? "Unknown")}`,
+    `Safer margin price: ${String(pricing.saferMarginPrice ?? "Unknown")}`,
+    `Required missing fields: ${Array.isArray(checklist.requiredMissingFields) ? checklist.requiredMissingFields.join(", ") || "None" : "None"}`,
+    `Warnings: ${Array.isArray(warnings.warnings) ? JSON.stringify(warnings.warnings) : "None"}`,
+    `Override: ${warnings.overrideSummary ? JSON.stringify(warnings.overrideSummary) : "None"}`,
+    `Critical prompts: ${Array.isArray(prompts.criticalPrompts) ? prompts.criticalPrompts.join(" | ") || "None" : "None"}`,
+    `Summary: ${String(input.currentApprovedArtifactSummary?.summary ?? "Use the current approved artifact summary for final handoff context.")}`
+  ];
+
+  return {
+    text: lines.join("\n"),
+    lineCount: lines.length
+  };
+}
+
+export function buildStructuredWorksheetExport(input: {
+  operatorWorksheetSnapshot?: Record<string, unknown> | null;
+  copyExportSnapshot?: Record<string, unknown> | null;
+  promptSnapshot?: Record<string, unknown> | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  currentApprovedArtifactSummary?: Record<string, unknown> | null;
+}) {
+  return {
+    operatorWorksheet: input.operatorWorksheetSnapshot ?? null,
+    copyExport: input.copyExportSnapshot ?? null,
+    prompts: input.promptSnapshot ?? null,
+    checklist: input.checklistSnapshot ?? null,
+    currentApprovedArtifact: input.currentApprovedArtifactSummary ?? null,
+    generatedAt: new Date().toISOString()
+  };
+}
+
+export function buildWorksheetErgonomicsSummary(input: {
+  checklistSnapshot?: Record<string, unknown> | null;
+  promptSnapshot?: Record<string, unknown> | null;
+  copyExportSnapshot?: Record<string, unknown> | null;
+  currentApprovedArtifact: boolean;
+}) {
+  const groups = (input.copyExportSnapshot?.groups ?? {}) as Record<string, unknown>;
+  const criticalPrompts = Array.isArray(input.promptSnapshot?.criticalPrompts)
+    ? (input.promptSnapshot?.criticalPrompts as string[])
+    : [];
+  const reviewPrompts = Array.isArray(input.promptSnapshot?.reviewPrompts)
+    ? (input.promptSnapshot?.reviewPrompts as string[])
+    : [];
+  const requiredChecklist = Array.isArray(input.checklistSnapshot?.requiredChecklist)
+    ? (input.checklistSnapshot?.requiredChecklist as Array<{ field: string; ready: boolean }>)
+    : [];
+  const missingCriticalFieldCount = requiredChecklist.filter((item) => !item.ready).length;
+
+  return {
+    copyGroupCount: Object.keys(groups).length,
+    promptCount: criticalPrompts.length + reviewPrompts.length,
+    criticalFieldCount: requiredChecklist.length,
+    missingCriticalFieldCount,
+    readyToUseBoolean: input.currentApprovedArtifact && missingCriticalFieldCount === 0,
+    summary:
+      input.currentApprovedArtifact && missingCriticalFieldCount === 0
+        ? "Worksheet is packaged cleanly enough for active manual listing work."
+        : "Worksheet still needs operator attention before it is friction-free to use."
   };
 }
 

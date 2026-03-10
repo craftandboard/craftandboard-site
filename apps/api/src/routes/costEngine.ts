@@ -36,7 +36,9 @@ import {
   getListingPrepPackage,
   getManualListingWorksheet,
   getOperatorWorksheet,
+  getPlainTextWorksheet,
   getListingPrepManualAmazonExport,
+  getWorksheetExport,
   getMarketplaceMappingTemplate,
   getShelfCostCalculation,
   getShippingZoneRule,
@@ -1110,6 +1112,36 @@ router.get("/listing-prep-packages/:listingPrepPackageId/operator-worksheet", as
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getOperatorWorksheet({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/worksheet-export", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getWorksheetExport({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/plain-text-worksheet", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getPlainTextWorksheet({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

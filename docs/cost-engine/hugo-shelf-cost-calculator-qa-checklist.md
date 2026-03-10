@@ -85,6 +85,13 @@
 74. Verify the current approved artifact card is obvious and shows export/worksheet version plus override involvement
 75. Verify the channel handoff summary card shows preset context, channel notes, and operator prompts clearly
 76. Reload the package and confirm operator worksheet, checklist, handoff summary, and current artifact summaries persist
+77. Verify the operator prompt card shows critical, review, and completion prompts clearly
+78. Verify the copy/export card shows grouped copy blocks for identity, specs, fulfillment, pricing, warnings, checklist, and prompts
+79. Verify the plain-text worksheet block renders a stable copy-ready text view
+80. Verify the structured worksheet export summary renders a stable grouped export payload
+81. Verify the worksheet ergonomics summary shows copy-group count, prompt count, missing critical fields, and ready-to-use state
+82. Edit a channel mapping preset to change review/completion prompts, copy-group order, or section labels
+83. Refresh the listing-prep package and confirm prompt/export/ergonomics snapshots update and persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -107,3 +114,6 @@
 - A user can see whether the channel preset was auto-applied from launch context or chosen manually
 - A user can use the manual listing worksheet as the primary internal worksheet for first-pass Amazon entry
 - A user can use the operator worksheet package as the faster, grouped artifact for daily manual listing work without losing the underlying approved package trail
+- A user can see concise operator prompts that explain what to enter first, what still needs review, and what to confirm before final manual listing entry
+- A user can copy grouped worksheet values without digging through raw JSON
+- A user can fall back to a stable plain-text worksheet or a structured worksheet export when handing the package to another internal operator

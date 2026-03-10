@@ -374,6 +374,9 @@ export const createChannelMappingPresetSchema = z.object({
   worksheetPromptSnapshot: z.unknown().nullable().optional(),
   requiredFieldChecklistSnapshot: z.unknown().nullable().optional(),
   optionalFieldChecklistSnapshot: z.unknown().nullable().optional(),
+  operatorPromptTemplateSnapshot: z.unknown().nullable().optional(),
+  copyGroupOrderingSnapshot: z.unknown().nullable().optional(),
+  worksheetSectionLabelSnapshot: z.unknown().nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
   presetSnapshot: z.unknown().nullable().optional()
 });

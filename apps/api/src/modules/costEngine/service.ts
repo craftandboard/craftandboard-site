@@ -12,19 +12,24 @@ import {
   buildApprovalHistorySnapshot,
   buildApprovalSummarySnapshot,
   buildChannelHandoffSummary,
+  buildCopyExportSnapshot,
   buildCurrentApprovedArtifactSummary,
   buildLaunchContextSnapshot,
   buildManualAmazonExportSnapshot,
   buildManualListingWorksheet,
   buildOperatorFieldChecklist,
+  buildOperatorPromptSnapshot,
   buildOperatorWorksheetPackage,
+  buildPlainTextWorksheet,
   buildPresetSelectionSummary,
   applyMarketplaceMappingTemplate,
   buildMarketplaceFieldValidationResult,
   buildOverrideHistorySnapshot,
   buildStableListingPrepExportShape,
+  buildStructuredWorksheetExport,
   buildExportMetadataBlock,
   buildPriceFloorOverrideSnapshot,
+  buildWorksheetErgonomicsSummary,
   buildWorksheetSummarySnapshot,
   calculateApprovalState,
   calculateListingPrepPackageStatus,
@@ -252,6 +257,9 @@ function mapChannelMappingPreset(record: any) {
     worksheetPromptSnapshot: record.worksheetPromptSnapshot ?? null,
     requiredFieldChecklistSnapshot: record.requiredFieldChecklistSnapshot ?? null,
     optionalFieldChecklistSnapshot: record.optionalFieldChecklistSnapshot ?? null,
+    operatorPromptTemplateSnapshot: record.operatorPromptTemplateSnapshot ?? null,
+    copyGroupOrderingSnapshot: record.copyGroupOrderingSnapshot ?? null,
+    worksheetSectionLabelSnapshot: record.worksheetSectionLabelSnapshot ?? null,
     notes: record.notes ?? null,
     presetSnapshot: record.presetSnapshot ?? null
   };
@@ -454,6 +462,12 @@ function buildListingArtifactsForScenario(input: {
           packagingFormat: input.channelPreset.packagingFormat ?? null,
           pricingFormat: input.channelPreset.pricingFormat ?? null,
           fieldOrderingSnapshot: input.channelPreset.fieldOrderingSnapshot ?? null,
+          operatorPromptTemplateSnapshot:
+            input.channelPreset.operatorPromptTemplateSnapshot ?? null,
+          copyGroupOrderingSnapshot:
+            input.channelPreset.copyGroupOrderingSnapshot ?? null,
+          worksheetSectionLabelSnapshot:
+            input.channelPreset.worksheetSectionLabelSnapshot ?? null,
           notes: input.channelPreset.notes ?? null
         }
       : null,
@@ -626,6 +640,53 @@ function buildListingArtifactsForScenario(input: {
     currentApprovedArtifactSummary,
     approvedAt: null
   });
+  const operatorPromptSnapshot = buildOperatorPromptSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    preset: input.channelPreset
+      ? {
+          operatorPromptTemplateSnapshot:
+            input.channelPreset.operatorPromptTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const copyExportSnapshot = buildCopyExportSnapshot({
+    packageId: input.packageId ?? "pending-package",
+    exportShapeSnapshot,
+    operatorWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    preset: input.channelPreset
+      ? {
+          copyGroupOrderingSnapshot:
+            input.channelPreset.copyGroupOrderingSnapshot ?? null,
+          worksheetSectionLabelSnapshot:
+            input.channelPreset.worksheetSectionLabelSnapshot ?? null
+        }
+      : null
+  });
+  const plainTextWorksheetSnapshot = buildPlainTextWorksheet({
+    operatorWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    currentApprovedArtifactSummary
+  });
+  const structuredWorksheetExportSnapshot = buildStructuredWorksheetExport({
+    operatorWorksheetSnapshot,
+    copyExportSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    currentApprovedArtifactSummary
+  });
+  const worksheetErgonomicsSummary = buildWorksheetErgonomicsSummary({
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    copyExportSnapshot,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact)
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: input.presetSelectionSummary ?? null
@@ -670,6 +731,11 @@ function buildListingArtifactsForScenario(input: {
     operatorChecklistSnapshot,
     channelHandoffSummarySnapshot,
     currentApprovedArtifactSummary,
+    operatorPromptSnapshot,
+    copyExportSnapshot,
+    plainTextWorksheetSnapshot,
+    structuredWorksheetExportSnapshot,
+    worksheetErgonomicsSummary,
     channelPresetSelectionSummary: input.presetSelectionSummary ?? null
   };
 }
@@ -777,6 +843,7 @@ function mapScenario(record: any) {
     latestApprovalSummarySnapshot: record.latestApprovalSummarySnapshot ?? null,
     latestPresetSelectionSummarySnapshot: record.latestPresetSelectionSummarySnapshot ?? null,
     latestWorksheetSummarySnapshot: record.latestWorksheetSummarySnapshot ?? null,
+    latestOperatorPromptSummarySnapshot: record.latestOperatorPromptSummarySnapshot ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -815,6 +882,8 @@ function mapComparisonSet(record: any) {
     selectedOperatorWorksheetVersion: record.selectedOperatorWorksheetVersion ?? null,
     selectedOperatorWorksheetSummarySnapshot:
       record.selectedOperatorWorksheetSummarySnapshot ?? null,
+    selectedWorksheetErgonomicsSummary:
+      record.selectedWorksheetErgonomicsSummary ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -864,6 +933,11 @@ function mapListingPrepPackage(record: any) {
     operatorChecklistSnapshot: record.operatorChecklistSnapshot ?? null,
     channelHandoffSummarySnapshot: record.channelHandoffSummarySnapshot ?? null,
     currentApprovedArtifactSummary: record.currentApprovedArtifactSummary ?? null,
+    operatorPromptSnapshot: record.operatorPromptSnapshot ?? null,
+    copyExportSnapshot: record.copyExportSnapshot ?? null,
+    plainTextWorksheetSnapshot: record.plainTextWorksheetSnapshot ?? null,
+    structuredWorksheetExportSnapshot: record.structuredWorksheetExportSnapshot ?? null,
+    worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
     notes: record.notes ?? null,
     approvedAt: record.approvedAt?.toISOString() ?? null,
@@ -2407,7 +2481,9 @@ export async function getComparisonSetHandoffSummary(input: {
     selectedWorksheetSummarySnapshot: set.selectedWorksheetSummarySnapshot ?? null,
     selectedOperatorWorksheetVersion: set.selectedOperatorWorksheetVersion ?? null,
     selectedOperatorWorksheetSummarySnapshot:
-      set.selectedOperatorWorksheetSummarySnapshot ?? null
+      set.selectedOperatorWorksheetSummarySnapshot ?? null,
+    selectedWorksheetErgonomicsSummary:
+      set.selectedWorksheetErgonomicsSummary ?? null
   };
 }
 
@@ -2602,6 +2678,11 @@ export async function buildListingPrepPackage(input: {
     operatorChecklistSnapshot: artifacts.operatorChecklistSnapshot,
     channelHandoffSummarySnapshot: artifacts.channelHandoffSummarySnapshot,
     currentApprovedArtifactSummary: artifacts.currentApprovedArtifactSummary,
+    operatorPromptSnapshot: artifacts.operatorPromptSnapshot,
+    copyExportSnapshot: artifacts.copyExportSnapshot,
+    plainTextWorksheetSnapshot: artifacts.plainTextWorksheetSnapshot,
+    structuredWorksheetExportSnapshot: artifacts.structuredWorksheetExportSnapshot,
+    worksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary,
     currentApprovedArtifact: false,
     notes: input.notes ?? null,
     approvedAt: null
@@ -2618,7 +2699,13 @@ export async function buildListingPrepPackage(input: {
       latestOverrideSummarySnapshot: artifacts.overrideHistorySnapshot?.latestOverride ?? null,
       latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot,
       latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
-      latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot
+      latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+      latestOperatorPromptSummarySnapshot: {
+        summary: artifacts.operatorPromptSnapshot?.summary ?? null,
+        criticalPrompts: artifacts.operatorPromptSnapshot?.criticalPrompts ?? [],
+        reviewPrompts: artifacts.operatorPromptSnapshot?.reviewPrompts ?? [],
+        completionPrompts: artifacts.operatorPromptSnapshot?.completionPrompts ?? []
+      }
     })
   });
 
@@ -2650,7 +2737,8 @@ export async function buildListingPrepPackage(input: {
       selectedWorksheetVersion: artifacts.worksheetVersion,
       selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
       selectedOperatorWorksheetVersion: artifacts.operatorWorksheetVersion,
-      selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot
+      selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot,
+      selectedWorksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary
     })
   });
 
@@ -2773,6 +2861,11 @@ export async function refreshListingPrepPackage(input: {
       operatorChecklistSnapshot: artifacts.operatorChecklistSnapshot,
       channelHandoffSummarySnapshot: artifacts.channelHandoffSummarySnapshot,
       currentApprovedArtifactSummary: artifacts.currentApprovedArtifactSummary,
+      operatorPromptSnapshot: artifacts.operatorPromptSnapshot,
+      copyExportSnapshot: artifacts.copyExportSnapshot,
+      plainTextWorksheetSnapshot: artifacts.plainTextWorksheetSnapshot,
+      structuredWorksheetExportSnapshot: artifacts.structuredWorksheetExportSnapshot,
+      worksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary,
       channelMappingPresetId: presetResolution.preset?.id ?? null,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
@@ -2788,6 +2881,12 @@ export async function refreshListingPrepPackage(input: {
       latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot,
       latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
       latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+      latestOperatorPromptSummarySnapshot: {
+        summary: artifacts.operatorPromptSnapshot?.summary ?? null,
+        criticalPrompts: artifacts.operatorPromptSnapshot?.criticalPrompts ?? [],
+        reviewPrompts: artifacts.operatorPromptSnapshot?.reviewPrompts ?? [],
+        completionPrompts: artifacts.operatorPromptSnapshot?.completionPrompts ?? []
+      },
       listingPrepPackageId: record.id
     })
   });
@@ -2821,7 +2920,8 @@ export async function refreshListingPrepPackage(input: {
         selectedWorksheetVersion: artifacts.worksheetVersion,
         selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
         selectedOperatorWorksheetVersion: artifacts.operatorWorksheetVersion,
-        selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot
+        selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot,
+        selectedWorksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary
       })
     });
   }
@@ -2962,6 +3062,53 @@ export async function evaluateMarketplaceFieldValidation(input: {
     channelHandoffSummary: channelHandoffSummarySnapshot,
     currentApprovedArtifactSummary
   });
+  const operatorPromptSnapshot = buildOperatorPromptSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    warningSnapshot: strongerAlerts.warnings as any,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          operatorPromptTemplateSnapshot:
+            record.channelMappingPreset.operatorPromptTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const copyExportSnapshot = buildCopyExportSnapshot({
+    packageId: record.id,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    operatorWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          copyGroupOrderingSnapshot:
+            record.channelMappingPreset.copyGroupOrderingSnapshot ?? null,
+          worksheetSectionLabelSnapshot:
+            record.channelMappingPreset.worksheetSectionLabelSnapshot ?? null
+        }
+      : null
+  });
+  const plainTextWorksheetSnapshot = buildPlainTextWorksheet({
+    operatorWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    currentApprovedArtifactSummary
+  });
+  const structuredWorksheetExportSnapshot = buildStructuredWorksheetExport({
+    operatorWorksheetSnapshot,
+    copyExportSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    currentApprovedArtifactSummary
+  });
+  const worksheetErgonomicsSummary = buildWorksheetErgonomicsSummary({
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    copyExportSnapshot,
+    currentApprovedArtifact: false
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
@@ -2985,6 +3132,11 @@ export async function evaluateMarketplaceFieldValidation(input: {
       operatorChecklistSnapshot,
       channelHandoffSummarySnapshot,
       currentApprovedArtifactSummary,
+      operatorPromptSnapshot,
+      copyExportSnapshot,
+      plainTextWorksheetSnapshot,
+      structuredWorksheetExportSnapshot,
+      worksheetErgonomicsSummary,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
       approvedAt: null
@@ -3018,7 +3170,8 @@ export async function evaluateMarketplaceFieldValidation(input: {
         selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
         selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
         selectedOperatorWorksheetVersion: "operator-listing-v1",
-        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot
+        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
+        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary
       })
     });
   }
@@ -3171,6 +3324,53 @@ export async function requestPriceFloorOverride(input: {
     channelHandoffSummary: channelHandoffSummarySnapshot,
     currentApprovedArtifactSummary
   });
+  const operatorPromptSnapshot = buildOperatorPromptSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    warningSnapshot: strongerAlerts.warnings as any,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          operatorPromptTemplateSnapshot:
+            record.channelMappingPreset.operatorPromptTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const copyExportSnapshot = buildCopyExportSnapshot({
+    packageId: record.id,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    operatorWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          copyGroupOrderingSnapshot:
+            record.channelMappingPreset.copyGroupOrderingSnapshot ?? null,
+          worksheetSectionLabelSnapshot:
+            record.channelMappingPreset.worksheetSectionLabelSnapshot ?? null
+        }
+      : null
+  });
+  const plainTextWorksheetSnapshot = buildPlainTextWorksheet({
+    operatorWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    currentApprovedArtifactSummary
+  });
+  const structuredWorksheetExportSnapshot = buildStructuredWorksheetExport({
+    operatorWorksheetSnapshot,
+    copyExportSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    currentApprovedArtifactSummary
+  });
+  const worksheetErgonomicsSummary = buildWorksheetErgonomicsSummary({
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    copyExportSnapshot,
+    currentApprovedArtifact: false
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
@@ -3196,6 +3396,11 @@ export async function requestPriceFloorOverride(input: {
       operatorChecklistSnapshot,
       channelHandoffSummarySnapshot,
       currentApprovedArtifactSummary,
+      operatorPromptSnapshot,
+      copyExportSnapshot,
+      plainTextWorksheetSnapshot,
+      structuredWorksheetExportSnapshot,
+      worksheetErgonomicsSummary,
       currentApprovedArtifact: false,
       approvedAt: null,
       approvedByMembershipId: input.approvedByMembershipId ?? null
@@ -3212,7 +3417,13 @@ export async function requestPriceFloorOverride(input: {
       listingPrepPackageId: record.id,
       latestOverrideSummarySnapshot: overrideHistorySnapshot.latestOverride ?? null,
       latestApprovalSummarySnapshot: approvalSummarySnapshot,
-      latestWorksheetSummarySnapshot: worksheetSummarySnapshot
+      latestWorksheetSummarySnapshot: worksheetSummarySnapshot,
+      latestOperatorPromptSummarySnapshot: {
+        summary: operatorPromptSnapshot.summary ?? null,
+        criticalPrompts: operatorPromptSnapshot.criticalPrompts ?? [],
+        reviewPrompts: operatorPromptSnapshot.reviewPrompts ?? [],
+        completionPrompts: operatorPromptSnapshot.completionPrompts ?? []
+      }
     })
   });
 
@@ -3244,7 +3455,8 @@ export async function requestPriceFloorOverride(input: {
         selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
         selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
         selectedOperatorWorksheetVersion: "operator-listing-v1",
-        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot
+        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
+        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary
       })
     });
   }
@@ -3466,6 +3678,53 @@ export async function approveListingPrepPackage(input: {
     currentApprovedArtifactSummary,
     approvedAt
   });
+  const operatorPromptSnapshot = buildOperatorPromptSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    warningSnapshot: Array.isArray(record.warningSnapshot) ? (record.warningSnapshot as any) : [],
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
+    checklistSnapshot: operatorChecklistSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          operatorPromptTemplateSnapshot:
+            record.channelMappingPreset.operatorPromptTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const copyExportSnapshot = buildCopyExportSnapshot({
+    packageId: record.id,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    operatorWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          copyGroupOrderingSnapshot:
+            record.channelMappingPreset.copyGroupOrderingSnapshot ?? null,
+          worksheetSectionLabelSnapshot:
+            record.channelMappingPreset.worksheetSectionLabelSnapshot ?? null
+        }
+      : null
+  });
+  const plainTextWorksheetSnapshot = buildPlainTextWorksheet({
+    operatorWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    currentApprovedArtifactSummary
+  });
+  const structuredWorksheetExportSnapshot = buildStructuredWorksheetExport({
+    operatorWorksheetSnapshot,
+    copyExportSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    currentApprovedArtifactSummary
+  });
+  const worksheetErgonomicsSummary = buildWorksheetErgonomicsSummary({
+    checklistSnapshot: operatorChecklistSnapshot,
+    promptSnapshot: operatorPromptSnapshot,
+    copyExportSnapshot,
+    currentApprovedArtifact: true
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
@@ -3493,6 +3752,11 @@ export async function approveListingPrepPackage(input: {
       channelHandoffSummarySnapshot,
       currentApprovedArtifactSummary,
       worksheetSummarySnapshot,
+      operatorPromptSnapshot,
+      copyExportSnapshot,
+      plainTextWorksheetSnapshot,
+      structuredWorksheetExportSnapshot,
+      worksheetErgonomicsSummary,
       approvedAt,
       approvedByMembershipId: input.approvedByMembershipId ?? null,
       currentApprovedArtifact: true
@@ -3504,7 +3768,13 @@ export async function approveListingPrepPackage(input: {
     scenarioId: record.calculationScenarioId,
     data: normalizeUpdateData({
       latestApprovalSummarySnapshot: approvalSummarySnapshot,
-      latestWorksheetSummarySnapshot: worksheetSummarySnapshot
+      latestWorksheetSummarySnapshot: worksheetSummarySnapshot,
+      latestOperatorPromptSummarySnapshot: {
+        summary: operatorPromptSnapshot.summary ?? null,
+        criticalPrompts: operatorPromptSnapshot.criticalPrompts ?? [],
+        reviewPrompts: operatorPromptSnapshot.reviewPrompts ?? [],
+        completionPrompts: operatorPromptSnapshot.completionPrompts ?? []
+      }
     })
   });
 
@@ -3519,7 +3789,8 @@ export async function approveListingPrepPackage(input: {
         selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
         selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
         selectedOperatorWorksheetVersion: "operator-listing-v1",
-        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot
+        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
+        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary
       })
     });
   }
@@ -3543,6 +3814,7 @@ export async function getManualListingWorksheet(input: {
     ok: true,
     manualListingWorksheet: record.manualListingWorksheetSnapshot ?? null,
     worksheetVersion: record.worksheetVersion ?? null,
+    worksheetSummary: record.worksheetSummarySnapshot ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };
@@ -3562,7 +3834,45 @@ export async function getOperatorWorksheet(input: {
     operatorChecklist: record.operatorChecklistSnapshot ?? null,
     channelHandoffSummary: record.channelHandoffSummarySnapshot ?? null,
     currentApprovedArtifactSummary: record.currentApprovedArtifactSummary ?? null,
+    operatorPromptSummary: record.operatorPromptSnapshot ?? null,
+    worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
     operatorWorksheetVersion: record.operatorWorksheetVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getWorksheetExport(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    worksheetExport: record.structuredWorksheetExportSnapshot ?? null,
+    copyExportSummary: record.copyExportSnapshot ?? null,
+    worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getPlainTextWorksheet(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    plainTextWorksheet: record.plainTextWorksheetSnapshot ?? null,
+    operatorPromptSummary: record.operatorPromptSnapshot ?? null,
+    worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };

@@ -74,10 +74,12 @@ import { ListingPrepPackageCard } from "./listing-prep-package-card";
 import { ListingPrepApprovalCard } from "./listing-prep-approval-card";
 import { ListingPrepFieldCard } from "./listing-prep-field-card";
 import { ManualAmazonExportCard } from "./manual-amazon-export-card";
+import { ManualListingCopyBlockCard } from "./manual-listing-copy-block-card";
 import { ManualListingWorksheetCard } from "./manual-listing-worksheet-card";
 import { MarketplaceMappingTemplateEditor } from "./marketplace-mapping-template-editor";
 import { MarketplaceMappingValidationCard } from "./marketplace-mapping-validation-card";
 import { OperatorFieldChecklistCard } from "./operator-field-checklist-card";
+import { OperatorPromptCard } from "./operator-prompt-card";
 import { OperatorWorksheetPackageCard } from "./operator-worksheet-package-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { OverrideHistoryCard } from "./override-history-card";
@@ -88,6 +90,7 @@ import { CostScenarioBuilder } from "./cost-scenario-builder";
 import { CostScenarioComparisonCard } from "./cost-scenario-comparison-card";
 import { ScenarioRankingTable } from "./scenario-ranking-table";
 import { ShippingZoneRuleEditor } from "./shipping-zone-rule-editor";
+import { WorksheetExportSummaryCard } from "./worksheet-export-summary-card";
 import { getEdgeBandPatternLabel } from "../lib/cost-engine";
 
 const edgeBandOptions = ["NONE", "LONG_EDGES", "SHORT_EDGES", "ALL_FOUR"] as const;
@@ -1143,6 +1146,22 @@ export function CostCalculatorForm() {
         worksheetPromptSnapshot: parseSnapshotLines(formData.get("worksheetPrompts"), "prompts"),
         requiredFieldChecklistSnapshot: parseSnapshotLines(formData.get("requiredChecklist"), "fields"),
         optionalFieldChecklistSnapshot: parseSnapshotLines(formData.get("optionalChecklist"), "fields"),
+        operatorPromptTemplateSnapshot: {
+          reviewPrompts:
+            (parseSnapshotLines(formData.get("reviewPrompts"), "reviewPrompts")?.reviewPrompts as string[] | undefined) ?? [],
+          completionPrompts:
+            (parseSnapshotLines(formData.get("completionPrompts"), "completionPrompts")?.completionPrompts as string[] | undefined) ?? []
+        },
+        copyGroupOrderingSnapshot: parseSnapshotLines(formData.get("copyGroupOrdering"), "groups"),
+        worksheetSectionLabelSnapshot: {
+          identity: String(formData.get("sectionLabelIdentity") ?? "") || null,
+          specs: String(formData.get("sectionLabelSpecs") ?? "") || null,
+          fulfillment: String(formData.get("sectionLabelFulfillment") ?? "") || null,
+          pricing: String(formData.get("sectionLabelPricing") ?? "") || null,
+          warnings: String(formData.get("sectionLabelWarnings") ?? "") || null,
+          checklist: String(formData.get("sectionLabelChecklist") ?? "") || null,
+          prompts: String(formData.get("sectionLabelPrompts") ?? "") || null
+        },
         notes: String(formData.get("notes") ?? "") || null
       })
         .then(() => refreshAll(selectedProfileId))
@@ -1178,6 +1197,22 @@ export function CostCalculatorForm() {
         worksheetPromptSnapshot: parseSnapshotLines(formData.get("worksheetPrompts"), "prompts"),
         requiredFieldChecklistSnapshot: parseSnapshotLines(formData.get("requiredChecklist"), "fields"),
         optionalFieldChecklistSnapshot: parseSnapshotLines(formData.get("optionalChecklist"), "fields"),
+        operatorPromptTemplateSnapshot: {
+          reviewPrompts:
+            (parseSnapshotLines(formData.get("reviewPrompts"), "reviewPrompts")?.reviewPrompts as string[] | undefined) ?? [],
+          completionPrompts:
+            (parseSnapshotLines(formData.get("completionPrompts"), "completionPrompts")?.completionPrompts as string[] | undefined) ?? []
+        },
+        copyGroupOrderingSnapshot: parseSnapshotLines(formData.get("copyGroupOrdering"), "groups"),
+        worksheetSectionLabelSnapshot: {
+          identity: String(formData.get("sectionLabelIdentity") ?? "") || null,
+          specs: String(formData.get("sectionLabelSpecs") ?? "") || null,
+          fulfillment: String(formData.get("sectionLabelFulfillment") ?? "") || null,
+          pricing: String(formData.get("sectionLabelPricing") ?? "") || null,
+          warnings: String(formData.get("sectionLabelWarnings") ?? "") || null,
+          checklist: String(formData.get("sectionLabelChecklist") ?? "") || null,
+          prompts: String(formData.get("sectionLabelPrompts") ?? "") || null
+        },
         notes: String(formData.get("notes") ?? "") || null
       })
         .then(() => refreshAll(selectedProfileId))
@@ -1510,6 +1545,7 @@ export function CostCalculatorForm() {
           <MarketplaceMappingValidationCard listingPrepPackage={listingPrepPackage} />
           <OverrideHistoryCard listingPrepPackage={listingPrepPackage} />
           <OperatorFieldChecklistCard listingPrepPackage={listingPrepPackage} />
+          <OperatorPromptCard listingPrepPackage={listingPrepPackage} />
           <LaunchCandidateHandoffCard comparison={comparison} />
           <ListingPrepFieldCard comparison={comparison} />
           <PriceFloorOverrideReviewCard
@@ -1521,6 +1557,8 @@ export function CostCalculatorForm() {
           <ManualAmazonExportCard listingPrepPackage={listingPrepPackage} />
           <ManualListingWorksheetCard listingPrepPackage={listingPrepPackage} />
           <OperatorWorksheetPackageCard listingPrepPackage={listingPrepPackage} />
+          <ManualListingCopyBlockCard listingPrepPackage={listingPrepPackage} />
+          <WorksheetExportSummaryCard listingPrepPackage={listingPrepPackage} />
           <CostScenarioBuilder
             scenarios={scenarios}
             feePresets={options.feePresets}

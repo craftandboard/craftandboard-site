@@ -2611,6 +2611,7 @@ model CalculationScenario {
   latestApprovalSummarySnapshot Json?
   latestPresetSelectionSummarySnapshot Json?
   latestWorksheetSummarySnapshot Json?
+  latestOperatorPromptSummarySnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
@@ -2645,6 +2646,7 @@ model CalculationComparisonSet {
   selectedWorksheetSummarySnapshot Json?
   selectedOperatorWorksheetVersion String?
   selectedOperatorWorksheetSummarySnapshot Json?
+  selectedWorksheetErgonomicsSummary Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2696,6 +2698,11 @@ model ListingPrepPackage {
   operatorChecklistSnapshot Json?
   channelHandoffSummarySnapshot Json?
   currentApprovedArtifactSummary Json?
+  operatorPromptSnapshot Json?
+  copyExportSnapshot Json?
+  plainTextWorksheetSnapshot Json?
+  structuredWorksheetExportSnapshot Json?
+  worksheetErgonomicsSummary Json?
   currentApprovedArtifact Boolean                 @default(false)
   notes                  String?
   approvedAt             DateTime?
@@ -2775,6 +2782,9 @@ model ChannelMappingPreset {
   worksheetPromptSnapshot Json?
   requiredFieldChecklistSnapshot Json?
   optionalFieldChecklistSnapshot Json?
+  operatorPromptTemplateSnapshot Json?
+  copyGroupOrderingSnapshot Json?
+  worksheetSectionLabelSnapshot Json?
   notes                String?
   presetSnapshot       Json?
   createdAt            DateTime                 @default(now())

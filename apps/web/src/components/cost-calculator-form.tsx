@@ -71,6 +71,7 @@ import { LaunchRecommendationCard } from "./launch-recommendation-card";
 import { LaunchRiskSummaryCard } from "./launch-risk-summary-card";
 import { LaunchTemplateEditor } from "./launch-template-editor";
 import { QuickCopySummaryCard } from "./quick-copy-summary-card";
+import { CompletionCueCard } from "./completion-cue-card";
 import { ListingPrepPackageCard } from "./listing-prep-package-card";
 import { ListingPrepApprovalCard } from "./listing-prep-approval-card";
 import { ListingPrepFieldCard } from "./listing-prep-field-card";
@@ -84,6 +85,9 @@ import { OperatorPromptCard } from "./operator-prompt-card";
 import { OperatorWorksheetPackageCard } from "./operator-worksheet-package-card";
 import { FinalReviewPromptCard } from "./final-review-prompt-card";
 import { ArtifactHandoffSummaryCard } from "./artifact-handoff-summary-card";
+import { FinalRunbookCard } from "./final-runbook-card";
+import { InternalShareSummaryCard } from "./internal-share-summary-card";
+import { LastChangeSummaryCard } from "./last-change-summary-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { OverrideHistoryCard } from "./override-history-card";
 import { PriceFloorOverrideReviewCard } from "./price-floor-override-review-card";
@@ -1165,9 +1169,16 @@ export function CostCalculatorForm() {
             (parseSnapshotLines(formData.get("finalReviewCompletionPrompts"), "completionReviewPrompts")?.completionReviewPrompts as string[] | undefined) ?? []
         },
         quickCopyOrderingSnapshot: parseSnapshotLines(formData.get("quickCopyOrdering"), "groups"),
+        finalReviewOrderingSnapshot: parseSnapshotLines(formData.get("finalRunbookOrdering"), "sections"),
+        completionCueTemplateSnapshot: parseSnapshotLines(formData.get("completionCueChecks"), "lastChecks"),
         shortSummaryFormatSnapshot: {
           headline: String(formData.get("shortSummaryHeadline") ?? "") || null,
           footer: String(formData.get("shortSummaryFooter") ?? "") || null
+        },
+        shareSummaryFormatSnapshot: {
+          whatThisIsFor: String(formData.get("shareSummaryPurpose") ?? "") || null,
+          whatToWatch: String(formData.get("shareSummaryWatch") ?? "") || null,
+          formatLabel: String(formData.get("shareSummaryFormatLabel") ?? "") || null
         },
         worksheetSectionLabelSnapshot: {
           identity: String(formData.get("sectionLabelIdentity") ?? "") || null,
@@ -1229,9 +1240,16 @@ export function CostCalculatorForm() {
             (parseSnapshotLines(formData.get("finalReviewCompletionPrompts"), "completionReviewPrompts")?.completionReviewPrompts as string[] | undefined) ?? []
         },
         quickCopyOrderingSnapshot: parseSnapshotLines(formData.get("quickCopyOrdering"), "groups"),
+        finalReviewOrderingSnapshot: parseSnapshotLines(formData.get("finalRunbookOrdering"), "sections"),
+        completionCueTemplateSnapshot: parseSnapshotLines(formData.get("completionCueChecks"), "lastChecks"),
         shortSummaryFormatSnapshot: {
           headline: String(formData.get("shortSummaryHeadline") ?? "") || null,
           footer: String(formData.get("shortSummaryFooter") ?? "") || null
+        },
+        shareSummaryFormatSnapshot: {
+          whatThisIsFor: String(formData.get("shareSummaryPurpose") ?? "") || null,
+          whatToWatch: String(formData.get("shareSummaryWatch") ?? "") || null,
+          formatLabel: String(formData.get("shareSummaryFormatLabel") ?? "") || null
         },
         worksheetSectionLabelSnapshot: {
           identity: String(formData.get("sectionLabelIdentity") ?? "") || null,
@@ -1577,7 +1595,10 @@ export function CostCalculatorForm() {
           <OperatorPromptCard listingPrepPackage={listingPrepPackage} />
           <QuickCopySummaryCard listingPrepPackage={listingPrepPackage} />
           <FinalReviewPromptCard listingPrepPackage={listingPrepPackage} />
+          <CompletionCueCard listingPrepPackage={listingPrepPackage} />
           <ArtifactHandoffSummaryCard listingPrepPackage={listingPrepPackage} />
+          <InternalShareSummaryCard listingPrepPackage={listingPrepPackage} />
+          <LastChangeSummaryCard listingPrepPackage={listingPrepPackage} />
           <LaunchCandidateHandoffCard comparison={comparison} />
           <ListingPrepFieldCard comparison={comparison} />
           <PriceFloorOverrideReviewCard
@@ -1589,6 +1610,7 @@ export function CostCalculatorForm() {
           <ManualAmazonExportCard listingPrepPackage={listingPrepPackage} />
           <ManualListingWorksheetCard listingPrepPackage={listingPrepPackage} />
           <OperatorWorksheetPackageCard listingPrepPackage={listingPrepPackage} />
+          <FinalRunbookCard listingPrepPackage={listingPrepPackage} />
           <ManualListingCopyBlockCard listingPrepPackage={listingPrepPackage} />
           <WorksheetExportSummaryCard listingPrepPackage={listingPrepPackage} />
           <CostScenarioBuilder

@@ -1374,6 +1374,240 @@ export function buildShortPlainTextSummary(input: {
   };
 }
 
+export function buildCompletionCueSnapshot(input: {
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  overrideSnapshot?: Record<string, unknown> | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  preset?: {
+    completionCueTemplateSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const requiredMissing = Array.isArray(input.checklistSnapshot?.requiredMissingFields)
+    ? (input.checklistSnapshot.requiredMissingFields as string[])
+    : [];
+  const weakFields = Array.isArray(input.checklistSnapshot?.optionalIncompleteFields)
+    ? (input.checklistSnapshot.optionalIncompleteFields as string[])
+    : [];
+  const blockingWarnings = (input.warningSnapshot ?? []).filter((warning) => warning.severity === "BLOCKING");
+  const template = (input.preset?.completionCueTemplateSnapshot ?? null) as Record<string, unknown> | null;
+
+  const readyNowBoolean =
+    input.currentApprovedArtifact &&
+    input.approvalState === "APPROVED" &&
+    requiredMissing.length === 0 &&
+    blockingWarnings.length === 0;
+  const readyWithOverrideBoolean =
+    input.currentApprovedArtifact &&
+    input.approvalState === "APPROVED_WITH_OVERRIDE" &&
+    requiredMissing.length === 0;
+  const blockedBoolean =
+    input.approvalState === "BLOCKED" || (!readyNowBoolean && !readyWithOverrideBoolean && blockingWarnings.length > 0);
+  const needsReviewBoolean = !readyNowBoolean && !readyWithOverrideBoolean && !blockedBoolean;
+
+  const lastChecks = [
+    ...(input.currentApprovedArtifact ? [] : ["Confirm this package is still the current approved artifact before manual entry."]),
+    ...(requiredMissing.length ? [`Resolve required fields: ${requiredMissing.join(", ")}.`] : []),
+    ...(weakFields.length ? [`Review weaker optional fields: ${weakFields.join(", ")}.`] : []),
+    ...(blockingWarnings.length ? [blockingWarnings[0]?.message ?? "Blocking warning still needs attention."] : []),
+    ...(Boolean(input.overrideSnapshot?.overrideApproved)
+      ? ["This package is usable because an override was approved. Re-check the override reason before entry."]
+      : []),
+    ...(Array.isArray(template?.lastChecks) ? (template?.lastChecks as string[]) : [])
+  ];
+
+  return {
+    readyNowBoolean,
+    readyWithOverrideBoolean,
+    needsReviewBoolean,
+    blockedBoolean,
+    cueLabel: readyNowBoolean
+      ? "READY_NOW"
+      : readyWithOverrideBoolean
+        ? "READY_WITH_OVERRIDE"
+        : blockedBoolean
+          ? "BLOCKED"
+          : "NEEDS_REVIEW",
+    lastChecks,
+    summary: readyNowBoolean
+      ? "Ready to enter now. Use this approved artifact and follow the final checks."
+      : readyWithOverrideBoolean
+        ? "Ready to enter with override awareness. Double-check the override and final warning-sensitive values."
+        : blockedBoolean
+          ? "Do not use yet. Blocking review conditions still remain."
+          : "Needs review before final manual listing entry."
+  };
+}
+
+export function buildInternalShareSummarySnapshot(input: {
+  packageId: string;
+  packageName?: string | null;
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  currentApprovedArtifactSummary?: Record<string, unknown> | null;
+  quickCopySummarySnapshot?: Record<string, unknown> | null;
+  finalReviewPromptSnapshot?: Record<string, unknown> | null;
+  artifactHandoffSummarySnapshot?: Record<string, unknown> | null;
+  shortPlainTextSummarySnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  preset?: {
+    shareSummaryFormatSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const template = (input.preset?.shareSummaryFormatSnapshot ?? null) as Record<string, unknown> | null;
+  const warnings = (input.warningSnapshot ?? []).map((warning) => warning.message);
+  const shareBlockSections = [
+    {
+      key: "use-now",
+      label: "What this package is for",
+      value:
+        input.currentApprovedArtifact
+          ? "Use this artifact now for manual Amazon listing prep."
+          : "Reference only. This is not the current approved artifact."
+    },
+    {
+      key: "copy-first",
+      label: "Copy first",
+      value: input.quickCopySummarySnapshot?.quickCopySummary ?? null
+    },
+    {
+      key: "watch",
+      label: "What to watch",
+      value: warnings[0] ?? input.finalReviewPromptSnapshot?.summary ?? "Review the final prompts and warnings before entry."
+    }
+  ];
+
+  return {
+    artifactUseNowSummary:
+      input.currentApprovedArtifactSummary?.summary ??
+      (input.currentApprovedArtifact
+        ? "This is the current approved artifact to use now."
+        : "This package is not the artifact to use now."),
+    shareBlockSections,
+    shortShareText:
+      input.shortPlainTextSummarySnapshot?.text ??
+      `${input.packageName ?? "Listing prep package"} | ${input.approvalState} | ${input.currentApprovedArtifact ? "Use now" : "Historical"}`,
+    whatThisIsFor:
+      (template?.whatThisIsFor as string | undefined) ??
+      "Internal handoff summary for manual Amazon listing prep.",
+    whatToWatch:
+      warnings[0] ??
+      (template?.whatToWatch as string | undefined) ??
+      "Review warnings, overrides, and final prompts before manual entry.",
+    summary:
+      input.currentApprovedArtifact
+        ? "Internal handoff summary is ready to share with the operator using the approved artifact."
+        : "Internal handoff summary is available, but this package is not the current artifact."
+  };
+}
+
+export function buildShortShareTextSnapshot(input: {
+  packageName?: string | null;
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  quickCopySummarySnapshot?: Record<string, unknown> | null;
+  completionCueSnapshot?: Record<string, unknown> | null;
+  preset?: {
+    shareSummaryFormatSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const template = (input.preset?.shareSummaryFormatSnapshot ?? null) as Record<string, unknown> | null;
+  const text = [
+    input.packageName ?? "Listing prep package",
+    input.currentApprovedArtifact ? "Use now" : "Historical",
+    input.approvalState,
+    input.completionCueSnapshot?.cueLabel ?? "REVIEW",
+    input.quickCopySummarySnapshot?.quickCopySummary ?? null
+  ]
+    .filter(Boolean)
+    .join(" | ");
+
+  return {
+    text,
+    formatLabel: (template?.formatLabel as string | undefined) ?? "internal-share-v1"
+  };
+}
+
+export function buildLastChangeSummarySnapshot(input: {
+  approvalHistorySnapshot?: Record<string, unknown> | null;
+  overrideHistorySnapshot?: Record<string, unknown> | null;
+  channelPresetSelectionSummary?: Record<string, unknown> | null;
+}) {
+  const approvalHistory = Array.isArray(input.approvalHistorySnapshot?.history)
+    ? (input.approvalHistorySnapshot?.history as Array<Record<string, unknown>>)
+    : [];
+  const lastApproval = approvalHistory[approvalHistory.length - 1] ?? null;
+  const latestOverride =
+    (input.overrideHistorySnapshot?.latestOverride as Record<string, unknown> | null) ?? null;
+  const presetSummary = input.channelPresetSelectionSummary ?? null;
+
+  return {
+    lastApprovalAction: lastApproval?.action ?? null,
+    lastApprovalAt: lastApproval?.createdAt ?? null,
+    lastPresetChange:
+      typeof presetSummary?.summary === "string" ? String(presetSummary.summary) : null,
+    lastOverrideSummary:
+      typeof latestOverride?.summary === "string" ? String(latestOverride.summary) : null,
+    summary:
+      typeof lastApproval?.action === "string"
+        ? `Last meaningful change: ${String(lastApproval.action)}`
+        : typeof presetSummary?.summary === "string"
+          ? `Last meaningful change: ${String(presetSummary.summary)}`
+          : "No meaningful change summary is available yet."
+  };
+}
+
+export function buildFinalRunbookSnapshot(input: {
+  packageId: string;
+  packageName?: string | null;
+  approvalState: string;
+  currentApprovedArtifactSummary?: Record<string, unknown> | null;
+  quickCopySummarySnapshot?: Record<string, unknown> | null;
+  finalReviewPromptSnapshot?: Record<string, unknown> | null;
+  completionCueSnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+  internalShareSummarySnapshot?: Record<string, unknown> | null;
+  lastChangeSummarySnapshot?: Record<string, unknown> | null;
+  preset?: {
+    finalReviewOrderingSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const ordering =
+    ((input.preset?.finalReviewOrderingSnapshot ?? null) as Record<string, unknown> | null)?.sections;
+
+  const runbookSectionOrder = Array.isArray(ordering)
+    ? (ordering as string[])
+    : ["copy-first", "final-review", "completion-cue", "warnings", "internal-share"];
+
+  return {
+    runbookVersion: "manual-runbook-v1",
+    runbookSectionOrder,
+    headerSummary: {
+      packageId: input.packageId,
+      packageName: input.packageName ?? null,
+      approvalState: input.approvalState,
+      artifactSummary: input.currentApprovedArtifactSummary?.summary ?? null
+    },
+    sections: {
+      copyFirst: input.quickCopySummarySnapshot ?? null,
+      finalReview: input.finalReviewPromptSnapshot ?? null,
+      completionCue: input.completionCueSnapshot ?? null,
+      warnings: {
+        warnings: input.warningSnapshot ?? [],
+        overrideSummary: input.overrideSnapshot ?? null
+      },
+      internalShare: input.internalShareSummarySnapshot ?? null,
+      lastChange: input.lastChangeSummarySnapshot ?? null
+    },
+    runbookSummary:
+      input.completionCueSnapshot?.summary ??
+      input.internalShareSummarySnapshot?.summary ??
+      "Final manual-listing runbook is ready."
+  };
+}
+
 export function buildWorksheetSummarySnapshot(input: {
   worksheet?: Record<string, unknown> | null;
   presetSelectionSummary?: Record<string, unknown> | null;

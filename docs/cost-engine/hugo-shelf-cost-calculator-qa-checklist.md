@@ -98,6 +98,12 @@
 87. Verify the short plain-text summary is concise enough for fast manual Amazon entry
 88. Edit a channel mapping preset to change quick-copy ordering, final-review prompts, or short-summary formatting
 89. Refresh the listing-prep package and confirm quick-copy, final-review, and handoff snapshots update and persist
+90. Verify the final runbook card renders a clear ordered runbook for the current approved artifact
+91. Verify the completion cue card clearly distinguishes ready now, ready with override, needs review, and blocked
+92. Verify the internal share summary card renders a concise handoff block and short share text
+93. Verify the last-change summary card shows the latest meaningful approval/preset/override context without noisy history
+94. Edit a channel mapping preset to change final runbook ordering, completion-cue checks, or share-summary formatting
+95. Refresh the listing-prep package and confirm runbook, completion-cue, share-summary, and last-change snapshots update and persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -126,3 +132,6 @@
 - A user can see the most important copy targets immediately instead of scanning the whole worksheet
 - A user can run a concise final-review pass before manual Amazon entry without digging through approval or warning cards
 - A user can tell at a glance whether the current artifact is still the package to use right now
+- A user can treat the final runbook as the current step-by-step manual listing artifact instead of stitching together multiple cards mentally
+- A user can tell immediately whether they are ready to enter now, ready with override awareness, still need review, or are blocked
+- A user can hand the package to another internal operator with a concise share summary instead of re-explaining the package status manually

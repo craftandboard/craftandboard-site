@@ -8,4 +8,4 @@ Do not do yet:
 - do not replace cost-engine guardrails or listing-prep review logic with spreadsheet-only steps
 
 Exact next cost-engine action:
-- open `/cost-calculator`, load an approved listing-prep package, verify the quick-copy summary, final-review prompts, artifact handoff summary, plain-text worksheet, structured worksheet export, and current approved artifact summary, then run `docs/cost-engine/hugo-shelf-cost-calculator-qa-checklist.md`
+- open `/cost-calculator`, load the current approved listing-prep package, verify the final runbook, completion cue, internal share summary, last-change summary, and current approved artifact state, then run `docs/cost-engine/hugo-shelf-cost-calculator-qa-checklist.md`

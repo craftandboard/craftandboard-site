@@ -33,9 +33,11 @@ import {
   getLaunchGuardrailProfile,
   getLaunchTemplate,
   getChannelMappingPreset,
+  getFinalRunbook,
   getListingPrepPackage,
   getQuickCopySummary,
   getFinalReviewPrompts,
+  getInternalShareSummary,
   getManualListingWorksheet,
   getOperatorWorksheet,
   getPlainTextWorksheet,
@@ -1144,6 +1146,36 @@ router.get("/listing-prep-packages/:listingPrepPackageId/final-review-prompts", 
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getFinalReviewPrompts({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/final-runbook", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getFinalRunbook({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/internal-share-summary", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getInternalShareSummary({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

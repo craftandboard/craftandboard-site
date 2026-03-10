@@ -2899,6 +2899,9 @@ export interface ChannelMappingPresetItem {
   finalReviewPromptTemplateSnapshot: Record<string, unknown> | null;
   quickCopyOrderingSnapshot: Record<string, unknown> | null;
   shortSummaryFormatSnapshot: Record<string, unknown> | null;
+  finalReviewOrderingSnapshot: Record<string, unknown> | null;
+  completionCueTemplateSnapshot: Record<string, unknown> | null;
+  shareSummaryFormatSnapshot: Record<string, unknown> | null;
   notes: string | null;
   presetSnapshot: Record<string, unknown> | null;
   createdAt: string;
@@ -3404,6 +3407,7 @@ export interface CalculationScenarioRecord {
   latestWorksheetSummarySnapshot: Record<string, unknown> | null;
   latestOperatorPromptSummarySnapshot: Record<string, unknown> | null;
   latestQuickCopySummarySnapshot: Record<string, unknown> | null;
+  latestRunbookSummarySnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3441,6 +3445,8 @@ export interface ComparisonSetRecord {
   selectedWorksheetErgonomicsSummary: Record<string, unknown> | null;
   selectedQuickCopySummarySnapshot: Record<string, unknown> | null;
   selectedFinalReviewPromptSnapshot: Record<string, unknown> | null;
+  selectedRunbookVersion: string | null;
+  selectedRunbookSummarySnapshot: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3515,6 +3521,12 @@ export interface ListingPrepPackageRecord {
   artifactHandoffSummarySnapshot: Record<string, unknown> | null;
   shortPlainTextSummarySnapshot: Record<string, unknown> | null;
   quickCopyVersion: string | null;
+  finalRunbookSnapshot: Record<string, unknown> | null;
+  completionCueSnapshot: Record<string, unknown> | null;
+  internalShareSummarySnapshot: Record<string, unknown> | null;
+  shortShareTextSnapshot: Record<string, unknown> | null;
+  runbookVersion: string | null;
+  lastChangeSummarySnapshot: Record<string, unknown> | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4244,10 +4256,16 @@ export async function getListingPrepOperatorWorksheet(listingPrepPackageId: stri
     quickCopySummary: Record<string, unknown> | null;
     finalReviewPrompts: Record<string, unknown> | null;
     artifactHandoffSummary: Record<string, unknown> | null;
+    completionCue: Record<string, unknown> | null;
+    finalRunbook: Record<string, unknown> | null;
+    internalShareSummary: Record<string, unknown> | null;
+    shortShareText: Record<string, unknown> | null;
+    lastChangeSummary: Record<string, unknown> | null;
     shortPlainTextSummary: Record<string, unknown> | null;
     worksheetErgonomicsSummary: Record<string, unknown> | null;
     operatorWorksheetVersion: string | null;
     quickCopyVersion: string | null;
+    runbookVersion: string | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/operator-worksheet`);
@@ -4260,9 +4278,13 @@ export async function getListingPrepWorksheetExport(listingPrepPackageId: string
     copyExportSummary: Record<string, unknown> | null;
     quickCopySummary: Record<string, unknown> | null;
     artifactHandoffSummary: Record<string, unknown> | null;
+    completionCue: Record<string, unknown> | null;
+    internalShareSummary: Record<string, unknown> | null;
+    finalRunbook: Record<string, unknown> | null;
     shortPlainTextSummary: Record<string, unknown> | null;
     worksheetErgonomicsSummary: Record<string, unknown> | null;
     quickCopyVersion: string | null;
+    runbookVersion: string | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/worksheet-export`);
@@ -4274,6 +4296,7 @@ export async function getListingPrepQuickCopySummary(listingPrepPackageId: strin
     quickCopySummary: Record<string, unknown> | null;
     shortPlainTextSummary: Record<string, unknown> | null;
     artifactHandoffSummary: Record<string, unknown> | null;
+    shortShareText: Record<string, unknown> | null;
     quickCopyVersion: string | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
@@ -4285,6 +4308,7 @@ export async function getListingPrepFinalReviewPrompts(listingPrepPackageId: str
     ok: true;
     finalReviewPrompts: Record<string, unknown> | null;
     artifactHandoffSummary: Record<string, unknown> | null;
+    completionCue: Record<string, unknown> | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/final-review-prompts`);
@@ -4298,11 +4322,40 @@ export async function getListingPrepPlainTextWorksheet(listingPrepPackageId: str
     finalReviewPrompts: Record<string, unknown> | null;
     shortPlainTextSummary: Record<string, unknown> | null;
     artifactHandoffSummary: Record<string, unknown> | null;
+    internalShareSummary: Record<string, unknown> | null;
+    completionCue: Record<string, unknown> | null;
     worksheetErgonomicsSummary: Record<string, unknown> | null;
     quickCopyVersion: string | null;
+    runbookVersion: string | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/plain-text-worksheet`);
+}
+
+export async function getListingPrepFinalRunbook(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    finalRunbook: Record<string, unknown> | null;
+    completionCue: Record<string, unknown> | null;
+    internalShareSummary: Record<string, unknown> | null;
+    lastChangeSummary: Record<string, unknown> | null;
+    runbookVersion: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/final-runbook`);
+}
+
+export async function getListingPrepInternalShareSummary(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    internalShareSummary: Record<string, unknown> | null;
+    shortShareText: Record<string, unknown> | null;
+    artifactHandoffSummary: Record<string, unknown> | null;
+    lastChangeSummary: Record<string, unknown> | null;
+    runbookVersion: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/internal-share-summary`);
 }
 
 export interface LeadListItem {

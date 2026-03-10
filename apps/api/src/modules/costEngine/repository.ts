@@ -937,6 +937,12 @@ export async function createListingPrepPackageRecord(input: {
   artifactHandoffSummarySnapshot?: unknown;
   shortPlainTextSummarySnapshot?: unknown;
   quickCopyVersion?: string | null;
+  finalRunbookSnapshot?: unknown;
+  completionCueSnapshot?: unknown;
+  internalShareSummarySnapshot?: unknown;
+  shortShareTextSnapshot?: unknown;
+  runbookVersion?: string | null;
+  lastChangeSummarySnapshot?: unknown;
   currentApprovedArtifact?: boolean;
   notes?: string | null;
   approvedAt?: Date | null;
@@ -987,6 +993,12 @@ export async function createListingPrepPackageRecord(input: {
       artifactHandoffSummarySnapshot: normalizeMetadata(input.artifactHandoffSummarySnapshot),
       shortPlainTextSummarySnapshot: normalizeMetadata(input.shortPlainTextSummarySnapshot),
       quickCopyVersion: input.quickCopyVersion ?? undefined,
+      finalRunbookSnapshot: normalizeMetadata(input.finalRunbookSnapshot),
+      completionCueSnapshot: normalizeMetadata(input.completionCueSnapshot),
+      internalShareSummarySnapshot: normalizeMetadata(input.internalShareSummarySnapshot),
+      shortShareTextSnapshot: normalizeMetadata(input.shortShareTextSnapshot),
+      runbookVersion: input.runbookVersion ?? undefined,
+      lastChangeSummarySnapshot: normalizeMetadata(input.lastChangeSummarySnapshot),
       currentApprovedArtifact: input.currentApprovedArtifact ?? false,
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
@@ -1148,6 +1160,9 @@ export async function createChannelMappingPresetRecord(input: {
   finalReviewPromptTemplateSnapshot?: unknown;
   shortSummaryFormatSnapshot?: unknown;
   worksheetSectionLabelSnapshot?: unknown;
+  finalReviewOrderingSnapshot?: unknown;
+  completionCueTemplateSnapshot?: unknown;
+  shareSummaryFormatSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -1181,6 +1196,9 @@ export async function createChannelMappingPresetRecord(input: {
       finalReviewPromptTemplateSnapshot: normalizeMetadata(input.finalReviewPromptTemplateSnapshot),
       shortSummaryFormatSnapshot: normalizeMetadata(input.shortSummaryFormatSnapshot),
       worksheetSectionLabelSnapshot: normalizeMetadata(input.worksheetSectionLabelSnapshot),
+      finalReviewOrderingSnapshot: normalizeMetadata(input.finalReviewOrderingSnapshot),
+      completionCueTemplateSnapshot: normalizeMetadata(input.completionCueTemplateSnapshot),
+      shareSummaryFormatSnapshot: normalizeMetadata(input.shareSummaryFormatSnapshot),
       notes: input.notes ?? null,
       presetSnapshot: normalizeMetadata(input.presetSnapshot)
     }

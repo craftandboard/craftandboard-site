@@ -14,9 +14,13 @@ import {
   buildChannelHandoffSummary,
   buildCopyExportSnapshot,
   buildCurrentApprovedArtifactSummary,
+  buildCompletionCueSnapshot,
   buildFinalReviewPromptSnapshot,
+  buildFinalRunbookSnapshot,
   buildArtifactHandoffSummarySnapshot,
+  buildInternalShareSummarySnapshot,
   buildLaunchContextSnapshot,
+  buildLastChangeSummarySnapshot,
   buildManualAmazonExportSnapshot,
   buildManualListingWorksheet,
   buildOperatorFieldChecklist,
@@ -25,6 +29,7 @@ import {
   buildPlainTextWorksheet,
   buildPresetSelectionSummary,
   buildQuickCopySummarySnapshot,
+  buildShortShareTextSnapshot,
   buildShortPlainTextSummary,
   applyMarketplaceMappingTemplate,
   buildMarketplaceFieldValidationResult,
@@ -267,6 +272,9 @@ function mapChannelMappingPreset(record: any) {
     finalReviewPromptTemplateSnapshot: record.finalReviewPromptTemplateSnapshot ?? null,
     quickCopyOrderingSnapshot: record.quickCopyOrderingSnapshot ?? null,
     shortSummaryFormatSnapshot: record.shortSummaryFormatSnapshot ?? null,
+    finalReviewOrderingSnapshot: record.finalReviewOrderingSnapshot ?? null,
+    completionCueTemplateSnapshot: record.completionCueTemplateSnapshot ?? null,
+    shareSummaryFormatSnapshot: record.shareSummaryFormatSnapshot ?? null,
     notes: record.notes ?? null,
     presetSnapshot: record.presetSnapshot ?? null
   };
@@ -744,6 +752,75 @@ function buildListingArtifactsForScenario(input: {
         }
       : null
   });
+  const completionCueSnapshot = buildCompletionCueSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    preset: input.channelPreset
+      ? {
+          completionCueTemplateSnapshot:
+            input.channelPreset.completionCueTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const internalShareSummarySnapshot = buildInternalShareSummarySnapshot({
+    packageId: input.packageId ?? "pending-package",
+    packageName: `${input.scenarioRecord.name} listing prep`,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    currentApprovedArtifactSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    artifactHandoffSummarySnapshot,
+    shortPlainTextSummarySnapshot,
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    preset: input.channelPreset
+      ? {
+          shareSummaryFormatSnapshot:
+            input.channelPreset.shareSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const shortShareTextSnapshot = buildShortShareTextSnapshot({
+    packageName: `${input.scenarioRecord.name} listing prep`,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    quickCopySummarySnapshot,
+    completionCueSnapshot,
+    preset: input.channelPreset
+      ? {
+          shareSummaryFormatSnapshot:
+            input.channelPreset.shareSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const lastChangeSummarySnapshot = buildLastChangeSummarySnapshot({
+    approvalHistorySnapshot,
+    overrideHistorySnapshot,
+    channelPresetSelectionSummary: input.presetSelectionSummary ?? null
+  });
+  const runbookVersion = "manual-runbook-v1";
+  const finalRunbookSnapshot = buildFinalRunbookSnapshot({
+    packageId: input.packageId ?? "pending-package",
+    packageName: `${input.scenarioRecord.name} listing prep`,
+    approvalState: approval.approvalState,
+    currentApprovedArtifactSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    completionCueSnapshot,
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    overrideSnapshot,
+    internalShareSummarySnapshot,
+    lastChangeSummarySnapshot,
+    preset: input.channelPreset
+      ? {
+          finalReviewOrderingSnapshot:
+            input.channelPreset.finalReviewOrderingSnapshot ?? null
+        }
+      : null
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: input.presetSelectionSummary ?? null
@@ -798,6 +875,12 @@ function buildListingArtifactsForScenario(input: {
     artifactHandoffSummarySnapshot,
     shortPlainTextSummarySnapshot,
     quickCopyVersion,
+    finalRunbookSnapshot,
+    completionCueSnapshot,
+    internalShareSummarySnapshot,
+    shortShareTextSnapshot,
+    runbookVersion,
+    lastChangeSummarySnapshot,
     channelPresetSelectionSummary: input.presetSelectionSummary ?? null
   };
 }
@@ -907,6 +990,7 @@ function mapScenario(record: any) {
     latestWorksheetSummarySnapshot: record.latestWorksheetSummarySnapshot ?? null,
     latestOperatorPromptSummarySnapshot: record.latestOperatorPromptSummarySnapshot ?? null,
     latestQuickCopySummarySnapshot: record.latestQuickCopySummarySnapshot ?? null,
+    latestRunbookSummarySnapshot: record.latestRunbookSummarySnapshot ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -951,6 +1035,8 @@ function mapComparisonSet(record: any) {
       record.selectedQuickCopySummarySnapshot ?? null,
     selectedFinalReviewPromptSnapshot:
       record.selectedFinalReviewPromptSnapshot ?? null,
+    selectedRunbookVersion: record.selectedRunbookVersion ?? null,
+    selectedRunbookSummarySnapshot: record.selectedRunbookSummarySnapshot ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -1010,6 +1096,12 @@ function mapListingPrepPackage(record: any) {
     artifactHandoffSummarySnapshot: record.artifactHandoffSummarySnapshot ?? null,
     shortPlainTextSummarySnapshot: record.shortPlainTextSummarySnapshot ?? null,
     quickCopyVersion: record.quickCopyVersion ?? null,
+    finalRunbookSnapshot: record.finalRunbookSnapshot ?? null,
+    completionCueSnapshot: record.completionCueSnapshot ?? null,
+    internalShareSummarySnapshot: record.internalShareSummarySnapshot ?? null,
+    shortShareTextSnapshot: record.shortShareTextSnapshot ?? null,
+    runbookVersion: record.runbookVersion ?? null,
+    lastChangeSummarySnapshot: record.lastChangeSummarySnapshot ?? null,
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
     notes: record.notes ?? null,
     approvedAt: record.approvedAt?.toISOString() ?? null,
@@ -1563,6 +1655,9 @@ export async function createChannelMappingPreset(input: {
   quickCopyOrderingSnapshot?: unknown;
   shortSummaryFormatSnapshot?: unknown;
   worksheetSectionLabelSnapshot?: unknown;
+  finalReviewOrderingSnapshot?: unknown;
+  completionCueTemplateSnapshot?: unknown;
+  shareSummaryFormatSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -2664,7 +2759,9 @@ export async function getComparisonSetExportSummary(input: {
     selectedWorksheetSummarySnapshot: set.selectedWorksheetSummarySnapshot ?? null,
     selectedOperatorWorksheetVersion: set.selectedOperatorWorksheetVersion ?? null,
     selectedOperatorWorksheetSummarySnapshot:
-      set.selectedOperatorWorksheetSummarySnapshot ?? null
+      set.selectedOperatorWorksheetSummarySnapshot ?? null,
+    selectedRunbookVersion: set.selectedRunbookVersion ?? null,
+    selectedRunbookSummarySnapshot: set.selectedRunbookSummarySnapshot ?? null
   };
 }
 
@@ -2780,6 +2877,12 @@ export async function buildListingPrepPackage(input: {
     artifactHandoffSummarySnapshot: artifacts.artifactHandoffSummarySnapshot,
     shortPlainTextSummarySnapshot: artifacts.shortPlainTextSummarySnapshot,
     quickCopyVersion: artifacts.quickCopyVersion,
+    finalRunbookSnapshot: artifacts.finalRunbookSnapshot,
+    completionCueSnapshot: artifacts.completionCueSnapshot,
+    internalShareSummarySnapshot: artifacts.internalShareSummarySnapshot,
+    shortShareTextSnapshot: artifacts.shortShareTextSnapshot,
+    runbookVersion: artifacts.runbookVersion,
+    lastChangeSummarySnapshot: artifacts.lastChangeSummarySnapshot,
     currentApprovedArtifact: false,
     notes: input.notes ?? null,
     approvedAt: null
@@ -2798,6 +2901,7 @@ export async function buildListingPrepPackage(input: {
       latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
       latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
       latestQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
+      latestRunbookSummarySnapshot: artifacts.finalRunbookSnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: artifacts.operatorPromptSnapshot?.summary ?? null,
         criticalPrompts: artifacts.operatorPromptSnapshot?.criticalPrompts ?? [],
@@ -2838,7 +2942,9 @@ export async function buildListingPrepPackage(input: {
       selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot,
       selectedWorksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary,
       selectedQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
-      selectedFinalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot
+      selectedFinalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot,
+      selectedRunbookVersion: artifacts.runbookVersion,
+      selectedRunbookSummarySnapshot: artifacts.finalRunbookSnapshot
     })
   });
 
@@ -3266,7 +3372,75 @@ export async function evaluateMarketplaceFieldValidation(input: {
         }
       : null
   });
-
+  const completionCueSnapshot = buildCompletionCueSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    preset: record.channelMappingPreset
+      ? {
+          completionCueTemplateSnapshot:
+            record.channelMappingPreset.completionCueTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const internalShareSummarySnapshot = buildInternalShareSummarySnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    currentApprovedArtifactSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    artifactHandoffSummarySnapshot,
+    shortPlainTextSummarySnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    preset: record.channelMappingPreset
+      ? {
+          shareSummaryFormatSnapshot:
+            record.channelMappingPreset.shareSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const shortShareTextSnapshot = buildShortShareTextSnapshot({
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    quickCopySummarySnapshot,
+    completionCueSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          shareSummaryFormatSnapshot:
+            record.channelMappingPreset.shareSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const lastChangeSummarySnapshot = buildLastChangeSummarySnapshot({
+    approvalHistorySnapshot,
+    overrideHistorySnapshot: (record.overrideHistorySnapshot ?? null) as Record<string, unknown> | null,
+    channelPresetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
+  const runbookVersion = record.runbookVersion ?? "manual-runbook-v1";
+  const finalRunbookSnapshot = buildFinalRunbookSnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifactSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    completionCueSnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    overrideSnapshot,
+    internalShareSummarySnapshot,
+    lastChangeSummarySnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          finalReviewOrderingSnapshot:
+            record.channelMappingPreset.finalReviewOrderingSnapshot ?? null
+        }
+      : null
+  });
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
     listingPrepPackageId: input.listingPrepPackageId,
@@ -3295,6 +3469,12 @@ export async function evaluateMarketplaceFieldValidation(input: {
       artifactHandoffSummarySnapshot,
       shortPlainTextSummarySnapshot,
       quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1",
+      finalRunbookSnapshot,
+      completionCueSnapshot,
+      internalShareSummarySnapshot,
+      shortShareTextSnapshot,
+      runbookVersion,
+      lastChangeSummarySnapshot,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
       approvedAt: null
@@ -3331,7 +3511,9 @@ export async function evaluateMarketplaceFieldValidation(input: {
         selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
         selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary,
         selectedQuickCopySummarySnapshot: quickCopySummarySnapshot,
-        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot
+        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot,
+        selectedRunbookVersion: runbookVersion,
+        selectedRunbookSummarySnapshot: finalRunbookSnapshot
       })
     });
   }
@@ -3580,6 +3762,75 @@ export async function requestPriceFloorOverride(input: {
         }
       : null
   });
+  const completionCueSnapshot = buildCompletionCueSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    preset: record.channelMappingPreset
+      ? {
+          completionCueTemplateSnapshot:
+            record.channelMappingPreset.completionCueTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const internalShareSummarySnapshot = buildInternalShareSummarySnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    currentApprovedArtifactSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    artifactHandoffSummarySnapshot,
+    shortPlainTextSummarySnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    preset: record.channelMappingPreset
+      ? {
+          shareSummaryFormatSnapshot:
+            record.channelMappingPreset.shareSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const shortShareTextSnapshot = buildShortShareTextSnapshot({
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    quickCopySummarySnapshot,
+    completionCueSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          shareSummaryFormatSnapshot:
+            record.channelMappingPreset.shareSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const lastChangeSummarySnapshot = buildLastChangeSummarySnapshot({
+    approvalHistorySnapshot,
+    overrideHistorySnapshot,
+    channelPresetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
+  const runbookVersion = record.runbookVersion ?? "manual-runbook-v1";
+  const finalRunbookSnapshot = buildFinalRunbookSnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifactSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    completionCueSnapshot,
+    warningSnapshot: strongerAlerts.warnings as any,
+    overrideSnapshot,
+    internalShareSummarySnapshot,
+    lastChangeSummarySnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          finalReviewOrderingSnapshot:
+            record.channelMappingPreset.finalReviewOrderingSnapshot ?? null
+        }
+      : null
+  });
 
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -3611,6 +3862,12 @@ export async function requestPriceFloorOverride(input: {
       artifactHandoffSummarySnapshot,
       shortPlainTextSummarySnapshot,
       quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1",
+      finalRunbookSnapshot,
+      completionCueSnapshot,
+      internalShareSummarySnapshot,
+      shortShareTextSnapshot,
+      runbookVersion,
+      lastChangeSummarySnapshot,
       currentApprovedArtifact: false,
       approvedAt: null,
       approvedByMembershipId: input.approvedByMembershipId ?? null
@@ -3629,6 +3886,7 @@ export async function requestPriceFloorOverride(input: {
       latestApprovalSummarySnapshot: approvalSummarySnapshot,
       latestWorksheetSummarySnapshot: worksheetSummarySnapshot,
       latestQuickCopySummarySnapshot: quickCopySummarySnapshot,
+      latestRunbookSummarySnapshot: finalRunbookSnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: operatorPromptSnapshot.summary ?? null,
         criticalPrompts: operatorPromptSnapshot.criticalPrompts ?? [],
@@ -3669,7 +3927,9 @@ export async function requestPriceFloorOverride(input: {
         selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
         selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary,
         selectedQuickCopySummarySnapshot: quickCopySummarySnapshot,
-        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot
+        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot,
+        selectedRunbookVersion: runbookVersion,
+        selectedRunbookSummarySnapshot: finalRunbookSnapshot
       })
     });
   }
@@ -3987,6 +4247,75 @@ export async function approveListingPrepPackage(input: {
         }
       : null
   });
+  const completionCueSnapshot = buildCompletionCueSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
+    checklistSnapshot: operatorChecklistSnapshot,
+    warningSnapshot: Array.isArray(record.warningSnapshot) ? (record.warningSnapshot as any) : [],
+    preset: record.channelMappingPreset
+      ? {
+          completionCueTemplateSnapshot:
+            record.channelMappingPreset.completionCueTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const internalShareSummarySnapshot = buildInternalShareSummarySnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    currentApprovedArtifactSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    artifactHandoffSummarySnapshot,
+    shortPlainTextSummarySnapshot,
+    warningSnapshot: Array.isArray(record.warningSnapshot) ? (record.warningSnapshot as any) : [],
+    preset: record.channelMappingPreset
+      ? {
+          shareSummaryFormatSnapshot:
+            record.channelMappingPreset.shareSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const shortShareTextSnapshot = buildShortShareTextSnapshot({
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    quickCopySummarySnapshot,
+    completionCueSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          shareSummaryFormatSnapshot:
+            record.channelMappingPreset.shareSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const lastChangeSummarySnapshot = buildLastChangeSummarySnapshot({
+    approvalHistorySnapshot,
+    overrideHistorySnapshot: (record.overrideHistorySnapshot ?? null) as Record<string, unknown> | null,
+    channelPresetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
+  const runbookVersion = record.runbookVersion ?? "manual-runbook-v1";
+  const finalRunbookSnapshot = buildFinalRunbookSnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifactSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    completionCueSnapshot,
+    warningSnapshot: Array.isArray(record.warningSnapshot) ? (record.warningSnapshot as any) : [],
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
+    internalShareSummarySnapshot,
+    lastChangeSummarySnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          finalReviewOrderingSnapshot:
+            record.channelMappingPreset.finalReviewOrderingSnapshot ?? null
+        }
+      : null
+  });
 
   await clearCurrentApprovedArtifactsForScope({
     organizationId: input.organizationId,
@@ -4020,6 +4349,12 @@ export async function approveListingPrepPackage(input: {
       artifactHandoffSummarySnapshot,
       shortPlainTextSummarySnapshot,
       quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1",
+      finalRunbookSnapshot,
+      completionCueSnapshot,
+      internalShareSummarySnapshot,
+      shortShareTextSnapshot,
+      runbookVersion,
+      lastChangeSummarySnapshot,
       approvedAt,
       approvedByMembershipId: input.approvedByMembershipId ?? null,
       currentApprovedArtifact: true
@@ -4033,6 +4368,7 @@ export async function approveListingPrepPackage(input: {
       latestApprovalSummarySnapshot: approvalSummarySnapshot,
       latestWorksheetSummarySnapshot: worksheetSummarySnapshot,
       latestQuickCopySummarySnapshot: quickCopySummarySnapshot,
+      latestRunbookSummarySnapshot: finalRunbookSnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: operatorPromptSnapshot.summary ?? null,
         criticalPrompts: operatorPromptSnapshot.criticalPrompts ?? [],
@@ -4056,7 +4392,9 @@ export async function approveListingPrepPackage(input: {
         selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
         selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary,
         selectedQuickCopySummarySnapshot: quickCopySummarySnapshot,
-        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot
+        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot,
+        selectedRunbookVersion: runbookVersion,
+        selectedRunbookSummarySnapshot: finalRunbookSnapshot
       })
     });
   }
@@ -4104,10 +4442,16 @@ export async function getOperatorWorksheet(input: {
     quickCopySummary: record.quickCopySummarySnapshot ?? null,
     finalReviewPrompts: record.finalReviewPromptSnapshot ?? null,
     artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    completionCue: record.completionCueSnapshot ?? null,
+    finalRunbook: record.finalRunbookSnapshot ?? null,
+    internalShareSummary: record.internalShareSummarySnapshot ?? null,
+    shortShareText: record.shortShareTextSnapshot ?? null,
+    lastChangeSummary: record.lastChangeSummarySnapshot ?? null,
     shortPlainTextSummary: record.shortPlainTextSummarySnapshot ?? null,
     worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
     operatorWorksheetVersion: record.operatorWorksheetVersion ?? null,
     quickCopyVersion: record.quickCopyVersion ?? null,
+    runbookVersion: record.runbookVersion ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };
@@ -4127,9 +4471,13 @@ export async function getWorksheetExport(input: {
     copyExportSummary: record.copyExportSnapshot ?? null,
     quickCopySummary: record.quickCopySummarySnapshot ?? null,
     artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    completionCue: record.completionCueSnapshot ?? null,
+    internalShareSummary: record.internalShareSummarySnapshot ?? null,
+    finalRunbook: record.finalRunbookSnapshot ?? null,
     shortPlainTextSummary: record.shortPlainTextSummarySnapshot ?? null,
     worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
     quickCopyVersion: record.quickCopyVersion ?? null,
+    runbookVersion: record.runbookVersion ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };
@@ -4148,6 +4496,7 @@ export async function getQuickCopySummary(input: {
     quickCopySummary: record.quickCopySummarySnapshot ?? null,
     shortPlainTextSummary: record.shortPlainTextSummarySnapshot ?? null,
     artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    shortShareText: record.shortShareTextSnapshot ?? null,
     quickCopyVersion: record.quickCopyVersion ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
@@ -4166,6 +4515,7 @@ export async function getFinalReviewPrompts(input: {
     ok: true,
     finalReviewPrompts: record.finalReviewPromptSnapshot ?? null,
     artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    completionCue: record.completionCueSnapshot ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };
@@ -4186,8 +4536,51 @@ export async function getPlainTextWorksheet(input: {
     finalReviewPrompts: record.finalReviewPromptSnapshot ?? null,
     shortPlainTextSummary: record.shortPlainTextSummarySnapshot ?? null,
     artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    internalShareSummary: record.internalShareSummarySnapshot ?? null,
+    completionCue: record.completionCueSnapshot ?? null,
     worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
     quickCopyVersion: record.quickCopyVersion ?? null,
+    runbookVersion: record.runbookVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getFinalRunbook(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    finalRunbook: record.finalRunbookSnapshot ?? null,
+    completionCue: record.completionCueSnapshot ?? null,
+    internalShareSummary: record.internalShareSummarySnapshot ?? null,
+    lastChangeSummary: record.lastChangeSummarySnapshot ?? null,
+    runbookVersion: record.runbookVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getInternalShareSummary(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    internalShareSummary: record.internalShareSummarySnapshot ?? null,
+    shortShareText: record.shortShareTextSnapshot ?? null,
+    artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    lastChangeSummary: record.lastChangeSummarySnapshot ?? null,
+    runbookVersion: record.runbookVersion ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };

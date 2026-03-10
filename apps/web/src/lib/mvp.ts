@@ -149,3 +149,101 @@ export function getConversionStatusLabel(value: string | null | undefined) {
       return humanizeToken(value);
   }
 }
+
+export function isAcceptanceCompleted(value: string | null | undefined) {
+  const normalized = (value ?? "").toUpperCase();
+  return normalized === "ACCEPTED" || normalized === "HANDOFF_ACCEPTED";
+}
+
+export function needsNewAcceptanceLink(value: string | null | undefined) {
+  const normalized = (value ?? "").toUpperCase();
+  return (
+    normalized === "" ||
+    normalized === "EXPIRED" ||
+    normalized === "REVOKED" ||
+    normalized === "FAILED" ||
+    normalized === "SUBMITTED" ||
+    normalized === "HANDOFF_ACCEPTED" ||
+    normalized === "HANDOFF_REJECTED"
+  );
+}
+
+export function getPilotWorkflowStatusLabel(input: {
+  hasProposal: boolean;
+  hasActiveLink: boolean;
+  linkNeedsReissue: boolean;
+  acceptanceCompleted: boolean;
+  depositRequired: boolean;
+  depositOutstandingAmountCents: number;
+  conversionStatus?: string | null;
+  projectCreated: boolean;
+  blockerCount: number;
+}) {
+  if (input.blockerCount > 0) {
+    return "Blocked by pilot issue";
+  }
+  if (!input.hasProposal) {
+    return "Waiting on proposal";
+  }
+  if (input.projectCreated || (input.conversionStatus ?? "").toUpperCase() === "CONVERTED") {
+    return "Project created";
+  }
+  if (!input.acceptanceCompleted) {
+    if (input.linkNeedsReissue) {
+      return "Needs new acceptance link";
+    }
+    if (input.hasActiveLink) {
+      return "Waiting on customer acceptance";
+    }
+    return "Waiting on customer acceptance";
+  }
+  if (input.depositRequired && input.depositOutstandingAmountCents > 0) {
+    return "Waiting on deposit";
+  }
+  if ((input.conversionStatus ?? "").toUpperCase() === "ELIGIBLE") {
+    return "Ready to convert";
+  }
+  if ((input.conversionStatus ?? "").toUpperCase() === "BLOCKED") {
+    return "Conversion blocked";
+  }
+  return "Ready for next action";
+}
+
+export function getPilotNextActionLabel(input: {
+  hasProposal: boolean;
+  hasActiveLink: boolean;
+  linkNeedsReissue: boolean;
+  acceptanceCompleted: boolean;
+  depositRequired: boolean;
+  depositRequestedAmountCents: number;
+  depositOutstandingAmountCents: number;
+  conversionStatus?: string | null;
+  projectCreated: boolean;
+  blockerCount: number;
+}) {
+  if (input.blockerCount > 0) {
+    return "Review blocker issue";
+  }
+  if (!input.hasProposal) {
+    return "Create proposal";
+  }
+  if (!input.acceptanceCompleted) {
+    if (input.linkNeedsReissue || !input.hasActiveLink) {
+      return "Issue fresh acceptance link";
+    }
+    return "Wait for customer acceptance";
+  }
+  if (input.depositRequired && input.depositRequestedAmountCents <= 0) {
+    return "Request deposit";
+  }
+  if (input.depositRequired && input.depositOutstandingAmountCents > 0) {
+    return "Wait for deposit";
+  }
+  if (input.projectCreated || (input.conversionStatus ?? "").toUpperCase() === "CONVERTED") {
+    return "Project ready";
+  }
+  if ((input.conversionStatus ?? "").toUpperCase() === "ELIGIBLE") {
+    return "Convert to project";
+  }
+  return "Evaluate conversion";
+}

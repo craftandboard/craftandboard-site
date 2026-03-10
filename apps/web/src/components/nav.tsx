@@ -9,6 +9,7 @@ const sections = [
     links: [
       { href: "/leads", label: "Leads" },
       { href: "/projects", label: "Projects" },
+      { href: "/pilot-ops", label: "Pilot Ops" },
       { href: "/pilot-feedback", label: "Pilot Feedback" },
       { href: "/settings", label: "Settings" }
     ]

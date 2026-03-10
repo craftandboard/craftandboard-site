@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
+  approveCostListingPrepPackage,
+  applyChannelMappingPresetToListingPrepPackage,
   buildCostListingPrepPackage,
   calculateShelfCost,
   compareShelfCostScenarios,
   createAmazonFeePreset,
+  createChannelMappingPreset,
   createCostProfile,
   createEdgeBandCostRule,
   createLaunchGuardrailProfile,
@@ -29,6 +32,7 @@ import {
   saveCostComparisonSet,
   saveShelfCostCalculation,
   updateAmazonFeePreset,
+  updateChannelMappingPreset,
   updateCostProfile,
   updateLaunchGuardrailProfile,
   updateLaunchTemplate,
@@ -51,6 +55,7 @@ import {
 } from "../lib/api";
 import { CostAssumptionsPanel } from "./cost-assumptions-panel";
 import { AmazonFeePresetEditor } from "./amazon-fee-preset-editor";
+import { ChannelMappingPresetEditor } from "./channel-mapping-preset-editor";
 import { CostBreakdownCard } from "./cost-breakdown-card";
 import { CostHistoryList } from "./cost-history-list";
 import { LaunchCandidateHandoffCard } from "./launch-candidate-handoff-card";
@@ -61,7 +66,9 @@ import { LaunchRecommendationCard } from "./launch-recommendation-card";
 import { LaunchRiskSummaryCard } from "./launch-risk-summary-card";
 import { LaunchTemplateEditor } from "./launch-template-editor";
 import { ListingPrepPackageCard } from "./listing-prep-package-card";
+import { ListingPrepApprovalCard } from "./listing-prep-approval-card";
 import { ListingPrepFieldCard } from "./listing-prep-field-card";
+import { ManualAmazonExportCard } from "./manual-amazon-export-card";
 import { MarketplaceMappingTemplateEditor } from "./marketplace-mapping-template-editor";
 import { MarketplaceMappingValidationCard } from "./marketplace-mapping-validation-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
@@ -145,6 +152,7 @@ export function CostCalculatorForm() {
     shippingBufferCents: "",
     guardrailProfileId: "",
     marketplaceMappingTemplateId: "",
+    channelMappingPresetId: "",
     comparisonName: "Launch pricing comparison",
     comparisonNotes: ""
   });
@@ -262,7 +270,9 @@ export function CostCalculatorForm() {
       guardrailProfileId:
         current.guardrailProfileId || selectedProfile.launchGuardrailProfiles[0]?.id || "",
       marketplaceMappingTemplateId:
-        current.marketplaceMappingTemplateId || selectedProfile.marketplaceMappingTemplates[0]?.id || ""
+        current.marketplaceMappingTemplateId || selectedProfile.marketplaceMappingTemplates[0]?.id || "",
+      channelMappingPresetId:
+        current.channelMappingPresetId || selectedProfile.channelMappingPresets[0]?.id || ""
     }));
   }, [selectedProfile]);
 
@@ -276,7 +286,8 @@ export function CostCalculatorForm() {
       shippingZones: selectedProfile?.shippingZoneRules ?? [],
       launchTemplates: selectedProfile?.launchTemplates ?? [],
       launchGuardrailProfiles: selectedProfile?.launchGuardrailProfiles ?? guardrailProfiles,
-      marketplaceMappingTemplates: selectedProfile?.marketplaceMappingTemplates ?? []
+      marketplaceMappingTemplates: selectedProfile?.marketplaceMappingTemplates ?? [],
+      channelMappingPresets: selectedProfile?.channelMappingPresets ?? []
     }),
     [guardrailProfiles, selectedProfile]
   );
@@ -536,7 +547,9 @@ export function CostCalculatorForm() {
             guardrailProfileId: comparisonSet.scenarios[0]?.scenario.guardrailProfileId ?? "",
             marketplaceMappingTemplateId:
               selectedListingPrepPackage?.marketplaceMappingTemplateId ??
-              current.marketplaceMappingTemplateId
+              current.marketplaceMappingTemplateId,
+            channelMappingPresetId:
+              selectedListingPrepPackage?.channelMappingPresetId ?? current.channelMappingPresetId
           }));
           setScenarios(
             comparisonSet.scenarios.map((entry) => {
@@ -1078,6 +1091,58 @@ export function CostCalculatorForm() {
     });
   }
 
+  function handleCreateChannelMappingPreset(formData: FormData) {
+    if (!selectedProfileId) return;
+    startTransition(() => {
+      void createChannelMappingPreset(selectedProfileId, {
+        name: String(formData.get("name") ?? ""),
+        channelCode: "AMAZON_MANUAL",
+        status: String(formData.get("status") ?? "ACTIVE") as "ACTIVE" | "ARCHIVED",
+        productLabelFormat: String(formData.get("productLabelFormat") ?? "") || null,
+        skuFormat: String(formData.get("skuFormat") ?? "") || null,
+        includeWarningNotes: String(formData.get("includeWarningNotes") ?? "") === "true",
+        includeOverrideNotes: String(formData.get("includeOverrideNotes") ?? "") === "true",
+        dimensionsFormat: String(formData.get("dimensionsFormat") ?? "") || null,
+        materialFormat: String(formData.get("materialFormat") ?? "") || null,
+        packagingFormat: String(formData.get("packagingFormat") ?? "") || null,
+        pricingFormat: String(formData.get("pricingFormat") ?? "") || null,
+        notes: String(formData.get("notes") ?? "") || null
+      })
+        .then(() => refreshAll(selectedProfileId))
+        .then(() => setSuccess("Channel mapping preset added."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to add channel mapping preset.")
+        );
+    });
+  }
+
+  function handleUpdateChannelMappingPreset(
+    channelMappingPresetId: string,
+    formData: FormData
+  ) {
+    startTransition(() => {
+      void updateChannelMappingPreset(channelMappingPresetId, {
+        name: String(formData.get("name") ?? ""),
+        channelCode: "AMAZON_MANUAL",
+        status: String(formData.get("status") ?? "ACTIVE"),
+        productLabelFormat: String(formData.get("productLabelFormat") ?? "") || null,
+        skuFormat: String(formData.get("skuFormat") ?? "") || null,
+        includeWarningNotes: String(formData.get("includeWarningNotes") ?? "") === "true",
+        includeOverrideNotes: String(formData.get("includeOverrideNotes") ?? "") === "true",
+        dimensionsFormat: String(formData.get("dimensionsFormat") ?? "") || null,
+        materialFormat: String(formData.get("materialFormat") ?? "") || null,
+        packagingFormat: String(formData.get("packagingFormat") ?? "") || null,
+        pricingFormat: String(formData.get("pricingFormat") ?? "") || null,
+        notes: String(formData.get("notes") ?? "") || null
+      })
+        .then(() => refreshAll(selectedProfileId))
+        .then(() => setSuccess("Channel mapping preset updated."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to update channel mapping preset.")
+        );
+    });
+  }
+
   function handleApplyLaunchTemplate(index: number, templateId: string) {
     if (!templateId) return;
     const template = options.launchTemplates.find((item) => item.id === templateId);
@@ -1153,7 +1218,8 @@ export function CostCalculatorForm() {
     startTransition(() => {
       void buildCostListingPrepPackage(comparisonSetId, {
         selectedScenarioId: comparison?.selectedLaunchScenarioId ?? null,
-        marketplaceMappingTemplateId: form.marketplaceMappingTemplateId || null
+        marketplaceMappingTemplateId: form.marketplaceMappingTemplateId || null,
+        channelMappingPresetId: form.channelMappingPresetId || null
       })
         .then((payload) => {
           setListingPrepPackage(payload.listingPrepPackage);
@@ -1183,6 +1249,33 @@ export function CostCalculatorForm() {
         .then(() => setSuccess("Listing-prep package refreshed."))
         .catch((caught) =>
           setError(caught instanceof Error ? caught.message : "Failed to refresh listing-prep package.")
+        );
+    });
+  }
+
+  function handleApplyChannelPreset() {
+    if (!listingPrepPackage) {
+      setError("Build a listing-prep package before applying a channel preset.");
+      return;
+    }
+    if (!form.channelMappingPresetId) {
+      setError("Choose a channel mapping preset first.");
+      return;
+    }
+
+    startTransition(() => {
+      void applyChannelMappingPresetToListingPrepPackage(listingPrepPackage.id, {
+        channelMappingPresetId: form.channelMappingPresetId
+      })
+        .then((payload) => {
+          setListingPrepPackage(payload.listingPrepPackage);
+          if (activeComparisonSetId) {
+            return loadComparisonSet(activeComparisonSetId);
+          }
+        })
+        .then(() => setSuccess("Channel mapping preset applied."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to apply channel mapping preset.")
         );
     });
   }
@@ -1228,6 +1321,27 @@ export function CostCalculatorForm() {
         .then(() => setSuccess("Price-floor override review saved."))
         .catch((caught) =>
           setError(caught instanceof Error ? caught.message : "Failed to save price-floor override review.")
+        );
+    });
+  }
+
+  function handleApproveListingPrepPackage() {
+    if (!listingPrepPackage) {
+      setError("Build a listing-prep package before approving it.");
+      return;
+    }
+
+    startTransition(() => {
+      void approveCostListingPrepPackage(listingPrepPackage.id)
+        .then((payload) => {
+          setListingPrepPackage(payload.listingPrepPackage);
+          if (activeComparisonSetId) {
+            return loadComparisonSet(activeComparisonSetId);
+          }
+        })
+        .then(() => setSuccess("Listing-prep package approved for manual Amazon handoff."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to approve listing-prep package.")
         );
     });
   }
@@ -1285,6 +1399,7 @@ export function CostCalculatorForm() {
           <label className="text-sm text-slate-300">Shipping zone<select value={form.shippingZoneRuleId} onChange={(event) => updateField("shippingZoneRuleId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">Base shipping only</option>{options.shippingZones.map((rule) => <option key={rule.id} value={rule.id}>{rule.name}</option>)}</select></label>
           <label className="text-sm text-slate-300">Guardrail profile<select value={form.guardrailProfileId} onChange={(event) => updateField("guardrailProfileId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">No guardrails</option>{options.launchGuardrailProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
           <label className="text-sm text-slate-300">Mapping template<select value={form.marketplaceMappingTemplateId} onChange={(event) => updateField("marketplaceMappingTemplateId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">No template</option>{options.marketplaceMappingTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
+          <label className="text-sm text-slate-300">Channel preset<select value={form.channelMappingPresetId} onChange={(event) => updateField("channelMappingPresetId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">No channel preset</option>{options.channelMappingPresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
           <label className="text-sm text-slate-300">Weight (lb)<input value={form.weightLb} onChange={(event) => updateField("weightLb", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
           <label className="text-sm text-slate-300">Labor minutes<input value={form.laborMinutes} onChange={(event) => updateField("laborMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
           <label className="text-sm text-slate-300">Machine minutes<input value={form.machineMinutes} onChange={(event) => updateField("machineMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
@@ -1301,7 +1416,9 @@ export function CostCalculatorForm() {
           <button type="button" onClick={handleEvaluateListingReadiness} disabled={isPending} className="rounded-full border border-sky-300/30 bg-sky-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Evaluate listing readiness</button>
           <button type="button" onClick={handleBuildListingPrepPackage} disabled={isPending} className="rounded-full border border-violet-300/30 bg-violet-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Build listing-prep package</button>
           <button type="button" onClick={handleRefreshListingPrepPackage} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Refresh listing-prep package</button>
+          <button type="button" onClick={handleApplyChannelPreset} disabled={isPending || !listingPrepPackage || !form.channelMappingPresetId} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Apply channel preset</button>
           <button type="button" onClick={handleValidateMarketplaceFields} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Validate marketplace fields</button>
+          <button type="button" onClick={handleApproveListingPrepPackage} disabled={isPending || !listingPrepPackage} className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Approve package</button>
         </div>
       </section>
 
@@ -1314,6 +1431,11 @@ export function CostCalculatorForm() {
           <LaunchReadinessCard comparison={comparison} />
           <ReadyForListingPrepCard listingPrepPackage={listingPrepPackage} />
           <ListingPrepPackageCard comparison={comparison} listingPrepPackage={listingPrepPackage} />
+          <ListingPrepApprovalCard
+            listingPrepPackage={listingPrepPackage}
+            onApprove={handleApproveListingPrepPackage}
+            busy={isPending}
+          />
           <MarketplaceMappingValidationCard listingPrepPackage={listingPrepPackage} />
           <OverrideHistoryCard listingPrepPackage={listingPrepPackage} />
           <LaunchCandidateHandoffCard comparison={comparison} />
@@ -1324,6 +1446,7 @@ export function CostCalculatorForm() {
             busy={isPending}
           />
           <LaunchExportSummaryCard comparison={comparison} />
+          <ManualAmazonExportCard listingPrepPackage={listingPrepPackage} />
           <CostScenarioBuilder
             scenarios={scenarios}
             feePresets={options.feePresets}
@@ -1420,6 +1543,12 @@ export function CostCalculatorForm() {
         templates={selectedProfile?.marketplaceMappingTemplates ?? []}
         onCreate={handleCreateMarketplaceMappingTemplate}
         onUpdate={handleUpdateMarketplaceMappingTemplate}
+      />
+
+      <ChannelMappingPresetEditor
+        presets={selectedProfile?.channelMappingPresets ?? []}
+        onCreate={handleCreateChannelMappingPreset}
+        onUpdate={handleUpdateChannelMappingPreset}
       />
     </div>
   );

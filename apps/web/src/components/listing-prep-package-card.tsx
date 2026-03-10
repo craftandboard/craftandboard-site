@@ -2,6 +2,8 @@
 
 import type { CostComparisonResult, ListingPrepPackageRecord } from "../lib/api";
 import {
+  getApprovalStateLabel,
+  getApprovalStateTone,
   getListingPrepPackageStatusLabel,
   getListingPrepPackageStatusTone,
   getListingReadinessLabel,
@@ -44,10 +46,20 @@ export function ListingPrepPackageCard({
           {getListingPrepPackageStatusLabel(listingPrepPackage.status)}
         </span>
         <span
+          className={`rounded-full border px-3 py-1 text-xs font-semibold ${getApprovalStateTone(listingPrepPackage.approvalState)}`}
+        >
+          {getApprovalStateLabel(listingPrepPackage.approvalState)}
+        </span>
+        <span
           className={`rounded-full border px-3 py-1 text-xs font-semibold ${getListingReadinessTone(listingPrepPackage.listingReadinessStatus)}`}
         >
           {getListingReadinessLabel(listingPrepPackage.listingReadinessStatus)}
         </span>
+        {listingPrepPackage.currentApprovedArtifact ? (
+          <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-semibold text-emerald-100">
+            Current approved artifact
+          </span>
+        ) : null}
       </div>
 
       <h3 className="mt-3 text-xl font-semibold text-white">{listingPrepPackage.name}</h3>
@@ -75,6 +87,11 @@ export function ListingPrepPackageCard({
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Mapping template</p>
           <p className="mt-2 font-semibold text-white">{listingPrepPackage.marketplaceMappingTemplateName ?? "No template applied"}</p>
           <p className="mt-1 text-xs text-slate-400">Export {listingPrepPackage.exportVersion ?? "listing-prep-v1"}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Channel preset</p>
+          <p className="mt-2 font-semibold text-white">{listingPrepPackage.channelMappingPresetName ?? "No channel preset"}</p>
+          <p className="mt-1 text-xs text-slate-400">Contract {listingPrepPackage.exportContractVersion ?? "manual-amazon-v1"}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Ready for listing prep</p>

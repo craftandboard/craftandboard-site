@@ -188,6 +188,63 @@ export function applyMarketplaceMappingTemplate(input: {
   };
 }
 
+export function applyChannelMappingPreset(input: {
+  preset?: {
+    id: string;
+    name: string;
+    channelCode: string;
+    productLabelFormat?: string | null;
+    skuFormat?: string | null;
+    includeWarningNotes?: boolean;
+    includeOverrideNotes?: boolean;
+    dimensionsFormat?: string | null;
+    materialFormat?: string | null;
+    packagingFormat?: string | null;
+    pricingFormat?: string | null;
+    fieldOrderingSnapshot?: Record<string, unknown> | null;
+    notes?: string | null;
+  } | null;
+  marketplaceFields: Record<string, unknown>;
+  warningSnapshot?: WarningItem[] | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+}) {
+  const preset = input.preset ?? null;
+  if (!preset) {
+    return {
+      ...(input.marketplaceFields ?? {}),
+      channelPresetLabel: null,
+      channelCode: null
+    };
+  }
+
+  const templated = applyMarketplaceMappingTemplate({
+    mappingTemplate: {
+      id: preset.id,
+      name: preset.name,
+      productLabelFormat: preset.productLabelFormat ?? null,
+      skuFormat: preset.skuFormat ?? null,
+      includeWarningNotes: preset.includeWarningNotes ?? true,
+      includeOverrideNotes: preset.includeOverrideNotes ?? true,
+      dimensionsFormat: preset.dimensionsFormat ?? null,
+      materialFormat: preset.materialFormat ?? null,
+      packagingFormat: preset.packagingFormat ?? null,
+      pricingFormat: preset.pricingFormat ?? null,
+      notes: preset.notes ?? null,
+      templateSnapshot: preset.fieldOrderingSnapshot ?? null
+    },
+    marketplaceFields: input.marketplaceFields,
+    warningSnapshot: input.warningSnapshot,
+    overrideSnapshot: input.overrideSnapshot
+  });
+
+  return {
+    ...templated,
+    channelPresetLabel: preset.name,
+    channelCode: preset.channelCode,
+    fieldOrderingSnapshot: preset.fieldOrderingSnapshot ?? null
+  };
+}
+
 export function buildOverrideHistorySnapshot(input: {
   existingHistory?: Array<Record<string, unknown>> | null;
   latestOverride?: Record<string, unknown> | null;
@@ -367,5 +424,128 @@ export function buildStableListingPrepExportShape(input: {
     }),
     readyForListingPrepSummary: input.readyForListingPrepSummary ?? null,
     generatedAt: new Date().toISOString()
+  };
+}
+
+export function calculateApprovalState(input: {
+  readyForListingPrepSummary?: Record<string, unknown> | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+  manualAmazonExportSnapshot?: Record<string, unknown> | null;
+}) {
+  const readyStatus = String(input.readyForListingPrepSummary?.readyForListingPrepStatus ?? "NEEDS_REVIEW");
+  const blockingReasons = Array.isArray(input.readyForListingPrepSummary?.blockingReasons)
+    ? (input.readyForListingPrepSummary?.blockingReasons as string[])
+    : [];
+  const overrideApproved = Boolean(input.overrideSnapshot?.overrideApproved);
+  const hasExport = Boolean(input.manualAmazonExportSnapshot && Object.keys(input.manualAmazonExportSnapshot).length > 0);
+
+  if (blockingReasons.length > 0 || readyStatus === "BLOCKED") {
+    return {
+      approvalState: "BLOCKED",
+      approvalWarnings: blockingReasons,
+      approvalBlockingReasons: blockingReasons
+    };
+  }
+
+  if (!hasExport || readyStatus === "NEEDS_REVIEW") {
+    return {
+      approvalState: "READY_FOR_REVIEW",
+      approvalWarnings: ["Package still needs review before approval."],
+      approvalBlockingReasons: []
+    };
+  }
+
+  if (overrideApproved || readyStatus === "READY_WITH_OVERRIDE") {
+    return {
+      approvalState: "APPROVED_WITH_OVERRIDE",
+      approvalWarnings: ["Package was approved with a price-floor override."],
+      approvalBlockingReasons: []
+    };
+  }
+
+  return {
+    approvalState: "APPROVED",
+    approvalWarnings: [],
+    approvalBlockingReasons: []
+  };
+}
+
+export function buildApprovalSummarySnapshot(input: {
+  approvalState: string;
+  readyForListingPrepSummary?: Record<string, unknown> | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+  approvedAt?: string | Date | null;
+  approvedByMembershipId?: string | null;
+}) {
+  return {
+    approvalState: input.approvalState,
+    approvalWarnings:
+      input.approvalState === "APPROVED_WITH_OVERRIDE"
+        ? ["Approved with a reviewed price-floor override."]
+        : input.approvalState === "READY_FOR_REVIEW"
+          ? ["Package still requires review before approval."]
+          : [],
+    approvalBlockingReasons: Array.isArray(input.readyForListingPrepSummary?.blockingReasons)
+      ? input.readyForListingPrepSummary?.blockingReasons
+      : [],
+    overrideSummary: input.overrideSnapshot ?? null,
+    approvedAt:
+      input.approvedAt instanceof Date
+        ? input.approvedAt.toISOString()
+        : (input.approvedAt as string | null | undefined) ?? null,
+    approvedByMembershipId: input.approvedByMembershipId ?? null,
+    summary:
+      input.approvalState === "APPROVED"
+        ? "Package is approved for manual listing prep."
+        : input.approvalState === "APPROVED_WITH_OVERRIDE"
+          ? "Package is approved for manual listing prep with an override."
+          : input.approvalState === "BLOCKED"
+            ? "Package is blocked and cannot be approved yet."
+            : "Package is not approved yet."
+  };
+}
+
+export function buildManualAmazonExportSnapshot(input: {
+  packageId: string;
+  comparisonSetId?: string | null;
+  scenarioId: string;
+  approvalState: string;
+  exportContractVersion?: string | null;
+  exportShapeSnapshot?: Record<string, unknown> | null;
+  readyForListingPrepSummary?: Record<string, unknown> | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+  channelPreset?: { id: string; name: string; channelCode: string } | null;
+  approvedAt?: string | Date | null;
+}) {
+  const snapshot = input.exportShapeSnapshot ?? {};
+  return {
+    exportContractVersion: input.exportContractVersion ?? "manual-amazon-v1",
+    packageId: input.packageId,
+    selectedScenarioId: input.scenarioId,
+    comparisonSetId: input.comparisonSetId ?? null,
+    approvalState: input.approvalState,
+    channelPresetLabel: input.channelPreset?.name ?? null,
+    channelCode: input.channelPreset?.channelCode ?? "AMAZON_MANUAL",
+    productLabel: snapshot.productLabel ?? null,
+    internalSku: snapshot.internalSku ?? null,
+    dimensionsSummary: snapshot.dimensionsSummary ?? null,
+    materialSummary: snapshot.materialSummary ?? null,
+    edgeBandSummary: snapshot.edgeBandSummary ?? null,
+    packagingSummary: snapshot.packagingSummary ?? null,
+    shippingSummary: snapshot.shippingSummary ?? null,
+    launchStrategyLabel: snapshot.launchStrategyLabel ?? null,
+    feePresetLabel: snapshot.feePresetLabel ?? null,
+    shippingZoneLabel: snapshot.shippingZoneLabel ?? null,
+    recommendedLaunchPrice: snapshot.pricingSummary ?? null,
+    warningSummary: snapshot.warningsSummary ?? [],
+    overrideSummary: input.overrideSnapshot ?? null,
+    readinessSummary: input.readyForListingPrepSummary ?? null,
+    assumptionsSnapshot: snapshot.assumptionsSnapshot ?? null,
+    resultSnapshot: snapshot.resultSnapshot ?? null,
+    generatedAt: new Date().toISOString(),
+    approvedAt:
+      input.approvedAt instanceof Date
+        ? input.approvedAt.toISOString()
+        : (input.approvedAt as string | null | undefined) ?? null
   };
 }

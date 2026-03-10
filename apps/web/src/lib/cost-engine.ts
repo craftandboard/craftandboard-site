@@ -232,6 +232,10 @@ export function getListingPrepPackageStatusLabel(status: string | null | undefin
       return "Ready for review";
     case "READY":
       return "Ready";
+    case "APPROVED":
+      return "Approved";
+    case "APPROVED_WITH_OVERRIDE":
+      return "Approved with override";
     case "BLOCKED":
       return "Blocked";
     case "ARCHIVED":
@@ -245,6 +249,10 @@ export function getListingPrepPackageStatusTone(status: string | null | undefine
   switch (status) {
     case "READY":
       return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+    case "APPROVED":
+      return "border-cyan-400/30 bg-cyan-400/10 text-cyan-100";
+    case "APPROVED_WITH_OVERRIDE":
+      return "border-amber-300/30 bg-amber-300/10 text-amber-100";
     case "READY_FOR_REVIEW":
       return "border-amber-300/30 bg-amber-300/10 text-amber-100";
     case "BLOCKED":
@@ -254,6 +262,14 @@ export function getListingPrepPackageStatusTone(status: string | null | undefine
     default:
       return "border-white/10 bg-white/5 text-slate-200";
   }
+}
+
+export function getApprovalStateLabel(status: string | null | undefined) {
+  return getListingPrepPackageStatusLabel(status);
+}
+
+export function getApprovalStateTone(status: string | null | undefined) {
+  return getListingPrepPackageStatusTone(status);
 }
 
 export function getReadyForListingPrepLabel(status: string | null | undefined, ready?: boolean | null) {

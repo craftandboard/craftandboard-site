@@ -47,8 +47,14 @@ enum ListingPrepPackageStatus {
   DRAFT
   READY_FOR_REVIEW
   READY
+  APPROVED
+  APPROVED_WITH_OVERRIDE
   BLOCKED
   ARCHIVED
+}
+
+enum ChannelMappingChannelCode {
+  AMAZON_MANUAL
 }
 
 enum ShelfCostEdgeBandPattern {
@@ -818,6 +824,7 @@ model Organization {
   launchTemplates LaunchTemplate[]
   launchGuardrailProfiles LaunchGuardrailProfile[]
   marketplaceMappingTemplates MarketplaceMappingTemplate[]
+  channelMappingPresets ChannelMappingPreset[]
   listingPrepPackages ListingPrepPackage[]
   shelfCostEstimates ShelfCostEstimate[]
   orderCostEstimates OrderCostEstimate[]
@@ -2324,6 +2331,7 @@ model CostProfile {
   launchTemplates                  LaunchTemplate[]
   launchGuardrailProfiles          LaunchGuardrailProfile[]
   marketplaceMappingTemplates      MarketplaceMappingTemplate[]
+  channelMappingPresets            ChannelMappingPreset[]
 
   @@index([organizationId, isDefault])
   @@index([organizationId, status])
@@ -2600,6 +2608,7 @@ model CalculationScenario {
   priceFloorOverrideApproved Boolean           @default(false)
   priceFloorOverrideSnapshot Json?
   latestOverrideSummarySnapshot Json?
+  latestApprovalSummarySnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
@@ -2628,6 +2637,8 @@ model CalculationComparisonSet {
   listingPrepSummarySnapshot Json?
   selectedListingPrepReadySnapshot Json?
   selectedListingPrepExportVersion String?
+  selectedListingPrepApprovalSnapshot Json?
+  selectedListingPrepExportContractVersion String?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2658,11 +2669,17 @@ model ListingPrepPackage {
   warningSnapshot        Json?
   overrideSnapshot       Json?
   marketplaceMappingTemplateId String?
+  channelMappingPresetId String?
+  approvalState          ListingPrepPackageStatus @default(DRAFT)
+  approvalSummarySnapshot Json?
   exportVersion          String?
+  exportContractVersion  String?
   exportShapeSnapshot    Json?
   overrideHistorySnapshot Json?
   readyForListingPrep    Boolean                  @default(false)
   readyForListingPrepSummary Json?
+  manualAmazonExportSnapshot Json?
+  currentApprovedArtifact Boolean                 @default(false)
   notes                  String?
   approvedAt             DateTime?
   approvedByMembershipId String?
@@ -2673,14 +2690,18 @@ model ListingPrepPackage {
   primaryForScenario     CalculationScenario?     @relation("ScenarioPrimaryListingPrepPackage")
   calculationScenario    CalculationScenario      @relation("ScenarioListingPrepPackages", fields: [calculationScenarioId], references: [id])
   marketplaceMappingTemplate MarketplaceMappingTemplate? @relation(fields: [marketplaceMappingTemplateId], references: [id])
+  channelMappingPreset   ChannelMappingPreset?    @relation(fields: [channelMappingPresetId], references: [id])
   selectedByComparisonSets CalculationComparisonSet[] @relation("ComparisonSetSelectedListingPrepPackage")
 
   @@index([organizationId, status])
+  @@index([organizationId, approvalState])
   @@index([organizationId, listingReadinessStatus])
   @@index([organizationId, calculationScenarioId])
   @@index([organizationId, comparisonSetId])
   @@index([organizationId, readyForListingPrep])
   @@index([organizationId, marketplaceMappingTemplateId])
+  @@index([organizationId, channelMappingPresetId])
+  @@index([organizationId, currentApprovedArtifact])
 }
 
 model MarketplaceMappingTemplate {
@@ -2706,6 +2727,35 @@ model MarketplaceMappingTemplate {
   listingPrepPackages  ListingPrepPackage[]
 
   @@index([organizationId, status])
+  @@index([organizationId, costProfileId])
+}
+
+model ChannelMappingPreset {
+  id                   String                    @id @default(cuid())
+  organizationId       String
+  costProfileId        String?
+  name                 String
+  channelCode          ChannelMappingChannelCode @default(AMAZON_MANUAL)
+  status               CostProfileStatus        @default(ACTIVE)
+  productLabelFormat   String?
+  skuFormat            String?
+  includeWarningNotes  Boolean                  @default(true)
+  includeOverrideNotes Boolean                  @default(true)
+  dimensionsFormat     String?
+  materialFormat       String?
+  packagingFormat      String?
+  pricingFormat        String?
+  fieldOrderingSnapshot Json?
+  notes                String?
+  presetSnapshot       Json?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  organization         Organization             @relation(fields: [organizationId], references: [id])
+  costProfile          CostProfile?             @relation(fields: [costProfileId], references: [id])
+  listingPrepPackages  ListingPrepPackage[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, channelCode])
   @@index([organizationId, costProfileId])
 }
 

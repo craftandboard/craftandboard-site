@@ -42,17 +42,22 @@ const serviceMocks = vi.hoisted(() => ({
   createLaunchGuardrailProfile: vi.fn(),
   createLaunchTemplate: vi.fn(),
   buildListingPrepPackage: vi.fn(),
+  createChannelMappingPreset: vi.fn(),
   createMarketplaceMappingTemplate: vi.fn(),
   listAmazonFeePresets: vi.fn(),
+  listChannelMappingPresets: vi.fn(),
   listMarketplaceMappingTemplates: vi.fn(),
   getAmazonFeePreset: vi.fn(),
+  getChannelMappingPreset: vi.fn(),
   getLaunchGuardrailProfile: vi.fn(),
   getListingPrepPackage: vi.fn(),
+  getListingPrepManualAmazonExport: vi.fn(),
   getMarketplaceMappingTemplate: vi.fn(),
   getComparisonSetRecommendation: vi.fn(),
   getComparisonSetHandoffSummary: vi.fn(),
   getComparisonSetExportSummary: vi.fn(),
   updateAmazonFeePreset: vi.fn(),
+  updateChannelMappingPreset: vi.fn(),
   updateMarketplaceMappingTemplate: vi.fn(),
   createShippingZoneRule: vi.fn(),
   listShippingZoneRules: vi.fn(),
@@ -70,6 +75,8 @@ const serviceMocks = vi.hoisted(() => ({
   rankComparisonSet: vi.fn(),
   selectLaunchScenario: vi.fn(),
   evaluateMarketplaceFieldValidation: vi.fn(),
+  applyChannelMappingPresetToPackage: vi.fn(),
+  approveListingPrepPackage: vi.fn(),
   requestPriceFloorOverride: vi.fn(),
   refreshListingPrepPackage: vi.fn(),
   saveShelfCostCalculation: vi.fn(),
@@ -123,17 +130,22 @@ beforeEach(async () => {
   serviceMocks.createLaunchGuardrailProfile.mockResolvedValue({ ok: true, launchGuardrailProfile: { id: "guard_1" } });
   serviceMocks.createLaunchTemplate.mockResolvedValue({ ok: true, launchTemplate: { id: "template_1" } });
   serviceMocks.buildListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
+  serviceMocks.createChannelMappingPreset.mockResolvedValue({ ok: true, channelMappingPreset: { id: "channel_1" } });
   serviceMocks.createMarketplaceMappingTemplate.mockResolvedValue({ ok: true, marketplaceMappingTemplate: { id: "mapping_1" } });
   serviceMocks.listAmazonFeePresets.mockResolvedValue({ ok: true, presets: [] });
+  serviceMocks.listChannelMappingPresets.mockResolvedValue({ ok: true, channelMappingPresets: [] });
   serviceMocks.listMarketplaceMappingTemplates.mockResolvedValue({ ok: true, marketplaceMappingTemplates: [] });
   serviceMocks.getAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.getChannelMappingPreset.mockResolvedValue({ ok: true, channelMappingPreset: { id: "channel_1" } });
   serviceMocks.getLaunchGuardrailProfile.mockResolvedValue({ ok: true, launchGuardrailProfile: { id: "guard_1" } });
   serviceMocks.getListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
+  serviceMocks.getListingPrepManualAmazonExport.mockResolvedValue({ ok: true, manualAmazonExport: { exportContractVersion: "manual-amazon-v1" }, approvalState: "APPROVED", currentApprovedArtifact: true });
   serviceMocks.getMarketplaceMappingTemplate.mockResolvedValue({ ok: true, marketplaceMappingTemplate: { id: "mapping_1" } });
   serviceMocks.getComparisonSetRecommendation.mockResolvedValue({ ok: true, recommendation: null });
   serviceMocks.getComparisonSetHandoffSummary.mockResolvedValue({ ok: true, handoffSummary: null, selectedLaunchScenarioId: null, riskSummary: null, selectedLaunchReadinessStatus: null, selectedLaunchWarningSnapshot: null, exportSummary: null });
   serviceMocks.getComparisonSetExportSummary.mockResolvedValue({ ok: true, exportSummary: null, selectedLaunchScenarioId: null, selectedLaunchReadinessStatus: null, selectedLaunchWarningSnapshot: null });
   serviceMocks.updateAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.updateChannelMappingPreset.mockResolvedValue({ ok: true, channelMappingPreset: { id: "channel_1" } });
   serviceMocks.updateMarketplaceMappingTemplate.mockResolvedValue({ ok: true, marketplaceMappingTemplate: { id: "mapping_1" } });
   serviceMocks.createShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
   serviceMocks.listShippingZoneRules.mockResolvedValue({ ok: true, shippingZoneRules: [] });
@@ -151,6 +163,8 @@ beforeEach(async () => {
   serviceMocks.rankComparisonSet.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
   serviceMocks.selectLaunchScenario.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
   serviceMocks.evaluateMarketplaceFieldValidation.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
+  serviceMocks.applyChannelMappingPresetToPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
+  serviceMocks.approveListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.requestPriceFloorOverride.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.refreshListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.saveShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
@@ -331,6 +345,30 @@ describe("cost engine routes", () => {
     });
   });
 
+  it("creates channel mapping presets in org scope", async () => {
+    const response = await fetch(`${baseUrl}/cost-profiles/profile_1/channel-mapping-presets`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Amazon manual preset", channelCode: "AMAZON_MANUAL" })
+    });
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createChannelMappingPreset).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Amazon manual preset",
+      channelCode: "AMAZON_MANUAL"
+    });
+  });
+
+  it("lists channel mapping presets", async () => {
+    const response = await fetch(`${baseUrl}/channel-mapping-presets?costProfileId=profile_1`);
+    expect(response.status).toBe(200);
+    expect(serviceMocks.listChannelMappingPresets).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1"
+    });
+  });
+
   it("lists marketplace mapping templates", async () => {
     const response = await fetch(`${baseUrl}/marketplace-mapping-templates?costProfileId=profile_1`);
     expect(response.status).toBe(200);
@@ -406,7 +444,8 @@ describe("cost engine routes", () => {
       body: JSON.stringify({
         selectedScenarioId: "scenario_1",
         notes: "Prep for listing",
-        marketplaceMappingTemplateId: "mapping_1"
+        marketplaceMappingTemplateId: "mapping_1",
+        channelMappingPresetId: "channel_1"
       })
     });
     expect(response.status).toBe(201);
@@ -415,7 +454,8 @@ describe("cost engine routes", () => {
       comparisonSetId: "set_1",
       selectedScenarioId: "scenario_1",
       notes: "Prep for listing",
-      marketplaceMappingTemplateId: "mapping_1"
+      marketplaceMappingTemplateId: "mapping_1",
+      channelMappingPresetId: "channel_1"
     });
   });
 
@@ -469,6 +509,43 @@ describe("cost engine routes", () => {
       organizationId: "org_local_craft_board",
       listingPrepPackageId: "package_1",
       notes: null
+    });
+  });
+
+  it("applies a channel preset to a listing-prep package", async () => {
+    const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/apply-channel-preset`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ channelMappingPresetId: "channel_1" })
+    });
+    expect(response.status).toBe(200);
+    expect(serviceMocks.applyChannelMappingPresetToPackage).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1",
+      channelMappingPresetId: "channel_1"
+    });
+  });
+
+  it("approves a listing-prep package", async () => {
+    const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/approve`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({})
+    });
+    expect(response.status).toBe(200);
+    expect(serviceMocks.approveListingPrepPackage).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1",
+      approvedByMembershipId: "membership_local_brandon"
+    });
+  });
+
+  it("returns the manual Amazon export contract for a listing-prep package", async () => {
+    const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/manual-amazon-export`);
+    expect(response.status).toBe(200);
+    expect(serviceMocks.getListingPrepManualAmazonExport).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1"
     });
   });
 

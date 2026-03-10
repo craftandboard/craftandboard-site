@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  CHANNEL_MAPPING_CHANNEL_CODES,
   COST_PROFILE_STATUSES,
   LISTING_READINESS_STATUSES,
   LISTING_PREP_PACKAGE_STATUSES,
@@ -19,6 +20,7 @@ export const launchStrategySchema = z.enum(LAUNCH_STRATEGIES);
 export const launchRiskLevelSchema = z.enum(LAUNCH_RISK_LEVELS);
 export const listingReadinessStatusSchema = z.enum(LISTING_READINESS_STATUSES);
 export const listingPrepPackageStatusSchema = z.enum(LISTING_PREP_PACKAGE_STATUSES);
+export const channelMappingChannelCodeSchema = z.enum(CHANNEL_MAPPING_CHANNEL_CODES);
 
 export const costProfileIdParamsSchema = z.object({
   costProfileId: z.string().trim().min(1)
@@ -66,6 +68,10 @@ export const guardrailProfileIdParamsSchema = z.object({
 
 export const mappingTemplateIdParamsSchema = z.object({
   mappingTemplateId: z.string().trim().min(1)
+});
+
+export const channelMappingPresetIdParamsSchema = z.object({
+  channelMappingPresetId: z.string().trim().min(1)
 });
 
 export const listingPrepPackageIdParamsSchema = z.object({
@@ -346,6 +352,28 @@ export const updateMarketplaceMappingTemplateSchema = createMarketplaceMappingTe
   { message: "At least one marketplace mapping template field must be provided." }
 );
 
+export const createChannelMappingPresetSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  channelCode: channelMappingChannelCodeSchema.optional(),
+  status: costProfileStatusSchema.optional(),
+  productLabelFormat: z.string().trim().max(400).nullable().optional(),
+  skuFormat: z.string().trim().max(200).nullable().optional(),
+  includeWarningNotes: z.boolean().optional(),
+  includeOverrideNotes: z.boolean().optional(),
+  dimensionsFormat: z.string().trim().max(400).nullable().optional(),
+  materialFormat: z.string().trim().max(400).nullable().optional(),
+  packagingFormat: z.string().trim().max(400).nullable().optional(),
+  pricingFormat: z.string().trim().max(400).nullable().optional(),
+  fieldOrderingSnapshot: z.unknown().nullable().optional(),
+  notes: z.string().trim().max(4000).nullable().optional(),
+  presetSnapshot: z.unknown().nullable().optional()
+});
+
+export const updateChannelMappingPresetSchema = createChannelMappingPresetSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one channel mapping preset field must be provided." }
+);
+
 export const listLaunchGuardrailProfilesQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()
 });
@@ -367,6 +395,7 @@ export const evaluateListingReadinessSchema = z.object({
 export const buildListingPrepPackageSchema = z.object({
   selectedScenarioId: z.string().trim().min(1).nullable().optional(),
   marketplaceMappingTemplateId: z.string().trim().min(1).nullable().optional(),
+  channelMappingPresetId: z.string().trim().min(1).nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional()
 });
 
@@ -388,6 +417,12 @@ export const refreshListingPrepPackageSchema = z.object({
   notes: z.string().trim().max(4000).nullable().optional()
 });
 
+export const applyChannelMappingPresetSchema = z.object({
+  channelMappingPresetId: z.string().trim().min(1)
+});
+
+export const approveListingPrepPackageSchema = z.object({});
+
 export const listShelfCostCalculationsQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()
 });
@@ -401,5 +436,9 @@ export const listShippingZoneRulesQuerySchema = z.object({
 });
 
 export const listMarketplaceMappingTemplatesQuerySchema = z.object({
+  costProfileId: z.string().trim().min(1).optional()
+});
+
+export const listChannelMappingPresetsQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()
 });

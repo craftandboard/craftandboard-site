@@ -2868,6 +2868,28 @@ export interface MarketplaceMappingTemplateItem {
   updatedAt: string;
 }
 
+export interface ChannelMappingPresetItem {
+  id: string;
+  orgId: string;
+  costProfileId: string | null;
+  name: string;
+  channelCode: "AMAZON_MANUAL";
+  status: "ACTIVE" | "ARCHIVED";
+  productLabelFormat: string | null;
+  skuFormat: string | null;
+  includeWarningNotes: boolean;
+  includeOverrideNotes: boolean;
+  dimensionsFormat: string | null;
+  materialFormat: string | null;
+  packagingFormat: string | null;
+  pricingFormat: string | null;
+  fieldOrderingSnapshot: Record<string, unknown> | null;
+  notes: string | null;
+  presetSnapshot: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MaterialCostRuleItem {
   id: string;
   orgId: string;
@@ -2981,6 +3003,7 @@ export interface CostProfileDetail {
   launchTemplates: LaunchTemplateItem[];
   launchGuardrailProfiles: LaunchGuardrailProfileItem[];
   marketplaceMappingTemplates: MarketplaceMappingTemplateItem[];
+  channelMappingPresets: ChannelMappingPresetItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -3387,6 +3410,8 @@ export interface ComparisonSetRecord {
   listingPrepSummarySnapshot: Record<string, unknown> | null;
   selectedListingPrepReadySnapshot: Record<string, unknown> | null;
   selectedListingPrepExportVersion: string | null;
+  selectedListingPrepApprovalSnapshot: Record<string, unknown> | null;
+  selectedListingPrepExportContractVersion: string | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3420,7 +3445,7 @@ export interface ListingPrepPackageRecord {
   comparisonSetId: string | null;
   calculationScenarioId: string;
   name: string;
-  status: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "BLOCKED" | "ARCHIVED";
+  status: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "APPROVED" | "APPROVED_WITH_OVERRIDE" | "BLOCKED" | "ARCHIVED";
   listingReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED";
   exportSnapshot: Record<string, unknown>;
   marketplaceFieldSnapshot: Record<string, unknown>;
@@ -3429,11 +3454,18 @@ export interface ListingPrepPackageRecord {
   overrideSnapshot: Record<string, unknown> | null;
   marketplaceMappingTemplateId: string | null;
   marketplaceMappingTemplateName: string | null;
+  channelMappingPresetId: string | null;
+  channelMappingPresetName: string | null;
+  approvalState: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "APPROVED" | "APPROVED_WITH_OVERRIDE" | "BLOCKED" | "ARCHIVED";
+  approvalSummarySnapshot: Record<string, unknown> | null;
   exportVersion: string | null;
+  exportContractVersion: string | null;
   exportShapeSnapshot: Record<string, unknown> | null;
   overrideHistorySnapshot: Record<string, unknown> | null;
   readyForListingPrep: boolean;
   readyForListingPrepSummary: Record<string, unknown> | null;
+  manualAmazonExportSnapshot: Record<string, unknown> | null;
+  currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
   approvedByMembershipId: string | null;
@@ -3824,6 +3856,41 @@ export async function updateMarketplaceMappingTemplate(
   );
 }
 
+export async function createChannelMappingPreset(
+  costProfileId: string,
+  input: Record<string, unknown>
+) {
+  return sendJson<{ ok: true; channelMappingPreset: ChannelMappingPresetItem }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/channel-mapping-presets`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function getChannelMappingPresets(input?: { costProfileId?: string }) {
+  const params = new URLSearchParams();
+  if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
+  const query = params.toString();
+  return readJson<{ ok: true; channelMappingPresets: ChannelMappingPresetItem[] }>(
+    `/channel-mapping-presets${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getChannelMappingPreset(channelMappingPresetId: string) {
+  return readJson<{ ok: true; channelMappingPreset: ChannelMappingPresetItem }>(
+    `/channel-mapping-presets/${encodeURIComponent(channelMappingPresetId)}`
+  );
+}
+
+export async function updateChannelMappingPreset(
+  channelMappingPresetId: string,
+  input: Record<string, unknown>
+) {
+  return sendJson<{ ok: true; channelMappingPreset: ChannelMappingPresetItem }>(
+    `/channel-mapping-presets/${encodeURIComponent(channelMappingPresetId)}`,
+    { method: "PATCH", body: JSON.stringify(input) }
+  );
+}
+
 export async function getLaunchTemplates(input?: { costProfileId?: string }) {
   const params = new URLSearchParams();
   if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
@@ -4001,6 +4068,7 @@ export async function buildCostListingPrepPackage(
   input?: {
     selectedScenarioId?: string | null;
     marketplaceMappingTemplateId?: string | null;
+    channelMappingPresetId?: string | null;
     notes?: string | null;
   }
 ) {
@@ -4021,7 +4089,7 @@ export async function refreshListingPrepPackage(
 }
 
 export async function getListingPrepPackages(input?: {
-  status?: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "BLOCKED" | "ARCHIVED";
+  status?: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "APPROVED" | "APPROVED_WITH_OVERRIDE" | "BLOCKED" | "ARCHIVED";
 }) {
   const params = new URLSearchParams();
   if (input?.status) params.set("status", input.status);
@@ -4055,6 +4123,32 @@ export async function requestCostPriceFloorOverride(
     `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/price-floor-override`,
     { method: "POST", body: JSON.stringify(input) }
   );
+}
+
+export async function applyChannelMappingPresetToListingPrepPackage(
+  listingPrepPackageId: string,
+  input: { channelMappingPresetId: string }
+) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/apply-channel-preset`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function approveCostListingPrepPackage(listingPrepPackageId: string) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/approve`,
+    { method: "POST", body: JSON.stringify({}) }
+  );
+}
+
+export async function getListingPrepManualAmazonExport(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    manualAmazonExport: Record<string, unknown> | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/manual-amazon-export`);
 }
 
 export interface LeadListItem {

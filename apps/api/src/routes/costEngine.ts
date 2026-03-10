@@ -16,6 +16,7 @@ import {
   createEdgeBandCostRule,
   createLaunchGuardrailProfile,
   createLaunchTemplate,
+  createChannelMappingPreset,
   createMarketplaceMappingTemplate,
   buildListingPrepPackage,
   createMaterialCostRule,
@@ -31,7 +32,9 @@ import {
   getComparisonSetRecommendation,
   getLaunchGuardrailProfile,
   getLaunchTemplate,
+  getChannelMappingPreset,
   getListingPrepPackage,
+  getListingPrepManualAmazonExport,
   getMarketplaceMappingTemplate,
   getShelfCostCalculation,
   getShippingZoneRule,
@@ -40,12 +43,15 @@ import {
   listCostProfiles,
   listLaunchGuardrailProfiles,
   listLaunchTemplates,
+  listChannelMappingPresets,
   listListingPrepPackages,
   listMarketplaceMappingTemplates,
   listShelfCostCalculations,
   listShippingZoneRules,
   requestPriceFloorOverride,
   refreshListingPrepPackage,
+  applyChannelMappingPresetToPackage,
+  approveListingPrepPackage,
   saveComparisonSet,
   saveShelfCostCalculation,
   rankComparisonSet,
@@ -57,6 +63,7 @@ import {
   updateEdgeBandCostRule,
   updateLaunchGuardrailProfile,
   updateLaunchTemplate,
+  updateChannelMappingPreset,
   updateMaterialCostRule,
   updateMarketplaceMappingTemplate,
   updatePackagingCostRule,
@@ -75,6 +82,7 @@ import {
   createEdgeBandCostRuleSchema,
   createLaunchGuardrailProfileSchema,
   createLaunchTemplateSchema,
+  createChannelMappingPresetSchema,
   createMarketplaceMappingTemplateSchema,
   createMaterialCostRuleSchema,
   createPackagingCostRuleSchema,
@@ -87,13 +95,17 @@ import {
   materialRuleIdParamsSchema,
   edgeBandRuleIdParamsSchema,
   listingPrepPackageIdParamsSchema,
+  listChannelMappingPresetsQuerySchema,
   listListingPrepPackagesQuerySchema,
   listMarketplaceMappingTemplatesQuerySchema,
+  channelMappingPresetIdParamsSchema,
   mappingTemplateIdParamsSchema,
   packagingRuleIdParamsSchema,
   presetIdParamsSchema,
   priceFloorOverrideSchema,
   refreshListingPrepPackageSchema,
+  applyChannelMappingPresetSchema,
+  approveListingPrepPackageSchema,
   saveComparisonSetSchema,
   saveShelfCostCalculationSchema,
   shippingRuleIdParamsSchema,
@@ -102,6 +114,7 @@ import {
   updateEdgeBandCostRuleSchema,
   updateLaunchGuardrailProfileSchema,
   updateLaunchTemplateSchema,
+  updateChannelMappingPresetSchema,
   updateMarketplaceMappingTemplateSchema,
   updateMaterialCostRuleSchema,
   updatePackagingCostRuleSchema,
@@ -141,6 +154,7 @@ function handleCostEngineRouteError(error: unknown, res: any, next: any) {
       "Launch template not found.",
       "Launch guardrail profile not found.",
       "Marketplace mapping template not found.",
+      "Channel mapping preset not found.",
       "Listing prep package not found."
     ]);
     res.status(notFoundErrors.has(error.message) ? 404 : 400).json({ ok: false, error: error.message });
@@ -656,6 +670,70 @@ router.patch("/marketplace-mapping-templates/:mappingTemplateId", async (req, re
   }
 });
 
+router.post("/cost-profiles/:costProfileId/channel-mapping-presets", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createChannelMappingPresetSchema.parse(req.body);
+    res.status(201).json(
+      await createChannelMappingPreset({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/channel-mapping-presets", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const query = listChannelMappingPresetsQuerySchema.parse(req.query);
+    res.json(
+      await listChannelMappingPresets({
+        organizationId: context.currentOrganization.id,
+        costProfileId: query.costProfileId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/channel-mapping-presets/:channelMappingPresetId", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const params = channelMappingPresetIdParamsSchema.parse(req.params);
+    res.json(
+      await getChannelMappingPreset({
+        organizationId: context.currentOrganization.id,
+        channelMappingPresetId: params.channelMappingPresetId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/channel-mapping-presets/:channelMappingPresetId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = channelMappingPresetIdParamsSchema.parse(req.params);
+    const body = updateChannelMappingPresetSchema.parse(req.body);
+    res.json(
+      await updateChannelMappingPreset({
+        organizationId: context.currentOrganization.id,
+        channelMappingPresetId: params.channelMappingPresetId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.post("/cost-calculations/calculate", async (req, res, next) => {
   try {
     const context = getCostCalculationWriteContext(req);
@@ -909,6 +987,40 @@ router.post("/listing-prep-packages/:listingPrepPackageId/refresh", async (req, 
   }
 });
 
+router.post("/listing-prep-packages/:listingPrepPackageId/apply-channel-preset", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    const body = applyChannelMappingPresetSchema.parse(req.body);
+    res.json(
+      await applyChannelMappingPresetToPackage({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId,
+        channelMappingPresetId: body.channelMappingPresetId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/listing-prep-packages/:listingPrepPackageId/approve", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    approveListingPrepPackageSchema.parse(req.body ?? {});
+    res.json(
+      await approveListingPrepPackage({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId,
+        approvedByMembershipId: (context as any).currentMembership?.id ?? null
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.get("/listing-prep-packages", async (req, res, next) => {
   try {
     const context = getCostCalculationReadContext(req);
@@ -930,6 +1042,21 @@ router.get("/listing-prep-packages/:listingPrepPackageId", async (req, res, next
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getListingPrepPackage({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/manual-amazon-export", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getListingPrepManualAmazonExport({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

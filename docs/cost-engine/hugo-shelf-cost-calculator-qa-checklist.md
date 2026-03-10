@@ -64,6 +64,15 @@
 53. Verify the override history card shows the latest active override plus readable prior history
 54. Verify the export summary card shows template label, export version, and a stable export block
 55. Reload the saved comparison set and confirm listing-prep package, validation snapshot, override summary, override history, ready-for-listing-prep summary, and export snapshot persist
+56. Create a channel mapping preset for `AMAZON_MANUAL`
+57. Edit the channel mapping preset and confirm formatting preferences update
+58. Apply the channel mapping preset to an existing listing-prep package
+59. Verify the package shows the channel preset label and export contract version
+60. Verify the approval card clearly shows `READY_FOR_REVIEW`, `APPROVED`, `APPROVED_WITH_OVERRIDE`, or `BLOCKED`
+61. Approve an eligible package
+62. Verify the package is marked as the current approved artifact
+63. Verify the manual Amazon export card renders a stable export contract with approval state and channel preset summary
+64. Reload the package and confirm approval summary, manual Amazon export snapshot, and current approved artifact state persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -77,6 +86,9 @@
 - A user can identify which marketplace-prep fields or price-floor warnings still need review before listing handoff
 - A user can identify whether a listing-prep package is blocked by missing fields or by unapproved floor-price override review
 - A user can explain which marketplace mapping template was applied and how it shaped the export package
+- A user can explain which channel mapping preset was applied and how it shaped the manual Amazon export contract
+- A user can tell whether a package is merely ready for review or actually approved for manual Amazon listing prep
+- A user can identify the single current approved artifact to use for the next manual listing step
 - A user can tell whether a package is ready, ready with override, still needs review, or blocked without reading raw JSON
 - A user can review active versus historical overrides without losing the exact reason text
 - A user can point to the exact stable package snapshot that the next listing phase should consume

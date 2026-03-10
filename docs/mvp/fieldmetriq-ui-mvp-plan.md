@@ -8,6 +8,7 @@
 - `/projects`
 - `/projects/:projectId`
 - `/accept/proposal?token=...`
+- `/pilot-feedback`
 
 ## Exact API routes consumed
 - `GET /leads`
@@ -37,6 +38,9 @@
 - `POST /proposals/:proposalId/convert`
 - `GET /projects`
 - `GET /projects/:projectLookup`
+- `GET /pilot-feedback`
+- `POST /pilot-feedback`
+- `PATCH /pilot-feedback/:feedbackId`
 - `POST /public/proposal-acceptance/review`
 - `POST /public/proposal-acceptance/presentation-state`
 - `POST /public/proposal-acceptance/instructions`
@@ -52,15 +56,18 @@
 4. Add sections and line items in the proposal editor
 5. Review totals and deposit policy
 6. Generate a public acceptance link
-7. Review acceptance, deposit, and payment state in the proposal screen
-8. Evaluate conversion and convert to project
-9. Open the created project detail screen
+7. Reissue a fresh public acceptance link when an old one is expired, revoked, submitted, or no longer shareable
+8. Review acceptance, deposit, and payment state in the proposal screen
+9. Evaluate conversion and convert to project
+10. Open the created project detail screen
+11. Capture pilot friction in `/pilot-feedback`
 
 ## Known intentional gaps
 - No full proposal list screen yet; proposals are entered from lead detail and project linkage.
 - No rich search/filter UI yet.
 - No advanced mutation UI for deposit status updates or payment status updates after creation.
 - No provider execution UI yet.
+- No notification or email delivery system for acceptance links yet.
 - No invoice, accounting, notifications, scheduling, manufacturing, or advanced CRM surface.
 - Public acceptance UI is intentionally thin and token-gated only.
 

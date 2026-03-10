@@ -25,6 +25,7 @@ import orderIntakeRouter from "./routes/orderIntake.js";
 import ordersRouter from "./routes/orders.js";
 import paymentsRouter from "./routes/payments.js";
 import paymentExecutionRouter from "./routes/paymentExecution.js";
+import pilotFeedbackRouter from "./routes/pilotFeedback.js";
 import proposalAcceptanceIntakeRouter from "./routes/proposalAcceptanceIntake.js";
 import proposalAcceptancePresentationRouter from "./routes/proposalAcceptancePresentation.js";
 import proposalAcceptanceReviewRouter from "./routes/proposalAcceptanceReview.js";
@@ -81,6 +82,7 @@ export function createApp() {
   app.use("/orders", ordersRouter);
   app.use("/", paymentsRouter);
   app.use("/", paymentExecutionRouter);
+  app.use("/", pilotFeedbackRouter);
   app.use("/", proposalAcceptanceIntakeRouter);
   app.use("/", proposalAcceptancePresentationRouter);
   app.use("/", proposalAcceptanceReviewRouter);

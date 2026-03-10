@@ -3044,6 +3044,30 @@ export interface ProjectDetail {
   }>;
 }
 
+export interface PilotFeedbackItem {
+  id: string;
+  orgId: string;
+  membershipId: string | null;
+  area: "LEADS" | "PROPOSALS" | "PUBLIC_ACCEPTANCE" | "PROJECTS" | "GENERAL";
+  severity: "LOW" | "MEDIUM" | "HIGH" | "BLOCKER";
+  status: "NEW" | "REVIEWED" | "RESOLVED";
+  pagePath: string | null;
+  title: string;
+  message: string;
+  reproductionNotes: string | null;
+  screenshotUrl: string | null;
+  metadata: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PilotFeedbackSummary {
+  openBlockerCount: number;
+  openHighSeverityCount: number;
+  openCount: number;
+  latestSubmittedAt: string | null;
+}
+
 export interface PublicProposalSnapshot {
   organizationName: string | null;
   title: string | null;
@@ -3559,4 +3583,51 @@ export async function trackPublicAcceptancePresentationViewed(token: string) {
     method: "POST",
     body: JSON.stringify({ token })
   });
+}
+
+export async function getPilotFeedback(filters?: {
+  area?: "LEADS" | "PROPOSALS" | "PUBLIC_ACCEPTANCE" | "PROJECTS" | "GENERAL";
+  severity?: "LOW" | "MEDIUM" | "HIGH" | "BLOCKER";
+  status?: "NEW" | "REVIEWED" | "RESOLVED";
+}) {
+  const params = new URLSearchParams();
+  if (filters?.area) params.set("area", filters.area);
+  if (filters?.severity) params.set("severity", filters.severity);
+  if (filters?.status) params.set("status", filters.status);
+  const query = params.toString();
+
+  return readJson<{ ok: true; feedback: PilotFeedbackItem[]; summary: PilotFeedbackSummary }>(
+    `/pilot-feedback${query ? `?${query}` : ""}`
+  );
+}
+
+export async function createPilotFeedback(input: {
+  area: "LEADS" | "PROPOSALS" | "PUBLIC_ACCEPTANCE" | "PROJECTS" | "GENERAL";
+  severity: "LOW" | "MEDIUM" | "HIGH" | "BLOCKER";
+  pagePath?: string | null;
+  title: string;
+  message: string;
+  reproductionNotes?: string | null;
+  screenshotUrl?: string | null;
+  metadata?: unknown;
+}) {
+  return sendJson<{ ok: true; feedback: PilotFeedbackItem }>("/pilot-feedback", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updatePilotFeedback(
+  feedbackId: string,
+  input: {
+    status: "NEW" | "REVIEWED" | "RESOLVED";
+  }
+) {
+  return sendJson<{ ok: true; feedback: PilotFeedbackItem }>(
+    `/pilot-feedback/${encodeURIComponent(feedbackId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
 }

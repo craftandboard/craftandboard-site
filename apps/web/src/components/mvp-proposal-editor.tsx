@@ -38,11 +38,13 @@ import {
   buildAcceptanceReviewUrl,
   centsToInputValue,
   formatCurrency,
-  formatDateTime,
+  getIntakeStatusLabel,
   humanizeToken,
   parseCurrencyInputToCents
 } from "../lib/mvp";
-import { CopyLinkButton } from "./copy-link-button";
+import { AcceptanceLinkStatusCard } from "./acceptance-link-status-card";
+import { PilotFeedbackForm } from "./pilot-feedback-form";
+import { PilotStatusCard } from "./pilot-status-card";
 import { StatusBadge } from "./status-badge";
 
 const proposalStatusOptions = ["draft", "sent", "accepted", "rejected", "archived"] as const;
@@ -304,6 +306,29 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
     });
   }
 
+  function handleReissueAcceptanceLink() {
+    setError(null);
+    setSuccess(null);
+    startTransition(() => {
+      void (async () => {
+        try {
+          const payload = await createAcceptanceIntake(proposalId, {
+            source: "PUBLIC_TOKEN",
+            note: "FieldMetriq MVP reissued review link",
+            tokenTtlHours: 168
+          });
+          if (payload.publicToken) {
+            setLatestLink(buildAcceptanceReviewUrl(payload.publicToken));
+          }
+          await loadProposalState();
+          setSuccess("A fresh acceptance link is ready to copy and share.");
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : "Failed to reissue acceptance link.");
+        }
+      })();
+    });
+  }
+
   function handleManualAccept() {
     setError(null);
     setSuccess(null);
@@ -437,8 +462,10 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
   }
 
   const totalCents =
-    proposal.sections.flatMap((section) => section.lines).reduce((sum, line) => sum + line.priceCents, 0) +
-    proposal.unsectionedLines.reduce((sum, line) => sum + line.priceCents, 0);
+    proposal.sections
+      .flatMap((section) => section.lines)
+      .reduce((sum, line) => sum + line.priceCents * line.qty, 0) +
+    proposal.unsectionedLines.reduce((sum, line) => sum + line.priceCents * line.qty, 0);
 
   const latestIntake = intakes[0] ?? null;
 
@@ -554,32 +581,49 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
             </div>
 
             <div className="mt-6 space-y-5">
-              {proposal.sections.map((section) => (
-                <ProposalSectionEditor
-                  key={section.id}
-                  proposalId={proposalId}
-                  section={section}
-                  sections={proposal.sections}
-                  onRefresh={() => void loadProposalState()}
-                  onError={setError}
-                  onSuccess={setSuccess}
-                />
-              ))}
+              {proposal.sections.length ? (
+                proposal.sections.map((section) => (
+                  <ProposalSectionEditor
+                    key={section.id}
+                    proposalId={proposalId}
+                    section={section}
+                    sections={proposal.sections}
+                    onRefresh={() => void loadProposalState()}
+                    onError={setError}
+                    onSuccess={setSuccess}
+                  />
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/15 px-4 py-6 text-sm text-slate-300">
+                  No sections yet. Start the estimate by adding a section like Labor, Materials, or Scope.
+                </div>
+              )}
 
               <div className="rounded-2xl border border-white/10 px-4 py-4">
-                <p className="text-sm font-medium text-white">Unsectioned Lines</p>
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm font-medium text-white">Standalone line items</p>
+                  <p className="text-xs text-slate-400">
+                    Use this only when a line does not belong in a specific section.
+                  </p>
+                </div>
                 <div className="mt-4 space-y-4">
-                  {proposal.unsectionedLines.map((line) => (
-                    <ProposalLineEditor
-                      key={line.id}
-                      proposalId={proposalId}
-                      line={line}
-                      sections={proposal.sections}
-                      onRefresh={() => void loadProposalState()}
-                      onError={setError}
-                      onSuccess={setSuccess}
-                    />
-                  ))}
+                  {proposal.unsectionedLines.length ? (
+                    proposal.unsectionedLines.map((line) => (
+                      <ProposalLineEditor
+                        key={line.id}
+                        proposalId={proposalId}
+                        line={line}
+                        sections={proposal.sections}
+                        onRefresh={() => void loadProposalState()}
+                        onError={setError}
+                        onSuccess={setSuccess}
+                      />
+                    ))
+                  ) : (
+                    <div className="rounded-2xl border border-dashed border-white/15 px-4 py-5 text-sm text-slate-300">
+                      No standalone lines yet. Add a line item below if you need a quick one-off charge.
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 grid gap-3 md:grid-cols-5">
@@ -588,7 +632,7 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
                     onChange={(event) =>
                       setNewUnsectionedLine((current) => ({ ...current, name: event.target.value }))
                     }
-                    placeholder="Line name"
+                    placeholder="Line item name"
                     className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white"
                   />
                   <input
@@ -612,7 +656,7 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
                     onChange={(event) =>
                       setNewUnsectionedLine((current) => ({ ...current, price: event.target.value }))
                     }
-                    placeholder="Price"
+                    placeholder="Unit price"
                     className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white"
                   />
                   <button
@@ -620,7 +664,7 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
                     onClick={handleCreateUnsectionedLine}
                     className="rounded-2xl border border-white/10 px-4 py-3 text-sm text-white"
                   >
-                    Add Line
+                    Add Line Item
                   </button>
                 </div>
               </div>
@@ -629,25 +673,45 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
         </article>
 
         <div className="space-y-6">
+          <PilotStatusCard
+            leadId={proposal.lead?.id}
+            latestIntakeStatus={latestIntake?.status}
+            acceptanceStatus={acceptance?.status}
+            conversionStatus={conversion?.status}
+            conversionBlockedReason={conversion?.blockedReasonMessage ?? eligibility?.reasons?.[0] ?? null}
+            requestedAmountCents={paymentSummary?.requestedAmountCents}
+            paidAmountCents={paymentSummary?.paidAmountCents}
+            outstandingAmountCents={paymentSummary?.outstandingAmountCents}
+          />
+
+          <AcceptanceLinkStatusCard
+            latestIntake={latestIntake}
+            latestLink={latestLink}
+            isPending={isPending}
+            onCreate={handleCreateAcceptanceLink}
+            onReissue={handleReissueAcceptanceLink}
+          />
+
           <article className="rounded-[1.5rem] border border-white/10 bg-white/5 p-6">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Share & Acceptance</p>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Acceptance State</p>
             <div className="mt-4 space-y-4 text-sm text-slate-200">
               <div className="flex flex-wrap items-center gap-2">
-                <StatusBadge value={acceptance?.status ?? "pending"} label={acceptance?.status ? undefined : "No acceptance yet"} />
-                {latestIntake ? <StatusBadge value={latestIntake.status} /> : null}
+                <StatusBadge
+                  value={acceptance?.status ?? "pending"}
+                  label={acceptance?.status ? humanizeToken(acceptance.status) : "No acceptance yet"}
+                />
+                {latestIntake ? (
+                  <StatusBadge value={latestIntake.status} label={getIntakeStatusLabel(latestIntake.status)} />
+                ) : null}
               </div>
               <p>
-                Acceptance link status: {latestIntake ? humanizeToken(latestIntake.status) : "No public intake created yet."}
+                {latestIntake?.status === "OPEN" && !latestLink
+                  ? "An active link exists, but the original token is not stored in plain text. Reissue a fresh link to share it again."
+                  : latestIntake
+                    ? `Latest intake state: ${getIntakeStatusLabel(latestIntake.status)}.`
+                    : "No public intake created yet."}
               </p>
               <div className="flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={handleCreateAcceptanceLink}
-                  disabled={isPending}
-                  className="rounded-full bg-emerald-400 px-4 py-2 text-sm font-medium text-emerald-950 disabled:opacity-60"
-                >
-                  Create Share Link
-                </button>
                 <button
                   type="button"
                   onClick={handleManualAccept}
@@ -657,14 +721,6 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
                   Manual Accept
                 </button>
               </div>
-              {latestLink ? (
-                <div className="rounded-2xl border border-white/10 px-4 py-4">
-                  <p className="break-all text-xs text-slate-300">{latestLink}</p>
-                  <div className="mt-3">
-                    <CopyLinkButton value={latestLink} />
-                  </div>
-                </div>
-              ) : null}
             </div>
           </article>
 
@@ -731,17 +787,23 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
                 </button>
               </div>
 
-              {depositRequests.map((request) => (
-                <div key={request.id} className="rounded-2xl border border-white/10 px-4 py-4 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-medium text-white">{request.description ?? "Deposit request"}</p>
-                    <StatusBadge value={request.status} />
+              {depositRequests.length ? (
+                depositRequests.map((request) => (
+                  <div key={request.id} className="rounded-2xl border border-white/10 px-4 py-4 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-white">{request.description ?? "Deposit request"}</p>
+                      <StatusBadge value={request.status} />
+                    </div>
+                    <p className="mt-2 text-slate-300">
+                      {formatCurrency(request.amountCents)} · Outstanding {formatCurrency(request.outstandingAmountCents)}
+                    </p>
                   </div>
-                  <p className="mt-2 text-slate-300">
-                    {formatCurrency(request.amountCents)} · Outstanding {formatCurrency(request.outstandingAmountCents)}
-                  </p>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/15 px-4 py-5 text-sm text-slate-300">
+                  No deposit requests yet. Create one if the pilot needs a required deposit before conversion.
                 </div>
-              ))}
+              )}
 
               <div className="rounded-2xl border border-white/10 px-4 py-4">
                 <p className="font-medium text-white">Record manual payment</p>
@@ -792,15 +854,21 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
                 </button>
               </div>
 
-              {payments.map((payment) => (
-                <div key={payment.id} className="rounded-2xl border border-white/10 px-4 py-4 text-sm">
-                  <div className="flex items-center justify-between gap-3">
-                    <p className="font-medium text-white">{formatCurrency(payment.amountCents)}</p>
-                    <StatusBadge value={payment.status} />
+              {payments.length ? (
+                payments.map((payment) => (
+                  <div key={payment.id} className="rounded-2xl border border-white/10 px-4 py-4 text-sm">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="font-medium text-white">{formatCurrency(payment.amountCents)}</p>
+                      <StatusBadge value={payment.status} />
+                    </div>
+                    <p className="mt-2 text-slate-300">{payment.note ?? payment.method}</p>
                   </div>
-                  <p className="mt-2 text-slate-300">{payment.note ?? payment.method}</p>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/15 px-4 py-5 text-sm text-slate-300">
+                  No payments recorded yet. Manual payments can be logged here for pilot validation.
                 </div>
-              ))}
+              )}
             </div>
           </article>
 
@@ -853,6 +921,8 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
               ) : null}
             </div>
           </article>
+
+          <PilotFeedbackForm defaultArea="PROPOSALS" defaultPagePath={`/proposals/${proposalId}`} />
         </div>
       </section>
     </div>
@@ -930,6 +1000,10 @@ function ProposalSectionEditor({
 
   return (
     <div className="rounded-2xl border border-white/10 px-4 py-4">
+      <div className="mb-4">
+        <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Section</p>
+        <p className="mt-1 text-sm text-slate-300">Keep related scope items grouped so the estimate is easier to scan.</p>
+      </div>
       <div className="grid gap-3 md:grid-cols-[1fr_120px_120px]">
         <input
           value={title}
@@ -952,24 +1026,30 @@ function ProposalSectionEditor({
       </div>
 
       <div className="mt-4 space-y-4">
-        {section.lines.map((line) => (
-          <ProposalLineEditor
-            key={line.id}
-            proposalId={proposalId}
-            line={line}
-            sections={sections}
-            onRefresh={onRefresh}
-            onError={onError}
-            onSuccess={onSuccess}
-          />
-        ))}
+        {section.lines.length ? (
+          section.lines.map((line) => (
+            <ProposalLineEditor
+              key={line.id}
+              proposalId={proposalId}
+              line={line}
+              sections={sections}
+              onRefresh={onRefresh}
+              onError={onError}
+              onSuccess={onSuccess}
+            />
+          ))
+        ) : (
+          <div className="rounded-2xl border border-dashed border-white/15 px-4 py-5 text-sm text-slate-300">
+            No line items in this section yet. Add the first one below.
+          </div>
+        )}
       </div>
 
       <div className="mt-4 grid gap-3 md:grid-cols-5">
         <input
           value={newLine.name}
           onChange={(event) => setNewLine((current) => ({ ...current, name: event.target.value }))}
-          placeholder="Line name"
+          placeholder="Line item name"
           className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white"
         />
         <input
@@ -987,7 +1067,7 @@ function ProposalSectionEditor({
         <input
           value={newLine.price}
           onChange={(event) => setNewLine((current) => ({ ...current, price: event.target.value }))}
-          placeholder="Price"
+          placeholder="Unit price"
           className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-white"
         />
         <button
@@ -995,7 +1075,7 @@ function ProposalSectionEditor({
           onClick={addLine}
           className="rounded-2xl border border-white/10 px-4 py-3 text-sm text-white"
         >
-          Add Line
+          Add Line Item
         </button>
       </div>
     </div>

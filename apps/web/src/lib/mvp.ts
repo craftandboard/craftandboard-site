@@ -85,3 +85,60 @@ export function toneForStatus(value: string | null | undefined) {
 
   return "neutral";
 }
+
+export function getIntakeStatusLabel(value: string | null | undefined) {
+  switch ((value ?? "").toUpperCase()) {
+    case "OPEN":
+      return "Ready for review";
+    case "SUBMITTED":
+      return "Already submitted";
+    case "VERIFIED":
+      return "Verified";
+    case "HANDOFF_ACCEPTED":
+      return "Acceptance completed";
+    case "HANDOFF_REJECTED":
+      return "Needs internal review";
+    case "EXPIRED":
+      return "Link expired";
+    case "REVOKED":
+      return "Link revoked";
+    case "FAILED":
+      return "Needs a new link";
+    default:
+      return humanizeToken(value);
+  }
+}
+
+export function getPublicAcceptanceStateLabel(value: string | null | undefined) {
+  switch ((value ?? "").toUpperCase()) {
+    case "REVIEW_READY":
+      return "Ready for review";
+    case "INSTRUCTIONS_READY":
+      return "Instructions ready";
+    case "READY_TO_CONFIRM":
+      return "Ready to confirm";
+    case "SUBMITTED":
+      return "Already submitted";
+    case "CONFIRMED":
+      return "Acceptance completed";
+    case "BLOCKED":
+      return "Review blocked";
+    case "EXPIRED":
+      return "Link expired";
+    default:
+      return humanizeToken(value);
+  }
+}
+
+export function getConversionStatusLabel(value: string | null | undefined) {
+  switch ((value ?? "").toUpperCase()) {
+    case "ELIGIBLE":
+      return "Ready to convert";
+    case "BLOCKED":
+      return "Conversion blocked";
+    case "CONVERTED":
+      return "Project created";
+    default:
+      return humanizeToken(value);
+  }
+}

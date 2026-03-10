@@ -685,6 +685,27 @@ enum LabelRenderFormat {
   PDF
 }
 
+enum PilotFeedbackArea {
+  LEADS
+  PROPOSALS
+  PUBLIC_ACCEPTANCE
+  PROJECTS
+  GENERAL
+}
+
+enum PilotFeedbackSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  BLOCKER
+}
+
+enum PilotFeedbackStatus {
+  NEW
+  REVIEWED
+  RESOLVED
+}
+
 model Organization {
   id        String    @id @default(cuid())
   name      String
@@ -716,6 +737,7 @@ model Organization {
   proposalAcceptanceIntakeLogs ProposalAcceptanceIntakeLog[]
   proposalAcceptanceReviewLogs ProposalAcceptanceReviewLog[]
   proposalAcceptancePresentationLogs ProposalAcceptancePresentationLog[]
+  pilotFeedbacks PilotFeedback[]
   parts     Part[]
   batches   Batch[]
   bundles   ProductionBundle[]
@@ -830,6 +852,29 @@ model OrganizationMember {
   @@unique([organizationId, userId])
   @@index([userId])
   @@index([organizationId, role])
+}
+
+model PilotFeedback {
+  id                String              @id @default(cuid())
+  organizationId    String
+  membershipId      String?
+  area              PilotFeedbackArea
+  severity          PilotFeedbackSeverity
+  status            PilotFeedbackStatus @default(NEW)
+  pagePath          String?
+  title             String
+  message           String
+  reproductionNotes String?
+  screenshotUrl     String?
+  metadata          Json?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  organization      Organization        @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId, status])
+  @@index([organizationId, area])
+  @@index([organizationId, severity])
+  @@index([organizationId, createdAt])
 }
 
 model Session {

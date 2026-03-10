@@ -162,7 +162,8 @@ describe("proposal acceptance presentation routes", () => {
     expect(response.status).toBe(400);
     expect(await response.json()).toEqual({
       ok: false,
-      error: "Invalid or expired acceptance token."
+      code: "INVALID",
+      error: "This acceptance link is not available."
     });
   });
 

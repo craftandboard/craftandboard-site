@@ -8,4 +8,4 @@ Do not do yet:
 - do not replace backend rule checks with frontend-only business logic
 
 Exact next MVP action:
-- run the hardened pilot flow in `docs/mvp/fieldmetriq-ui-mvp-qa-checklist.md`, log issues in `/pilot-feedback`, then decide whether the next spec should improve post-submission public completion/retry handling or tighten proposal-editor speed for repeated estimates
+- run the pilot again using the retry/completion checklist, log issues in `/pilot-feedback`, then decide whether the next spec should focus on faster repeated estimate editing or on a slightly richer public completion/retry wrapper around the existing token flow

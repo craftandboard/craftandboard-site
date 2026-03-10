@@ -89,9 +89,9 @@ export function toneForStatus(value: string | null | undefined) {
 export function getIntakeStatusLabel(value: string | null | undefined) {
   switch ((value ?? "").toUpperCase()) {
     case "OPEN":
-      return "Ready for review";
+      return "Active link ready to share";
     case "SUBMITTED":
-      return "Already submitted";
+      return "Confirmation already received";
     case "VERIFIED":
       return "Verified";
     case "HANDOFF_ACCEPTED":
@@ -111,6 +111,8 @@ export function getIntakeStatusLabel(value: string | null | undefined) {
 
 export function getPublicAcceptanceStateLabel(value: string | null | undefined) {
   switch ((value ?? "").toUpperCase()) {
+    case "READY":
+      return "Ready for review";
     case "REVIEW_READY":
       return "Ready for review";
     case "INSTRUCTIONS_READY":
@@ -118,9 +120,14 @@ export function getPublicAcceptanceStateLabel(value: string | null | undefined) 
     case "READY_TO_CONFIRM":
       return "Ready to confirm";
     case "SUBMITTED":
-      return "Already submitted";
+      return "Confirmation already received";
     case "CONFIRMED":
+    case "COMPLETED":
       return "Acceptance completed";
+    case "REVOKED":
+      return "Link revoked";
+    case "INVALID":
+      return "Invalid link";
     case "BLOCKED":
       return "Review blocked";
     case "EXPIRED":

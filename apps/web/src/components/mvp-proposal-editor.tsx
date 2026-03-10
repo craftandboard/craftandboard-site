@@ -468,6 +468,12 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
     proposal.unsectionedLines.reduce((sum, line) => sum + line.priceCents * line.qty, 0);
 
   const latestIntake = intakes[0] ?? null;
+  const activeOpenIntake = intakes.find((intake) => intake.status === "OPEN") ?? null;
+  const primaryIntake = activeOpenIntake ?? latestIntake;
+  const needsFreshLink =
+    !primaryIntake ||
+    primaryIntake.status !== "OPEN" ||
+    (primaryIntake.status === "OPEN" && !latestLink);
 
   return (
     <div className="space-y-6">
@@ -685,7 +691,8 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
           />
 
           <AcceptanceLinkStatusCard
-            latestIntake={latestIntake}
+            latestIntake={primaryIntake}
+            recentIntakes={intakes}
             latestLink={latestLink}
             isPending={isPending}
             onCreate={handleCreateAcceptanceLink}
@@ -700,17 +707,24 @@ export function MvpProposalEditor({ proposalId }: { proposalId: string }) {
                   value={acceptance?.status ?? "pending"}
                   label={acceptance?.status ? humanizeToken(acceptance.status) : "No acceptance yet"}
                 />
-                {latestIntake ? (
-                  <StatusBadge value={latestIntake.status} label={getIntakeStatusLabel(latestIntake.status)} />
+                {primaryIntake ? (
+                  <StatusBadge value={primaryIntake.status} label={getIntakeStatusLabel(primaryIntake.status)} />
                 ) : null}
               </div>
               <p>
-                {latestIntake?.status === "OPEN" && !latestLink
+                {primaryIntake?.status === "OPEN" && !latestLink
                   ? "An active link exists, but the original token is not stored in plain text. Reissue a fresh link to share it again."
-                  : latestIntake
-                    ? `Latest intake state: ${getIntakeStatusLabel(latestIntake.status)}.`
+                  : primaryIntake
+                    ? `Current public intake state: ${getIntakeStatusLabel(primaryIntake.status)}.`
                     : "No public intake created yet."}
               </p>
+              <div className="rounded-2xl border border-white/10 bg-black/10 px-4 py-4 text-sm text-slate-200">
+                {acceptance?.status === "ACCEPTED" || primaryIntake?.status === "HANDOFF_ACCEPTED"
+                  ? "Public acceptance is complete. The next step is deposit or conversion, not another share action."
+                  : needsFreshLink
+                    ? "This proposal needs a fresh share link before the contractor can complete the public flow again."
+                    : "The current public link is the one that should be shared with the tester."}
+              </div>
               <div className="flex flex-wrap gap-3">
                 <button
                   type="button"

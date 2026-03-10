@@ -51,7 +51,14 @@ type PresentationLogRecord = {
   createdAt: Date;
 };
 
-export class ProposalAcceptancePresentationTokenError extends Error {}
+export class ProposalAcceptancePresentationTokenError extends Error {
+  code: "INVALID" | "EXPIRED" | "REVOKED";
+
+  constructor(message: string, code: "INVALID" | "EXPIRED" | "REVOKED" = "INVALID") {
+    super(message);
+    this.code = code;
+  }
+}
 
 function mapLog(record: PresentationLogRecord): ProposalAcceptancePresentationLogView {
   return {
@@ -73,7 +80,7 @@ async function getValidPresentationBundle(token: string) {
   })) as PresentationBundle | null;
 
   if (!bundle) {
-    throw new ProposalAcceptancePresentationTokenError("Invalid or expired acceptance token.");
+    throw new ProposalAcceptancePresentationTokenError("Invalid or expired acceptance token.", "INVALID");
   }
 
   const now = Date.now();
@@ -82,7 +89,10 @@ async function getValidPresentationBundle(token: string) {
     bundle.expiredAt ||
     (bundle.tokenExpiresAt && bundle.tokenExpiresAt.getTime() < now)
   ) {
-    throw new ProposalAcceptancePresentationTokenError("Invalid or expired acceptance token.");
+    throw new ProposalAcceptancePresentationTokenError(
+      "Invalid or expired acceptance token.",
+      bundle.revokedAt ? "REVOKED" : "EXPIRED"
+    );
   }
 
   return bundle;

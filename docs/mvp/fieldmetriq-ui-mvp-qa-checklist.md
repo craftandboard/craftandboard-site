@@ -13,24 +13,27 @@
 10. Create a public acceptance link and copy it.
 11. Open the public link in a separate browser session and confirm the review snapshot loads.
 12. Confirm the public page shows a safe state for valid review, not just raw form fields.
-13. Revoke or let an existing link expire, then confirm the public page shows a safe blocked/expired message.
-14. Reissue a fresh acceptance link from the proposal screen and confirm it can be copied immediately.
-15. Submit public acceptance with signer name and confirm the confirmation state appears.
-16. Return to the internal proposal screen and confirm acceptance or intake state changed.
-17. Create a deposit request and confirm it appears in the deposit list.
-18. Record a manual payment and confirm the payment summary updates.
-19. Run conversion evaluation and confirm eligible or blocked reasons render in plain language.
-20. Convert the proposal to a project once eligible.
-21. Confirm the UI routes to `/projects/:projectId` and shows the created project.
-22. Open `/projects` and confirm the converted project appears in the list.
-23. Open `/pilot-feedback`, submit one blocker or high-severity issue, and confirm it appears in the list.
-24. Update that issue to `REVIEWED` or `RESOLVED` and confirm the pilot summary counts update.
+13. Submit public acceptance with signer name and confirm the confirmation state appears.
+14. Reload the same public link and confirm it now shows a safe already-submitted or completed state with no duplicate submit CTA.
+15. Revoke or let an existing link expire, then confirm the public page shows a safe expired or revoked retry-needed state.
+16. Open an invalid token and confirm the page shows a safe generic blocked state without leaking internals.
+17. Reissue a fresh acceptance link from the proposal screen and confirm it becomes the clearly shareable link and can be copied immediately.
+18. Return to the internal proposal screen and confirm it clearly shows acceptance completed vs needs new link.
+19. Create a deposit request and confirm it appears in the deposit list.
+20. Record a manual payment and confirm the payment summary updates.
+21. Run conversion evaluation and confirm eligible or blocked reasons render in plain language.
+22. Convert the proposal to a project once eligible.
+23. Confirm the UI routes to `/projects/:projectId` and shows the created project.
+24. Open `/projects` and confirm the converted project appears in the list.
+25. Open `/pilot-feedback`, submit one blocker or high-severity issue, and confirm it appears in the list.
+26. Update that issue to `REVIEWED` or `RESOLVED` and confirm the pilot summary counts update.
 
 ## Known manual watchpoints
 - Public acceptance routes should never leak internal IDs.
 - Repeated acceptance link clicks should remain safe.
 - Reissued acceptance links should create fresh shareable links without deleting intake history.
-- If an active link exists but the token is not re-readable, the UI should explain that a fresh link must be issued.
+- If an active historical link exists but the token is not re-readable, the UI should explain that a fresh link must be issued.
+- Public stale-link states should never dead-end without a clear "contact the sender for a new link" instruction.
 - Proposal save, section save, and line save actions should show success or error feedback.
 - Conversion should only be attempted after acceptance and deposit conditions are met.
 - Pilot feedback should remain internal-only and never appear on public routes.

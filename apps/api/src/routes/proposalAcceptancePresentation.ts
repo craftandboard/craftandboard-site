@@ -18,9 +18,16 @@ const router = Router();
 
 function handlePresentationError(error: unknown, res: any, next: any) {
   if (error instanceof ProposalAcceptancePresentationTokenError) {
+    const code = error.code ?? "INVALID";
     res.status(400).json({
       ok: false,
-      error: "Invalid or expired acceptance token."
+      code,
+      error:
+        code === "EXPIRED"
+          ? "This acceptance link expired."
+          : code === "REVOKED"
+            ? "This acceptance link was revoked."
+            : "This acceptance link is not available."
     });
     return;
   }

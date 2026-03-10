@@ -693,7 +693,11 @@ async function sendJson<T>(input: string, init?: RequestInit): Promise<T> {
         : payload && typeof payload === "object" && "error" in payload && typeof payload.error === "string"
           ? payload.error
           : "Request failed.";
-    throw new Error(message);
+    const error = new Error(message) as Error & { code?: string };
+    if (payload && typeof payload === "object" && "code" in payload && typeof payload.code === "string") {
+      error.code = payload.code;
+    }
+    throw error;
   }
 
   return payload as T;

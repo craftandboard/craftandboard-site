@@ -49,6 +49,7 @@ export function PublicProposalAcceptancePage({ token }: { token: string }) {
   const [isPending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [review, setReview] = useState<ReviewState | null>(null);
   const [presentation, setPresentation] = useState<PresentationState | null>(null);
   const [instructions, setInstructions] = useState<Array<{ key: string; label: string; detail: string }>>([]);
@@ -62,6 +63,7 @@ export function PublicProposalAcceptancePage({ token }: { token: string }) {
   const load = useCallback(async () => {
     setLoading(true);
     setError(null);
+    setErrorCode(null);
     try {
       const [reviewPayload, presentationPayload, instructionsPayload, confirmationPayload] =
         await Promise.all([
@@ -77,6 +79,11 @@ export function PublicProposalAcceptancePage({ token }: { token: string }) {
       setConfirmation(confirmationPayload.confirmation);
       await trackPublicAcceptancePresentationViewed(token);
     } catch (caught) {
+      const code =
+        caught && typeof caught === "object" && "code" in caught && typeof caught.code === "string"
+          ? caught.code
+          : null;
+      setErrorCode(code);
       setError(caught instanceof Error ? caught.message : "This acceptance link is not available.");
     } finally {
       setLoading(false);
@@ -89,6 +96,7 @@ export function PublicProposalAcceptancePage({ token }: { token: string }) {
 
   function handleSubmit() {
     setError(null);
+    setErrorCode(null);
     startTransition(() => {
       void (async () => {
         try {
@@ -107,13 +115,18 @@ export function PublicProposalAcceptancePage({ token }: { token: string }) {
           setConfirmation(confirmationPayload.confirmation);
           await load();
         } catch (caught) {
+          const code =
+            caught && typeof caught === "object" && "code" in caught && typeof caught.code === "string"
+              ? caught.code
+              : null;
+          setErrorCode(code);
           setError(caught instanceof Error ? caught.message : "Failed to submit acceptance.");
         }
       })();
     });
   }
 
-  const fallbackState = useMemo(() => buildFallbackState(error), [error]);
+  const fallbackState = useMemo(() => buildFallbackState(error, errorCode), [error, errorCode]);
   const currentState = presentation?.state ?? fallbackState.state;
   const blockedReasons = presentation?.blockedReasons ?? fallbackState.blockedReasons;
   const canConfirm =
@@ -289,24 +302,38 @@ function SnapshotCard({ label, value }: { label: string; value: string }) {
   );
 }
 
-function buildFallbackState(error: string | null) {
+function buildFallbackState(error: string | null, errorCode: string | null) {
+  if (errorCode === "EXPIRED") {
+    return { state: "EXPIRED", blockedReasons: ["This link expired. Please contact the sender for a new link."] };
+  }
+  if (errorCode === "REVOKED") {
+    return { state: "REVOKED", blockedReasons: ["This link was revoked. Please contact the sender for a new link."] };
+  }
+  if (errorCode === "INVALID") {
+    return { state: "INVALID", blockedReasons: ["This link is not available. Please contact the sender for help."] };
+  }
+
   const normalized = (error ?? "").toLowerCase();
   if (normalized.includes("expired")) {
-    return { state: "EXPIRED", blockedReasons: ["This review link expired. Contact the sender for a new link."] };
+    return { state: "EXPIRED", blockedReasons: ["This link expired. Please contact the sender for a new link."] };
   }
   if (normalized.includes("revoked")) {
-    return { state: "BLOCKED", blockedReasons: ["This review link was revoked. Contact the sender for a new link."] };
+    return { state: "REVOKED", blockedReasons: ["This link was revoked. Please contact the sender for a new link."] };
   }
   if (normalized.includes("invalid")) {
-    return { state: "BLOCKED", blockedReasons: ["This review link is invalid. Contact the sender for a new link."] };
+    return { state: "INVALID", blockedReasons: ["This link is not available. Please contact the sender for help."] };
   }
-  return { state: "BLOCKED", blockedReasons: ["This review link is not available. Contact the sender for help."] };
+  return { state: "BLOCKED", blockedReasons: ["This link is not available. Please contact the sender for help."] };
 }
 
 function stateHeadline(state: string) {
   switch (state) {
     case "EXPIRED":
       return "This review link expired";
+    case "REVOKED":
+      return "This review link was revoked";
+    case "INVALID":
+      return "This review link is unavailable";
     case "BLOCKED":
       return "This review link is unavailable";
     case "SUBMITTED":
@@ -328,13 +355,17 @@ function stateDetail(state: string, blockedReasons: string[]) {
       return "The confirmation was already received. No further action is required.";
     case "CONFIRMED":
       return "This proposal has already been accepted.";
+    case "REVOKED":
+      return "Please contact the sender and ask for a fresh acceptance link.";
+    case "INVALID":
+      return "Please contact the sender if you still need to review this proposal.";
     default:
       return "Check the proposal details, then confirm only if the sender asked you to proceed.";
   }
 }
 
 function stateContainerClass(state: string) {
-  if (state === "BLOCKED" || state === "EXPIRED") {
+  if (state === "BLOCKED" || state === "EXPIRED" || state === "REVOKED" || state === "INVALID") {
     return "border-amber-300/30 bg-amber-500/10";
   }
   if (state === "SUBMITTED" || state === "CONFIRMED") {

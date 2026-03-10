@@ -45,13 +45,24 @@ function requestHeadersToObject(headers: Record<string, unknown>) {
 function publicError(res: any) {
   res.status(400).json({
     ok: false,
-    error: "Invalid or expired acceptance token."
+    code: "INVALID",
+    error: "This acceptance link is not available."
   });
 }
 
 function handleRouteError(error: unknown, res: any, next: any) {
   if (error instanceof ProposalAcceptancePublicTokenError) {
-    publicError(res);
+    const code = error.code ?? "INVALID";
+    res.status(400).json({
+      ok: false,
+      code,
+      error:
+        code === "EXPIRED"
+          ? "This acceptance link expired."
+          : code === "REVOKED"
+            ? "This acceptance link was revoked."
+            : "This acceptance link is not available."
+    });
     return;
   }
   if (error instanceof RequestAuthenticationError) {

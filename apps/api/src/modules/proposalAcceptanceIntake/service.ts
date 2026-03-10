@@ -95,7 +95,14 @@ type TokenLookupRecord = IntakeRecord & {
 };
 
 export class ProposalAcceptanceIntakeConflictError extends Error {}
-export class ProposalAcceptancePublicTokenError extends Error {}
+export class ProposalAcceptancePublicTokenError extends Error {
+  code: "INVALID" | "EXPIRED" | "REVOKED";
+
+  constructor(message: string, code: "INVALID" | "EXPIRED" | "REVOKED" = "INVALID") {
+    super(message);
+    this.code = code;
+  }
+}
 
 function toIso(value: Date | null) {
   return value ? value.toISOString() : null;
@@ -263,7 +270,7 @@ async function validateTokenRecord(token: string) {
   })) as TokenLookupRecord | null;
 
   if (!lookup) {
-    throw new ProposalAcceptancePublicTokenError("Invalid or expired acceptance token.");
+    throw new ProposalAcceptancePublicTokenError("Invalid or expired acceptance token.", "INVALID");
   }
 
   const maybeExpired = (await markExpiredIfNeeded(lookup)) as IntakeRecord;
@@ -277,7 +284,10 @@ async function validateTokenRecord(token: string) {
       outcome: "FAILED",
       message: "Acceptance token was expired or revoked."
     });
-    throw new ProposalAcceptancePublicTokenError("Invalid or expired acceptance token.");
+    throw new ProposalAcceptancePublicTokenError(
+      "Invalid or expired acceptance token.",
+      maybeExpired.status === "REVOKED" ? "REVOKED" : "EXPIRED"
+    );
   }
 
   return {
@@ -325,7 +335,7 @@ async function processVerifiedSubmission(input: {
   }
 
   if (isTerminalIntakeStatus(input.intake.status) && input.intake.status !== "OPEN") {
-    throw new ProposalAcceptancePublicTokenError("Invalid or expired acceptance token.");
+    throw new ProposalAcceptancePublicTokenError("Invalid or expired acceptance token.", "INVALID");
   }
 
   if (!canTransitionIntakeStatus(input.intake.status, "SUBMITTED")) {

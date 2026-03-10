@@ -64,7 +64,14 @@ type ReviewLogRecord = {
   createdAt: Date;
 };
 
-export class ProposalAcceptanceReviewTokenError extends Error {}
+export class ProposalAcceptanceReviewTokenError extends Error {
+  code: "INVALID" | "EXPIRED" | "REVOKED";
+
+  constructor(message: string, code: "INVALID" | "EXPIRED" | "REVOKED" = "INVALID") {
+    super(message);
+    this.code = code;
+  }
+}
 
 function mapLog(record: ReviewLogRecord): ProposalAcceptanceReviewLogView {
   return {
@@ -86,7 +93,7 @@ async function getValidReviewBundle(token: string) {
   })) as ReviewBundle | null;
 
   if (!bundle) {
-    throw new ProposalAcceptanceReviewTokenError("Invalid or expired acceptance token.");
+    throw new ProposalAcceptanceReviewTokenError("Invalid or expired acceptance token.", "INVALID");
   }
 
   const now = Date.now();
@@ -103,7 +110,10 @@ async function getValidReviewBundle(token: string) {
       outcome: "FAILED",
       message: "Review token was expired or revoked."
     });
-    throw new ProposalAcceptanceReviewTokenError("Invalid or expired acceptance token.");
+    throw new ProposalAcceptanceReviewTokenError(
+      "Invalid or expired acceptance token.",
+      bundle.revokedAt ? "REVOKED" : "EXPIRED"
+    );
   }
 
   return bundle;

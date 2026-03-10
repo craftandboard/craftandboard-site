@@ -365,6 +365,11 @@ export const createChannelMappingPresetSchema = z.object({
   packagingFormat: z.string().trim().max(400).nullable().optional(),
   pricingFormat: z.string().trim().max(400).nullable().optional(),
   fieldOrderingSnapshot: z.unknown().nullable().optional(),
+  defaultForChannel: z.boolean().optional(),
+  defaultLaunchStrategies: z.array(launchStrategySchema).nullable().optional(),
+  launchContextSnapshot: z.unknown().nullable().optional(),
+  priority: z.number().int().min(0).nullable().optional(),
+  autoApplyEnabled: z.boolean().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
   presetSnapshot: z.unknown().nullable().optional()
 });
@@ -419,6 +424,10 @@ export const refreshListingPrepPackageSchema = z.object({
 
 export const applyChannelMappingPresetSchema = z.object({
   channelMappingPresetId: z.string().trim().min(1)
+});
+
+export const applyDefaultChannelPresetSchema = z.object({
+  force: z.boolean().optional()
 });
 
 export const approveListingPrepPackageSchema = z.object({});

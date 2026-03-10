@@ -41,6 +41,11 @@ export function OverrideHistoryCard({
             <p className="mt-1 text-xs text-slate-500">{entry?.approvedAt ? new Date(entry.approvedAt).toLocaleString() : "Approval timestamp unavailable"}</p>
           </div>
         ))}
+        {!entries.length && !history?.latestOverride ? (
+          <div className="rounded-2xl border border-dashed border-white/15 bg-black/20 px-4 py-3 text-sm text-slate-300">
+            No override history has been captured for this package.
+          </div>
+        ) : null}
       </div>
     </section>
   );

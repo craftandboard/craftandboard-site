@@ -125,7 +125,7 @@ export async function getCostProfileRecord(input: {
       },
       channelMappingPresets: {
         where: { status: "ACTIVE" },
-        orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
+        orderBy: [{ defaultForChannel: "desc" }, { priority: "desc" }, { updatedAt: "desc" }, { id: "desc" }]
       }
     }
   });
@@ -904,6 +904,12 @@ export async function createListingPrepPackageRecord(input: {
   readyForListingPrep?: boolean;
   readyForListingPrepSummary?: unknown;
   manualAmazonExportSnapshot?: unknown;
+  approvalHistorySnapshot?: unknown;
+  autoAppliedChannelPreset?: boolean;
+  channelPresetSelectionSummary?: unknown;
+  manualListingWorksheetSnapshot?: unknown;
+  worksheetVersion?: string | null;
+  worksheetSummarySnapshot?: unknown;
   currentApprovedArtifact?: boolean;
   notes?: string | null;
   approvedAt?: Date | null;
@@ -933,6 +939,12 @@ export async function createListingPrepPackageRecord(input: {
       readyForListingPrep: input.readyForListingPrep ?? false,
       readyForListingPrepSummary: normalizeMetadata(input.readyForListingPrepSummary),
       manualAmazonExportSnapshot: normalizeMetadata(input.manualAmazonExportSnapshot),
+      approvalHistorySnapshot: normalizeMetadata(input.approvalHistorySnapshot),
+      autoAppliedChannelPreset: input.autoAppliedChannelPreset ?? false,
+      channelPresetSelectionSummary: normalizeMetadata(input.channelPresetSelectionSummary),
+      manualListingWorksheetSnapshot: normalizeMetadata(input.manualListingWorksheetSnapshot),
+      worksheetVersion: input.worksheetVersion ?? undefined,
+      worksheetSummarySnapshot: normalizeMetadata(input.worksheetSummarySnapshot),
       currentApprovedArtifact: input.currentApprovedArtifact ?? false,
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
@@ -1080,6 +1092,11 @@ export async function createChannelMappingPresetRecord(input: {
   packagingFormat?: string | null;
   pricingFormat?: string | null;
   fieldOrderingSnapshot?: unknown;
+  defaultForChannel?: boolean;
+  defaultLaunchStrategies?: unknown;
+  launchContextSnapshot?: unknown;
+  priority?: number | null;
+  autoApplyEnabled?: boolean;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -1099,6 +1116,11 @@ export async function createChannelMappingPresetRecord(input: {
       packagingFormat: input.packagingFormat ?? null,
       pricingFormat: input.pricingFormat ?? null,
       fieldOrderingSnapshot: normalizeMetadata(input.fieldOrderingSnapshot),
+      defaultForChannel: input.defaultForChannel ?? false,
+      defaultLaunchStrategies: normalizeMetadata(input.defaultLaunchStrategies),
+      launchContextSnapshot: normalizeMetadata(input.launchContextSnapshot),
+      priority: input.priority ?? undefined,
+      autoApplyEnabled: input.autoApplyEnabled ?? false,
       notes: input.notes ?? null,
       presetSnapshot: normalizeMetadata(input.presetSnapshot)
     }
@@ -1127,7 +1149,7 @@ export async function listChannelMappingPresetsForOrganization(input: {
       organizationId: input.organizationId,
       ...(input.costProfileId ? { OR: [{ costProfileId: input.costProfileId }, { costProfileId: null }] } : {})
     },
-    orderBy: [{ status: "asc" }, { channelCode: "asc" }, { name: "asc" }, { id: "asc" }]
+    orderBy: [{ status: "asc" }, { channelCode: "asc" }, { defaultForChannel: "desc" }, { priority: "desc" }, { name: "asc" }, { id: "asc" }]
   });
 }
 

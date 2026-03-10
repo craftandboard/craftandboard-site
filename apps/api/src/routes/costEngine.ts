@@ -34,6 +34,7 @@ import {
   getLaunchTemplate,
   getChannelMappingPreset,
   getListingPrepPackage,
+  getManualListingWorksheet,
   getListingPrepManualAmazonExport,
   getMarketplaceMappingTemplate,
   getShelfCostCalculation,
@@ -51,6 +52,7 @@ import {
   requestPriceFloorOverride,
   refreshListingPrepPackage,
   applyChannelMappingPresetToPackage,
+  applyDefaultChannelMappingPreset,
   approveListingPrepPackage,
   saveComparisonSet,
   saveShelfCostCalculation,
@@ -105,6 +107,7 @@ import {
   priceFloorOverrideSchema,
   refreshListingPrepPackageSchema,
   applyChannelMappingPresetSchema,
+  applyDefaultChannelPresetSchema,
   approveListingPrepPackageSchema,
   saveComparisonSetSchema,
   saveShelfCostCalculationSchema,
@@ -1004,6 +1007,25 @@ router.post("/listing-prep-packages/:listingPrepPackageId/apply-channel-preset",
   }
 });
 
+router.post(
+  "/listing-prep-packages/:listingPrepPackageId/apply-default-channel-preset",
+  async (req, res, next) => {
+    try {
+      const context = getCostCalculationWriteContext(req);
+      const params = listingPrepPackageIdParamsSchema.parse(req.params);
+      applyDefaultChannelPresetSchema.parse(req.body ?? {});
+      res.json(
+        await applyDefaultChannelMappingPreset({
+          organizationId: context.currentOrganization.id,
+          listingPrepPackageId: params.listingPrepPackageId
+        })
+      );
+    } catch (error) {
+      handleCostEngineRouteError(error, res, next);
+    }
+  }
+);
+
 router.post("/listing-prep-packages/:listingPrepPackageId/approve", async (req, res, next) => {
   try {
     const context = getCostCalculationWriteContext(req);
@@ -1057,6 +1079,21 @@ router.get("/listing-prep-packages/:listingPrepPackageId/manual-amazon-export", 
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getListingPrepManualAmazonExport({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/manual-listing-worksheet", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getManualListingWorksheet({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

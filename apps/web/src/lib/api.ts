@@ -2884,6 +2884,11 @@ export interface ChannelMappingPresetItem {
   packagingFormat: string | null;
   pricingFormat: string | null;
   fieldOrderingSnapshot: Record<string, unknown> | null;
+  defaultForChannel: boolean;
+  defaultLaunchStrategies: Array<"BALANCED" | "AGGRESSIVE" | "SAFER_MARGIN"> | null;
+  launchContextSnapshot: Record<string, unknown> | null;
+  priority: number | null;
+  autoApplyEnabled: boolean;
   notes: string | null;
   presetSnapshot: Record<string, unknown> | null;
   createdAt: string;
@@ -3382,6 +3387,8 @@ export interface CalculationScenarioRecord {
   priceFloorOverrideApproved: boolean;
   priceFloorOverrideSnapshot: Record<string, unknown> | null;
   latestOverrideSummarySnapshot: Record<string, unknown> | null;
+  latestApprovalSummarySnapshot: Record<string, unknown> | null;
+  latestPresetSelectionSummarySnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3412,6 +3419,8 @@ export interface ComparisonSetRecord {
   selectedListingPrepExportVersion: string | null;
   selectedListingPrepApprovalSnapshot: Record<string, unknown> | null;
   selectedListingPrepExportContractVersion: string | null;
+  selectedWorksheetVersion: string | null;
+  selectedWorksheetSummarySnapshot: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3465,6 +3474,12 @@ export interface ListingPrepPackageRecord {
   readyForListingPrep: boolean;
   readyForListingPrepSummary: Record<string, unknown> | null;
   manualAmazonExportSnapshot: Record<string, unknown> | null;
+  approvalHistorySnapshot: Record<string, unknown> | null;
+  autoAppliedChannelPreset: boolean;
+  channelPresetSelectionSummary: Record<string, unknown> | null;
+  manualListingWorksheetSnapshot: Record<string, unknown> | null;
+  worksheetVersion: string | null;
+  worksheetSummarySnapshot: Record<string, unknown> | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4036,6 +4051,10 @@ export async function getCostComparisonHandoffSummary(comparisonSetId: string) {
     selectedListingPrepPackageId: string | null;
     selectedListingPrepReadySnapshot: Record<string, unknown> | null;
     selectedListingPrepExportVersion: string | null;
+    selectedListingPrepApprovalSnapshot: Record<string, unknown> | null;
+    selectedListingPrepExportContractVersion: string | null;
+    selectedWorksheetVersion: string | null;
+    selectedWorksheetSummarySnapshot: Record<string, unknown> | null;
   }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/handoff-summary`);
 }
 
@@ -4060,6 +4079,10 @@ export async function getCostComparisonExportSummary(comparisonSetId: string) {
     selectedListingPrepPackageId: string | null;
     selectedListingPrepReadySnapshot: Record<string, unknown> | null;
     selectedListingPrepExportVersion: string | null;
+    selectedListingPrepApprovalSnapshot: Record<string, unknown> | null;
+    selectedListingPrepExportContractVersion: string | null;
+    selectedWorksheetVersion: string | null;
+    selectedWorksheetSummarySnapshot: Record<string, unknown> | null;
   }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/export-summary`);
 }
 
@@ -4135,6 +4158,15 @@ export async function applyChannelMappingPresetToListingPrepPackage(
   );
 }
 
+export async function applyDefaultChannelMappingPresetToListingPrepPackage(
+  listingPrepPackageId: string
+) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/apply-default-channel-preset`,
+    { method: "POST", body: JSON.stringify({}) }
+  );
+}
+
 export async function approveCostListingPrepPackage(listingPrepPackageId: string) {
   return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
     `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/approve`,
@@ -4149,6 +4181,16 @@ export async function getListingPrepManualAmazonExport(listingPrepPackageId: str
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/manual-amazon-export`);
+}
+
+export async function getListingPrepManualWorksheet(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    manualListingWorksheet: Record<string, unknown> | null;
+    worksheetVersion: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/manual-listing-worksheet`);
 }
 
 export interface LeadListItem {

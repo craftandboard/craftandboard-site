@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
   approveCostListingPrepPackage,
+  applyDefaultChannelMappingPresetToListingPrepPackage,
   applyChannelMappingPresetToListingPrepPackage,
   buildCostListingPrepPackage,
   calculateShelfCost,
@@ -69,6 +70,7 @@ import { ListingPrepPackageCard } from "./listing-prep-package-card";
 import { ListingPrepApprovalCard } from "./listing-prep-approval-card";
 import { ListingPrepFieldCard } from "./listing-prep-field-card";
 import { ManualAmazonExportCard } from "./manual-amazon-export-card";
+import { ManualListingWorksheetCard } from "./manual-listing-worksheet-card";
 import { MarketplaceMappingTemplateEditor } from "./marketplace-mapping-template-editor";
 import { MarketplaceMappingValidationCard } from "./marketplace-mapping-validation-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
@@ -88,6 +90,16 @@ function toOptionalNumber(value: FormDataEntryValue | null) {
   if (typeof value !== "string" || value.trim() === "") return undefined;
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function parseLaunchStrategies(value: FormDataEntryValue | null) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return null;
+  }
+  return value
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function createDefaultScenario(index: number): CostScenarioInput {
@@ -1106,6 +1118,10 @@ export function CostCalculatorForm() {
         materialFormat: String(formData.get("materialFormat") ?? "") || null,
         packagingFormat: String(formData.get("packagingFormat") ?? "") || null,
         pricingFormat: String(formData.get("pricingFormat") ?? "") || null,
+        defaultForChannel: String(formData.get("defaultForChannel") ?? "") === "true",
+        defaultLaunchStrategies: parseLaunchStrategies(formData.get("defaultLaunchStrategies")),
+        priority: toOptionalNumber(formData.get("priority")) ?? null,
+        autoApplyEnabled: String(formData.get("autoApplyEnabled") ?? "") === "true",
         notes: String(formData.get("notes") ?? "") || null
       })
         .then(() => refreshAll(selectedProfileId))
@@ -1133,6 +1149,10 @@ export function CostCalculatorForm() {
         materialFormat: String(formData.get("materialFormat") ?? "") || null,
         packagingFormat: String(formData.get("packagingFormat") ?? "") || null,
         pricingFormat: String(formData.get("pricingFormat") ?? "") || null,
+        defaultForChannel: String(formData.get("defaultForChannel") ?? "") === "true",
+        defaultLaunchStrategies: parseLaunchStrategies(formData.get("defaultLaunchStrategies")),
+        priority: toOptionalNumber(formData.get("priority")) ?? null,
+        autoApplyEnabled: String(formData.get("autoApplyEnabled") ?? "") === "true",
         notes: String(formData.get("notes") ?? "") || null
       })
         .then(() => refreshAll(selectedProfileId))
@@ -1280,6 +1300,27 @@ export function CostCalculatorForm() {
     });
   }
 
+  function handleApplyDefaultChannelPreset() {
+    if (!listingPrepPackage) {
+      setError("Build a listing-prep package before applying a default channel preset.");
+      return;
+    }
+
+    startTransition(() => {
+      void applyDefaultChannelMappingPresetToListingPrepPackage(listingPrepPackage.id)
+        .then((payload) => {
+          setListingPrepPackage(payload.listingPrepPackage);
+          if (activeComparisonSetId) {
+            return loadComparisonSet(activeComparisonSetId);
+          }
+        })
+        .then(() => setSuccess("Default channel preset applied from launch context."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to apply the default channel preset.")
+        );
+    });
+  }
+
   function handleValidateMarketplaceFields() {
     if (!listingPrepPackage) {
       setError("Build a listing-prep package before validating marketplace fields.");
@@ -1416,6 +1457,7 @@ export function CostCalculatorForm() {
           <button type="button" onClick={handleEvaluateListingReadiness} disabled={isPending} className="rounded-full border border-sky-300/30 bg-sky-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Evaluate listing readiness</button>
           <button type="button" onClick={handleBuildListingPrepPackage} disabled={isPending} className="rounded-full border border-violet-300/30 bg-violet-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Build listing-prep package</button>
           <button type="button" onClick={handleRefreshListingPrepPackage} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Refresh listing-prep package</button>
+          <button type="button" onClick={handleApplyDefaultChannelPreset} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Apply default channel preset</button>
           <button type="button" onClick={handleApplyChannelPreset} disabled={isPending || !listingPrepPackage || !form.channelMappingPresetId} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Apply channel preset</button>
           <button type="button" onClick={handleValidateMarketplaceFields} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Validate marketplace fields</button>
           <button type="button" onClick={handleApproveListingPrepPackage} disabled={isPending || !listingPrepPackage} className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Approve package</button>
@@ -1431,11 +1473,13 @@ export function CostCalculatorForm() {
           <LaunchReadinessCard comparison={comparison} />
           <ReadyForListingPrepCard listingPrepPackage={listingPrepPackage} />
           <ListingPrepPackageCard comparison={comparison} listingPrepPackage={listingPrepPackage} />
+          <ChannelPresetSelectionSummaryCard listingPrepPackage={listingPrepPackage} />
           <ListingPrepApprovalCard
             listingPrepPackage={listingPrepPackage}
             onApprove={handleApproveListingPrepPackage}
             busy={isPending}
           />
+          <ApprovalHistoryCard listingPrepPackage={listingPrepPackage} />
           <MarketplaceMappingValidationCard listingPrepPackage={listingPrepPackage} />
           <OverrideHistoryCard listingPrepPackage={listingPrepPackage} />
           <LaunchCandidateHandoffCard comparison={comparison} />
@@ -1447,6 +1491,7 @@ export function CostCalculatorForm() {
           />
           <LaunchExportSummaryCard comparison={comparison} />
           <ManualAmazonExportCard listingPrepPackage={listingPrepPackage} />
+          <ManualListingWorksheetCard listingPrepPackage={listingPrepPackage} />
           <CostScenarioBuilder
             scenarios={scenarios}
             feePresets={options.feePresets}
@@ -1553,3 +1598,5 @@ export function CostCalculatorForm() {
     </div>
   );
 }
+import { ApprovalHistoryCard } from "./approval-history-card";
+import { ChannelPresetSelectionSummaryCard } from "./channel-preset-selection-summary-card";

@@ -9,17 +9,23 @@ import {
 } from "./guardrails.js";
 import {
   applyChannelMappingPreset,
+  buildApprovalHistorySnapshot,
   buildApprovalSummarySnapshot,
+  buildLaunchContextSnapshot,
   buildManualAmazonExportSnapshot,
+  buildManualListingWorksheet,
+  buildPresetSelectionSummary,
   applyMarketplaceMappingTemplate,
   buildMarketplaceFieldValidationResult,
   buildOverrideHistorySnapshot,
   buildStableListingPrepExportShape,
   buildExportMetadataBlock,
   buildPriceFloorOverrideSnapshot,
+  buildWorksheetSummarySnapshot,
   calculateApprovalState,
   calculateListingPrepPackageStatus,
-  calculateReadyForListingPrep
+  calculateReadyForListingPrep,
+  selectBestDefaultChannelPreset
 } from "./listingPrep.js";
 import { decimalToNumber } from "./normalization.js";
 import {
@@ -233,6 +239,11 @@ function mapChannelMappingPreset(record: any) {
     packagingFormat: record.packagingFormat ?? null,
     pricingFormat: record.pricingFormat ?? null,
     fieldOrderingSnapshot: record.fieldOrderingSnapshot ?? null,
+    defaultForChannel: Boolean(record.defaultForChannel),
+    defaultLaunchStrategies: record.defaultLaunchStrategies ?? null,
+    launchContextSnapshot: record.launchContextSnapshot ?? null,
+    priority: record.priority ?? null,
+    autoApplyEnabled: Boolean(record.autoApplyEnabled),
     notes: record.notes ?? null,
     presetSnapshot: record.presetSnapshot ?? null
   };
@@ -345,6 +356,11 @@ function buildListingArtifactsForScenario(input: {
   packageId?: string | null;
   exportVersion?: string | null;
   exportContractVersion?: string | null;
+  explicitApproval?: boolean;
+  currentApprovedArtifact?: boolean;
+  presetSelectionSummary?: Record<string, unknown> | null;
+  existingApprovalHistory?: Array<Record<string, unknown>> | null;
+  worksheetVersion?: string | null;
 }) {
   const mappedScenario = {
     ...mapScenario(input.scenarioRecord),
@@ -479,13 +495,38 @@ function buildListingArtifactsForScenario(input: {
   const approval = calculateApprovalState({
     readyForListingPrepSummary,
     overrideSnapshot,
-    manualAmazonExportSnapshot: exportShapeSnapshot
+    manualAmazonExportSnapshot: exportShapeSnapshot,
+    explicitApproval: input.explicitApproval ?? false
   });
   const approvalSummarySnapshot = buildApprovalSummarySnapshot({
     approvalState: approval.approvalState,
     readyForListingPrepSummary,
     overrideSnapshot,
     approvedByMembershipId: input.approvedByMembershipId ?? null
+  });
+  const approvalHistorySnapshot = buildApprovalHistorySnapshot({
+    existingHistory: input.existingApprovalHistory ?? null,
+    nextAction:
+      approval.approvalState === "BLOCKED"
+        ? "BLOCKED"
+        : approval.approvalState === "READY_FOR_REVIEW"
+          ? "MARKED_REVIEW"
+          : approval.approvalState === "APPROVED_WITH_OVERRIDE"
+            ? "APPROVED_WITH_OVERRIDE"
+            : approval.approvalState === "APPROVED"
+              ? "APPROVED"
+              : null,
+    actorMembershipId: input.approvedByMembershipId ?? null,
+    reason:
+      approval.approvalState === "READY_FOR_REVIEW"
+        ? "Package requires review before approval."
+        : approval.approvalState === "BLOCKED"
+          ? "Package is blocked by listing readiness or price-floor conditions."
+          : null,
+    details: {
+      approvalState: approval.approvalState,
+      readyForListingPrepStatus: readyForListingPrepSummary.readyForListingPrepStatus
+    }
   });
   const exportContractVersion = input.exportContractVersion ?? "manual-amazon-v1";
   const manualAmazonExportSnapshot = buildManualAmazonExportSnapshot({
@@ -504,6 +545,23 @@ function buildListingArtifactsForScenario(input: {
           channelCode: input.channelPreset.channelCode
         }
       : null
+  });
+  const manualListingWorksheetSnapshot = buildManualListingWorksheet({
+    worksheetVersion: input.worksheetVersion ?? "manual-listing-v1",
+    packageId: input.packageId ?? "pending-package",
+    packageApprovalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    selectedScenarioId: input.scenarioRecord.id,
+    selectedScenarioName: input.scenarioRecord.name,
+    exportShapeSnapshot,
+    approvalSummarySnapshot,
+    readyForListingPrepSummary,
+    overrideSummary: overrideSnapshot,
+    presetSelectionSummary: input.presetSelectionSummary ?? null
+  });
+  const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
+    worksheet: manualListingWorksheetSnapshot,
+    presetSelectionSummary: input.presetSelectionSummary ?? null
   });
 
   return {
@@ -534,8 +592,13 @@ function buildListingArtifactsForScenario(input: {
     readyForListingPrepSummary,
     approvalState: approval.approvalState,
     approvalSummarySnapshot,
+    approvalHistorySnapshot,
     exportContractVersion,
-    manualAmazonExportSnapshot
+    manualAmazonExportSnapshot,
+    manualListingWorksheetSnapshot,
+    worksheetVersion: input.worksheetVersion ?? "manual-listing-v1",
+    worksheetSummarySnapshot,
+    channelPresetSelectionSummary: input.presetSelectionSummary ?? null
   };
 }
 
@@ -640,6 +703,7 @@ function mapScenario(record: any) {
     priceFloorOverrideSnapshot: record.priceFloorOverrideSnapshot ?? null,
     latestOverrideSummarySnapshot: record.latestOverrideSummarySnapshot ?? null,
     latestApprovalSummarySnapshot: record.latestApprovalSummarySnapshot ?? null,
+    latestPresetSelectionSummarySnapshot: record.latestPresetSelectionSummarySnapshot ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -673,6 +737,8 @@ function mapComparisonSet(record: any) {
     selectedListingPrepApprovalSnapshot: record.selectedListingPrepApprovalSnapshot ?? null,
     selectedListingPrepExportContractVersion:
       record.selectedListingPrepExportContractVersion ?? null,
+    selectedWorksheetVersion: record.selectedWorksheetVersion ?? null,
+    selectedWorksheetSummarySnapshot: record.selectedWorksheetSummarySnapshot ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -711,6 +777,12 @@ function mapListingPrepPackage(record: any) {
     readyForListingPrep: Boolean(record.readyForListingPrep),
     readyForListingPrepSummary: record.readyForListingPrepSummary ?? null,
     manualAmazonExportSnapshot: record.manualAmazonExportSnapshot ?? null,
+    approvalHistorySnapshot: record.approvalHistorySnapshot ?? null,
+    autoAppliedChannelPreset: Boolean(record.autoAppliedChannelPreset),
+    channelPresetSelectionSummary: record.channelPresetSelectionSummary ?? null,
+    manualListingWorksheetSnapshot: record.manualListingWorksheetSnapshot ?? null,
+    worksheetVersion: record.worksheetVersion ?? null,
+    worksheetSummarySnapshot: record.worksheetSummarySnapshot ?? null,
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
     notes: record.notes ?? null,
     approvedAt: record.approvedAt?.toISOString() ?? null,
@@ -728,6 +800,66 @@ function getScenarioRiskSummaryText(snapshot: unknown) {
     return String(guardrailSnapshot.summary);
   }
   return null;
+}
+
+async function resolveChannelPresetForListingPackage(input: {
+  organizationId: string;
+  costProfileId: string;
+  selectedPresetId?: string | null;
+  scenarioRecord: any;
+  readyForListingPrepStatus?: string | null;
+  listingReadinessStatus?: string | null;
+  feePresetLabel?: string | null;
+  shippingZoneLabel?: string | null;
+}) {
+  const launchContext = buildLaunchContextSnapshot({
+    channelCode: "AMAZON_MANUAL",
+    launchStrategy: input.scenarioRecord.launchStrategy ?? null,
+    listingReadinessStatus: input.listingReadinessStatus ?? null,
+    readyForListingPrepStatus: input.readyForListingPrepStatus ?? null,
+    overrideApproved: Boolean(input.scenarioRecord.priceFloorOverrideApproved),
+    feePresetLabel: input.feePresetLabel ?? null,
+    shippingZoneLabel: input.shippingZoneLabel ?? null
+  });
+
+  if (input.selectedPresetId) {
+    const selectedPreset = await getChannelMappingPresetRecord({
+      organizationId: input.organizationId,
+      channelMappingPresetId: input.selectedPresetId
+    });
+    if (!selectedPreset) {
+      throw new Error("Channel mapping preset not found.");
+    }
+    return {
+      preset: selectedPreset,
+      autoApplied: false,
+      selectionSummary: buildPresetSelectionSummary({
+        preset: selectedPreset,
+        launchContext,
+        autoApplied: false,
+        manualReason: "Explicitly chosen for this listing-prep package."
+      })
+    };
+  }
+
+  const availablePresets = await listChannelMappingPresetsForOrganization({
+    organizationId: input.organizationId,
+    costProfileId: input.costProfileId
+  });
+  const suggestedPreset = selectBestDefaultChannelPreset({
+    presets: availablePresets,
+    launchContext
+  });
+
+  return {
+    preset: suggestedPreset,
+    autoApplied: Boolean(suggestedPreset),
+    selectionSummary: buildPresetSelectionSummary({
+      preset: suggestedPreset,
+      launchContext,
+      autoApplied: Boolean(suggestedPreset)
+    })
+  };
 }
 
 export async function createCostProfile(input: {
@@ -1189,6 +1321,11 @@ export async function createChannelMappingPreset(input: {
   packagingFormat?: string | null;
   pricingFormat?: string | null;
   fieldOrderingSnapshot?: unknown;
+  defaultForChannel?: boolean;
+  defaultLaunchStrategies?: unknown;
+  launchContextSnapshot?: unknown;
+  priority?: number | null;
+  autoApplyEnabled?: boolean;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -2180,7 +2317,9 @@ export async function getComparisonSetHandoffSummary(input: {
     selectedListingPrepExportVersion: set.selectedListingPrepExportVersion ?? null,
     selectedListingPrepApprovalSnapshot: set.selectedListingPrepApprovalSnapshot ?? null,
     selectedListingPrepExportContractVersion:
-      set.selectedListingPrepExportContractVersion ?? null
+      set.selectedListingPrepExportContractVersion ?? null,
+    selectedWorksheetVersion: set.selectedWorksheetVersion ?? null,
+    selectedWorksheetSummarySnapshot: set.selectedWorksheetSummarySnapshot ?? null
   };
 }
 
@@ -2264,7 +2403,9 @@ export async function getComparisonSetExportSummary(input: {
     selectedListingPrepExportVersion: set.selectedListingPrepExportVersion ?? null,
     selectedListingPrepApprovalSnapshot: set.selectedListingPrepApprovalSnapshot ?? null,
     selectedListingPrepExportContractVersion:
-      set.selectedListingPrepExportContractVersion ?? null
+      set.selectedListingPrepExportContractVersion ?? null,
+    selectedWorksheetVersion: set.selectedWorksheetVersion ?? null,
+    selectedWorksheetSummarySnapshot: set.selectedWorksheetSummarySnapshot ?? null
   };
 }
 
@@ -2307,16 +2448,17 @@ export async function buildListingPrepPackage(input: {
   if (input.marketplaceMappingTemplateId && !mappingTemplate) {
     throw new Error("Marketplace mapping template not found.");
   }
-  const channelPreset =
-    input.channelMappingPresetId
-      ? await getChannelMappingPresetRecord({
-          organizationId: input.organizationId,
-          channelMappingPresetId: input.channelMappingPresetId
-        })
-      : null;
-  if (input.channelMappingPresetId && !channelPreset) {
-    throw new Error("Channel mapping preset not found.");
-  }
+  const presetResolution = await resolveChannelPresetForListingPackage({
+    organizationId: input.organizationId,
+    costProfileId: scenarioRecord.costProfileId,
+    selectedPresetId: input.channelMappingPresetId ?? null,
+    scenarioRecord,
+    readyForListingPrepStatus: scenarioRecord.listingReadinessSnapshot?.readyForListingPrepStatus ?? null,
+    listingReadinessStatus: scenarioRecord.listingReadinessStatus ?? null,
+    feePresetLabel: scenarioRecord.exportSnapshot?.feePresetLabel ?? null,
+    shippingZoneLabel: scenarioRecord.exportSnapshot?.shippingZoneLabel ?? null
+  });
+  const channelPreset = presetResolution.preset;
 
   const artifacts = buildListingArtifactsForScenario({
     scenarioRecord,
@@ -2325,7 +2467,8 @@ export async function buildListingPrepPackage(input: {
     channelPreset,
     comparisonSetId: comparisonSet.id,
     exportVersion: "listing-prep-v1",
-    exportContractVersion: "manual-amazon-v1"
+    exportContractVersion: "manual-amazon-v1",
+    presetSelectionSummary: presetResolution.selectionSummary
   });
   const listingPrepPackage = await createListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -2357,10 +2500,15 @@ export async function buildListingPrepPackage(input: {
     readyForListingPrep: artifacts.readyForListingPrep,
     readyForListingPrepSummary: artifacts.readyForListingPrepSummary,
     manualAmazonExportSnapshot: artifacts.manualAmazonExportSnapshot,
-    currentApprovedArtifact:
-      artifacts.approvalState === "APPROVED" || artifacts.approvalState === "APPROVED_WITH_OVERRIDE",
+    approvalHistorySnapshot: artifacts.approvalHistorySnapshot,
+    autoAppliedChannelPreset: presetResolution.autoApplied,
+    channelPresetSelectionSummary: artifacts.channelPresetSelectionSummary,
+    manualListingWorksheetSnapshot: artifacts.manualListingWorksheetSnapshot,
+    worksheetVersion: artifacts.worksheetVersion,
+    worksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+    currentApprovedArtifact: false,
     notes: input.notes ?? null,
-    approvedAt: artifacts.packageStatus.packageReadinessLabel === "READY" ? new Date() : null
+    approvedAt: null
   });
 
   await updateCalculationScenarioRecord({
@@ -2372,7 +2520,8 @@ export async function buildListingPrepPackage(input: {
       priceFloorOverrideApproved: artifacts.overrideSnapshot.overrideApproved,
       priceFloorOverrideSnapshot: artifacts.overrideSnapshot,
       latestOverrideSummarySnapshot: artifacts.overrideHistorySnapshot?.latestOverride ?? null,
-      latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot
+      latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot,
+      latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary
     })
   });
 
@@ -2392,12 +2541,16 @@ export async function buildListingPrepPackage(input: {
         mappingTemplateLabel: mappingTemplate?.name ?? null,
         channelPresetLabel: channelPreset?.name ?? null,
         approvalState: artifacts.approvalState,
-        approvalSummary: artifacts.approvalSummarySnapshot
+        approvalSummary: artifacts.approvalSummarySnapshot,
+        presetSelectionSummary: artifacts.channelPresetSelectionSummary,
+        worksheetSummary: artifacts.worksheetSummarySnapshot
       },
       selectedListingPrepReadySnapshot: artifacts.readyForListingPrepSummary,
       selectedListingPrepExportVersion: artifacts.exportVersion,
       selectedListingPrepApprovalSnapshot: artifacts.approvalSummarySnapshot,
-      selectedListingPrepExportContractVersion: artifacts.exportContractVersion
+      selectedListingPrepExportContractVersion: artifacts.exportContractVersion,
+      selectedWorksheetVersion: artifacts.worksheetVersion,
+      selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot
     })
   });
 
@@ -2441,6 +2594,27 @@ export async function refreshListingPrepPackage(input: {
     throw new Error("Listing prep package not found.");
   }
 
+  const presetResolution = await resolveChannelPresetForListingPackage({
+    organizationId: input.organizationId,
+    costProfileId: record.calculationScenario.costProfileId,
+    selectedPresetId: record.channelMappingPresetId ?? null,
+    scenarioRecord: record.calculationScenario,
+    readyForListingPrepStatus:
+      typeof (record.readyForListingPrepSummary as Record<string, unknown> | null)?.readyForListingPrepStatus ===
+      "string"
+        ? String((record.readyForListingPrepSummary as Record<string, unknown>).readyForListingPrepStatus)
+        : null,
+    listingReadinessStatus: record.listingReadinessStatus ?? null,
+    feePresetLabel:
+      typeof (record.exportShapeSnapshot as Record<string, unknown> | null)?.feePresetLabel === "string"
+        ? String((record.exportShapeSnapshot as Record<string, unknown>).feePresetLabel)
+        : null,
+    shippingZoneLabel:
+      typeof (record.exportShapeSnapshot as Record<string, unknown> | null)?.shippingZoneLabel === "string"
+        ? String((record.exportShapeSnapshot as Record<string, unknown>).shippingZoneLabel)
+        : null
+  });
+
   const artifacts = buildListingArtifactsForScenario({
     scenarioRecord: record.calculationScenario,
     overrideReason:
@@ -2456,11 +2630,16 @@ export async function refreshListingPrepPackage(input: {
       ? (((record.overrideHistorySnapshot as Record<string, unknown>).history as unknown[]) as Array<Record<string, unknown>>)
       : null,
     mappingTemplate: record.marketplaceMappingTemplate ?? null,
-    channelPreset: record.channelMappingPreset ?? null,
+    channelPreset: presetResolution.preset,
     comparisonSetId: record.comparisonSetId ?? null,
     packageId: record.id,
     exportVersion: record.exportVersion ?? "listing-prep-v1",
-    exportContractVersion: record.exportContractVersion ?? "manual-amazon-v1"
+    exportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+    presetSelectionSummary: presetResolution.selectionSummary,
+    existingApprovalHistory: Array.isArray((record.approvalHistorySnapshot as Record<string, unknown> | null)?.history)
+      ? (((record.approvalHistorySnapshot as Record<string, unknown>).history as unknown[]) as Array<Record<string, unknown>>)
+      : null,
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1"
   });
 
   await updateListingPrepPackageRecord({
@@ -2483,10 +2662,16 @@ export async function refreshListingPrepPackage(input: {
       readyForListingPrep: artifacts.readyForListingPrep,
       readyForListingPrepSummary: artifacts.readyForListingPrepSummary,
       manualAmazonExportSnapshot: artifacts.manualAmazonExportSnapshot,
-      currentApprovedArtifact:
-        artifacts.approvalState === "APPROVED" || artifacts.approvalState === "APPROVED_WITH_OVERRIDE",
+      approvalHistorySnapshot: artifacts.approvalHistorySnapshot,
+      autoAppliedChannelPreset: presetResolution.autoApplied,
+      channelPresetSelectionSummary: artifacts.channelPresetSelectionSummary,
+      manualListingWorksheetSnapshot: artifacts.manualListingWorksheetSnapshot,
+      worksheetVersion: artifacts.worksheetVersion,
+      worksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+      channelMappingPresetId: presetResolution.preset?.id ?? null,
+      currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
-      approvedAt: artifacts.packageStatus.packageStatus === "READY" ? new Date() : null
+      approvedAt: record.approvedAt ?? null
     })
   });
 
@@ -2496,6 +2681,7 @@ export async function refreshListingPrepPackage(input: {
     data: normalizeUpdateData({
       latestOverrideSummarySnapshot: artifacts.overrideHistorySnapshot?.latestOverride ?? null,
       latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot,
+      latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
       listingPrepPackageId: record.id
     })
   });
@@ -2515,14 +2701,18 @@ export async function refreshListingPrepPackage(input: {
           readyForListingPrep: artifacts.readyForListingPrep,
           readyForListingPrepSummary: artifacts.readyForListingPrepSummary,
           mappingTemplateLabel: record.marketplaceMappingTemplate?.name ?? null,
-          channelPresetLabel: record.channelMappingPreset?.name ?? null,
+          channelPresetLabel: presetResolution.preset?.name ?? null,
           approvalState: artifacts.approvalState,
-          approvalSummary: artifacts.approvalSummarySnapshot
+          approvalSummary: artifacts.approvalSummarySnapshot,
+          presetSelectionSummary: artifacts.channelPresetSelectionSummary,
+          worksheetSummary: artifacts.worksheetSummarySnapshot
         },
         selectedListingPrepReadySnapshot: artifacts.readyForListingPrepSummary,
         selectedListingPrepExportVersion: artifacts.exportVersion,
         selectedListingPrepApprovalSnapshot: artifacts.approvalSummarySnapshot,
-        selectedListingPrepExportContractVersion: artifacts.exportContractVersion
+        selectedListingPrepExportContractVersion: artifacts.exportContractVersion,
+        selectedWorksheetVersion: artifacts.worksheetVersion,
+        selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot
       })
     });
   }
@@ -2579,12 +2769,37 @@ export async function evaluateMarketplaceFieldValidation(input: {
   const approval = calculateApprovalState({
     readyForListingPrepSummary,
     overrideSnapshot,
-    manualAmazonExportSnapshot: record.manualAmazonExportSnapshot as Record<string, unknown> | null
+    manualAmazonExportSnapshot: record.manualAmazonExportSnapshot as Record<string, unknown> | null,
+    explicitApproval: false
   });
   const approvalSummarySnapshot = buildApprovalSummarySnapshot({
     approvalState: approval.approvalState,
     readyForListingPrepSummary,
     overrideSnapshot
+  });
+  const approvalHistorySnapshot = buildApprovalHistorySnapshot({
+    existingHistory: Array.isArray((record.approvalHistorySnapshot as Record<string, unknown> | null)?.history)
+      ? (((record.approvalHistorySnapshot as Record<string, unknown>).history as unknown[]) as Array<Record<string, unknown>>)
+      : null,
+    nextAction: approval.approvalState === "BLOCKED" ? "BLOCKED" : "MARKED_REVIEW",
+    details: { approvalState: approval.approvalState }
+  });
+  const manualListingWorksheetSnapshot = buildManualListingWorksheet({
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    packageId: record.id,
+    packageApprovalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    selectedScenarioId: record.calculationScenarioId,
+    selectedScenarioName: record.calculationScenario?.name ?? null,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    approvalSummarySnapshot,
+    readyForListingPrepSummary,
+    overrideSummary: overrideSnapshot,
+    presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
+  const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
+    worksheet: manualListingWorksheetSnapshot,
+    presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
 
   await updateListingPrepPackageRecord({
@@ -2595,12 +2810,14 @@ export async function evaluateMarketplaceFieldValidation(input: {
       status: packageStatus.packageStatus,
       approvalState: approval.approvalState,
       approvalSummarySnapshot,
+      approvalHistorySnapshot,
       readyForListingPrep: readyForListingPrepSummary.readyForListingPrep,
       readyForListingPrepSummary,
-      currentApprovedArtifact:
-        approval.approvalState === "APPROVED" || approval.approvalState === "APPROVED_WITH_OVERRIDE",
+      manualListingWorksheetSnapshot,
+      worksheetSummarySnapshot,
+      currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
-      approvedAt: packageStatus.packageStatus === "READY" ? new Date() : null
+      approvedAt: null
     })
   });
 
@@ -2620,12 +2837,15 @@ export async function evaluateMarketplaceFieldValidation(input: {
           mappingTemplateLabel: record.marketplaceMappingTemplate?.name ?? null,
           channelPresetLabel: record.channelMappingPreset?.name ?? null,
           approvalState: approval.approvalState,
-          approvalSummary: approvalSummarySnapshot
+          approvalSummary: approvalSummarySnapshot,
+          worksheetSummary: worksheetSummarySnapshot
         },
         selectedListingPrepReadySnapshot: readyForListingPrepSummary,
         selectedListingPrepExportVersion: record.exportVersion ?? "listing-prep-v1",
         selectedListingPrepApprovalSnapshot: approvalSummarySnapshot,
-        selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1"
+        selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+        selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot
       })
     });
   }
@@ -2691,13 +2911,40 @@ export async function requestPriceFloorOverride(input: {
   const approval = calculateApprovalState({
     readyForListingPrepSummary,
     overrideSnapshot,
-    manualAmazonExportSnapshot: record.manualAmazonExportSnapshot as Record<string, unknown> | null
+    manualAmazonExportSnapshot: record.manualAmazonExportSnapshot as Record<string, unknown> | null,
+    explicitApproval: false
   });
   const approvalSummarySnapshot = buildApprovalSummarySnapshot({
     approvalState: approval.approvalState,
     readyForListingPrepSummary,
     overrideSnapshot,
     approvedByMembershipId: input.approvedByMembershipId ?? null
+  });
+  const approvalHistorySnapshot = buildApprovalHistorySnapshot({
+    existingHistory: Array.isArray((record.approvalHistorySnapshot as Record<string, unknown> | null)?.history)
+      ? (((record.approvalHistorySnapshot as Record<string, unknown>).history as unknown[]) as Array<Record<string, unknown>>)
+      : null,
+    nextAction: approval.approvalState === "BLOCKED" ? "BLOCKED" : "MARKED_REVIEW",
+    actorMembershipId: input.approvedByMembershipId ?? null,
+    reason: input.reason,
+    details: { approvalState: approval.approvalState }
+  });
+  const manualListingWorksheetSnapshot = buildManualListingWorksheet({
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    packageId: record.id,
+    packageApprovalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    selectedScenarioId: record.calculationScenarioId,
+    selectedScenarioName: record.calculationScenario?.name ?? null,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    approvalSummarySnapshot,
+    readyForListingPrepSummary,
+    overrideSummary: overrideSnapshot,
+    presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
+  const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
+    worksheet: manualListingWorksheetSnapshot,
+    presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
 
   await updateListingPrepPackageRecord({
@@ -2710,11 +2957,13 @@ export async function requestPriceFloorOverride(input: {
       overrideHistorySnapshot,
       approvalState: approval.approvalState,
       approvalSummarySnapshot,
+      approvalHistorySnapshot,
       readyForListingPrep: readyForListingPrepSummary.readyForListingPrep,
       readyForListingPrepSummary,
-      currentApprovedArtifact:
-        approval.approvalState === "APPROVED" || approval.approvalState === "APPROVED_WITH_OVERRIDE",
-      approvedAt: overrideSnapshot.overrideApproved ? new Date() : null,
+      manualListingWorksheetSnapshot,
+      worksheetSummarySnapshot,
+      currentApprovedArtifact: false,
+      approvedAt: null,
       approvedByMembershipId: input.approvedByMembershipId ?? null
     })
   });
@@ -2749,12 +2998,15 @@ export async function requestPriceFloorOverride(input: {
           mappingTemplateLabel: record.marketplaceMappingTemplate?.name ?? null,
           channelPresetLabel: record.channelMappingPreset?.name ?? null,
           approvalState: approval.approvalState,
-          approvalSummary: approvalSummarySnapshot
+          approvalSummary: approvalSummarySnapshot,
+          worksheetSummary: worksheetSummarySnapshot
         },
         selectedListingPrepReadySnapshot: readyForListingPrepSummary,
         selectedListingPrepExportVersion: record.exportVersion ?? "listing-prep-v1",
         selectedListingPrepApprovalSnapshot: approvalSummarySnapshot,
-        selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1"
+        selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+        selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot
       })
     });
   }
@@ -2780,24 +3032,68 @@ export async function applyChannelMappingPresetToPackage(input: {
     throw new Error("Channel mapping preset not found.");
   }
 
-  const refreshed = await refreshListingPrepPackage({
-    organizationId: input.organizationId,
-    listingPrepPackageId: input.listingPrepPackageId,
-    notes: record.notes ?? null
-  });
-
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
     listingPrepPackageId: input.listingPrepPackageId,
     data: normalizeUpdateData({
-      channelMappingPresetId: preset.id
+      channelMappingPresetId: preset.id,
+      autoAppliedChannelPreset: false
     })
   });
 
   return refreshListingPrepPackage({
     organizationId: input.organizationId,
     listingPrepPackageId: input.listingPrepPackageId,
-    notes: refreshed.listingPrepPackage.notes ?? null
+    notes: record.notes ?? null
+  });
+}
+
+export async function applyDefaultChannelMappingPreset(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+
+  const presetResolution = await resolveChannelPresetForListingPackage({
+    organizationId: input.organizationId,
+    costProfileId: record.calculationScenario.costProfileId,
+    scenarioRecord: record.calculationScenario,
+    readyForListingPrepStatus:
+      typeof (record.readyForListingPrepSummary as Record<string, unknown> | null)?.readyForListingPrepStatus ===
+      "string"
+        ? String((record.readyForListingPrepSummary as Record<string, unknown>).readyForListingPrepStatus)
+        : null,
+    listingReadinessStatus: record.listingReadinessStatus ?? null,
+    feePresetLabel:
+      typeof (record.exportShapeSnapshot as Record<string, unknown> | null)?.feePresetLabel === "string"
+        ? String((record.exportShapeSnapshot as Record<string, unknown>).feePresetLabel)
+        : null,
+    shippingZoneLabel:
+      typeof (record.exportShapeSnapshot as Record<string, unknown> | null)?.shippingZoneLabel === "string"
+        ? String((record.exportShapeSnapshot as Record<string, unknown>).shippingZoneLabel)
+        : null
+  });
+
+  if (!presetResolution.preset) {
+    throw new Error("No default channel mapping preset matched this launch context.");
+  }
+
+  await updateListingPrepPackageRecord({
+    organizationId: input.organizationId,
+    listingPrepPackageId: input.listingPrepPackageId,
+    data: normalizeUpdateData({
+      channelMappingPresetId: presetResolution.preset.id,
+      autoAppliedChannelPreset: true
+    })
+  });
+
+  return refreshListingPrepPackage({
+    organizationId: input.organizationId,
+    listingPrepPackageId: input.listingPrepPackageId,
+    notes: record.notes ?? null
   });
 }
 
@@ -2814,7 +3110,8 @@ export async function approveListingPrepPackage(input: {
   const approval = calculateApprovalState({
     readyForListingPrepSummary: (record.readyForListingPrepSummary ?? null) as Record<string, unknown> | null,
     overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
-    manualAmazonExportSnapshot: (record.manualAmazonExportSnapshot ?? null) as Record<string, unknown> | null
+    manualAmazonExportSnapshot: (record.manualAmazonExportSnapshot ?? null) as Record<string, unknown> | null,
+    explicitApproval: true
   });
 
   if (approval.approvalState === "BLOCKED" || approval.approvalState === "READY_FOR_REVIEW") {
@@ -2828,6 +3125,18 @@ export async function approveListingPrepPackage(input: {
     overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
     approvedAt,
     approvedByMembershipId: input.approvedByMembershipId ?? null
+  });
+  const approvalHistorySnapshot = buildApprovalHistorySnapshot({
+    existingHistory: Array.isArray((record.approvalHistorySnapshot as Record<string, unknown> | null)?.history)
+      ? (((record.approvalHistorySnapshot as Record<string, unknown>).history as unknown[]) as Array<Record<string, unknown>>)
+      : null,
+    nextAction:
+      approval.approvalState === "APPROVED_WITH_OVERRIDE" ? "APPROVED_WITH_OVERRIDE" : "APPROVED",
+    actorMembershipId: input.approvedByMembershipId ?? null,
+    details: {
+      approvalState: approval.approvalState
+    },
+    createdAt: approvedAt
   });
   const manualAmazonExportSnapshot = buildManualAmazonExportSnapshot({
     packageId: record.id,
@@ -2847,6 +3156,24 @@ export async function approveListingPrepPackage(input: {
       : null,
     approvedAt
   });
+  const manualListingWorksheetSnapshot = buildManualListingWorksheet({
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    packageId: record.id,
+    packageApprovalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    selectedScenarioId: record.calculationScenarioId,
+    selectedScenarioName: record.calculationScenario?.name ?? null,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    approvalSummarySnapshot,
+    readyForListingPrepSummary: (record.readyForListingPrepSummary ?? null) as Record<string, unknown> | null,
+    overrideSummary: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
+    presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null,
+    approvedAt
+  });
+  const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
+    worksheet: manualListingWorksheetSnapshot,
+    presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
 
   await clearCurrentApprovedArtifactsForScope({
     organizationId: input.organizationId,
@@ -2862,6 +3189,9 @@ export async function approveListingPrepPackage(input: {
       approvalState: approval.approvalState,
       approvalSummarySnapshot,
       manualAmazonExportSnapshot,
+      approvalHistorySnapshot,
+      manualListingWorksheetSnapshot,
+      worksheetSummarySnapshot,
       approvedAt,
       approvedByMembershipId: input.approvedByMembershipId ?? null,
       currentApprovedArtifact: true
@@ -2883,7 +3213,9 @@ export async function approveListingPrepPackage(input: {
       data: normalizeUpdateData({
         selectedListingPrepPackageId: record.id,
         selectedListingPrepApprovalSnapshot: approvalSummarySnapshot,
-        selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1"
+        selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+        selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot
       })
     });
   }
@@ -2893,6 +3225,23 @@ export async function approveListingPrepPackage(input: {
     listingPrepPackageId: record.id
   });
   return { ok: true, listingPrepPackage: mapListingPrepPackage(refreshed) };
+}
+
+export async function getManualListingWorksheet(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    manualListingWorksheet: record.manualListingWorksheetSnapshot ?? null,
+    worksheetVersion: record.worksheetVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
 }
 
 export async function getListingPrepManualAmazonExport(input: {

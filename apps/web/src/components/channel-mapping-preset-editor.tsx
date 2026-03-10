@@ -33,9 +33,13 @@ export function ChannelMappingPresetEditor({
         <label className="text-sm text-slate-300">Material format<input name="materialFormat" className={fieldClass()} placeholder="{materialSummary}" /></label>
         <label className="text-sm text-slate-300">Packaging format<input name="packagingFormat" className={fieldClass()} placeholder="{packagingSummary}" /></label>
         <label className="text-sm text-slate-300">Pricing format<input name="pricingFormat" className={fieldClass()} placeholder="{pricingSummary}" /></label>
+        <label className="text-sm text-slate-300">Priority<input name="priority" type="number" min="0" className={fieldClass()} placeholder="10" /></label>
+        <label className="text-sm text-slate-300">Default launch strategies<input name="defaultLaunchStrategies" className={fieldClass()} placeholder="BALANCED,AGGRESSIVE" /></label>
         <label className="text-sm text-slate-300 md:col-span-2">Notes<input name="notes" className={fieldClass()} placeholder="Use this preset for the first manual Amazon listing pass." /></label>
         <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" name="includeWarningNotes" value="true" defaultChecked className="rounded border-white/20 bg-slate-950/35" /> Include warning notes</label>
         <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" name="includeOverrideNotes" value="true" defaultChecked className="rounded border-white/20 bg-slate-950/35" /> Include override notes</label>
+        <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" name="defaultForChannel" value="true" className="rounded border-white/20 bg-slate-950/35" /> Default for channel</label>
+        <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" name="autoApplyEnabled" value="true" className="rounded border-white/20 bg-slate-950/35" /> Auto-apply enabled</label>
         <div className="flex items-end">
           <button type="submit" className="w-full rounded-full bg-cyan-300 px-4 py-2 text-sm font-semibold text-slate-950">Add channel preset</button>
         </div>
@@ -53,11 +57,15 @@ export function ChannelMappingPresetEditor({
             <label className="text-sm text-slate-300">Material format<input name="materialFormat" defaultValue={preset.materialFormat ?? ""} className={fieldClass()} /></label>
             <label className="text-sm text-slate-300">Packaging format<input name="packagingFormat" defaultValue={preset.packagingFormat ?? ""} className={fieldClass()} /></label>
             <label className="text-sm text-slate-300">Pricing format<input name="pricingFormat" defaultValue={preset.pricingFormat ?? ""} className={fieldClass()} /></label>
+            <label className="text-sm text-slate-300">Priority<input name="priority" type="number" min="0" defaultValue={preset.priority ?? ""} className={fieldClass()} /></label>
+            <label className="text-sm text-slate-300">Default launch strategies<input name="defaultLaunchStrategies" defaultValue={(preset.defaultLaunchStrategies ?? []).join(",")} className={fieldClass()} /></label>
             <label className="text-sm text-slate-300 md:col-span-2">Notes<input name="notes" defaultValue={preset.notes ?? ""} className={fieldClass()} /></label>
             <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" name="includeWarningNotes" value="true" defaultChecked={preset.includeWarningNotes} className="rounded border-white/20 bg-slate-950/35" /> Include warning notes</label>
             <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" name="includeOverrideNotes" value="true" defaultChecked={preset.includeOverrideNotes} className="rounded border-white/20 bg-slate-950/35" /> Include override notes</label>
+            <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" name="defaultForChannel" value="true" defaultChecked={preset.defaultForChannel} className="rounded border-white/20 bg-slate-950/35" /> Default for channel</label>
+            <label className="flex items-center gap-2 text-sm text-slate-300"><input type="checkbox" name="autoApplyEnabled" value="true" defaultChecked={preset.autoApplyEnabled} className="rounded border-white/20 bg-slate-950/35" /> Auto-apply enabled</label>
             <div className="flex items-end justify-between gap-3">
-              <div className="text-xs text-slate-400">{preset.channelCode} · {preset.productLabelFormat ?? "{productLabel}"}</div>
+              <div className="text-xs text-slate-400">{preset.channelCode} · {preset.defaultForChannel ? "default" : "manual"} · {preset.productLabelFormat ?? "{productLabel}"}</div>
               <button type="submit" className="rounded-full border border-white/10 px-4 py-2 text-sm text-white">Update preset</button>
             </div>
           </form>

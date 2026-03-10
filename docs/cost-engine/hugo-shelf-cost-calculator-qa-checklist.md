@@ -73,6 +73,12 @@
 62. Verify the package is marked as the current approved artifact
 63. Verify the manual Amazon export card renders a stable export contract with approval state and channel preset summary
 64. Reload the package and confirm approval summary, manual Amazon export snapshot, and current approved artifact state persist
+65. Mark a channel preset as default-for-channel with auto-apply enabled and a priority
+66. Refresh a listing-prep package and verify the default channel preset can be auto-applied from launch context
+67. Verify the preset selection summary clearly shows whether the preset was auto-applied or chosen manually
+68. Approve a package and verify the approval history card shows the latest approval state plus prior condensed events
+69. Verify the manual listing worksheet card renders worksheet version, cleaned fields, prompts, and preset/approval summaries
+70. Reload the package and confirm worksheet summary, preset-selection summary, and approval-history snapshots persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -92,3 +98,5 @@
 - A user can tell whether a package is ready, ready with override, still needs review, or blocked without reading raw JSON
 - A user can review active versus historical overrides without losing the exact reason text
 - A user can point to the exact stable package snapshot that the next listing phase should consume
+- A user can see whether the channel preset was auto-applied from launch context or chosen manually
+- A user can use the manual listing worksheet as the primary internal worksheet for first-pass Amazon entry

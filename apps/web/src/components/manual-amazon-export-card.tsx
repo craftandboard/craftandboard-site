@@ -45,6 +45,10 @@ export function ManualAmazonExportCard({
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Approval</p>
           <p className="mt-2 font-semibold text-white">{listingPrepPackage.approvalState}</p>
         </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Current artifact</p>
+          <p className="mt-2 font-semibold text-white">{listingPrepPackage.currentApprovedArtifact ? "Yes" : "No"}</p>
+        </div>
       </div>
       <pre className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-slate-200">
         {JSON.stringify(exportSnapshot, null, 2)}

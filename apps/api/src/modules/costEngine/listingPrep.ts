@@ -245,6 +245,100 @@ export function applyChannelMappingPreset(input: {
   };
 }
 
+export function buildLaunchContextSnapshot(input: {
+  channelCode?: string | null;
+  launchStrategy?: string | null;
+  listingReadinessStatus?: string | null;
+  readyForListingPrepStatus?: string | null;
+  overrideApproved?: boolean;
+  feePresetLabel?: string | null;
+  shippingZoneLabel?: string | null;
+}) {
+  return {
+    channelCode: input.channelCode ?? "AMAZON_MANUAL",
+    launchStrategy: input.launchStrategy ?? null,
+    listingReadinessStatus: input.listingReadinessStatus ?? null,
+    readyForListingPrepStatus: input.readyForListingPrepStatus ?? null,
+    overrideApproved: Boolean(input.overrideApproved),
+    feePresetLabel: input.feePresetLabel ?? null,
+    shippingZoneLabel: input.shippingZoneLabel ?? null
+  };
+}
+
+export function selectBestDefaultChannelPreset(input: {
+  presets: Array<{
+    id: string;
+    name: string;
+    channelCode: string;
+    status?: string | null;
+    defaultForChannel?: boolean | null;
+    defaultLaunchStrategies?: unknown;
+    priority?: number | null;
+    autoApplyEnabled?: boolean | null;
+  }>;
+  launchContext: {
+    channelCode?: string | null;
+    launchStrategy?: string | null;
+  };
+}) {
+  const channelCode = input.launchContext.channelCode ?? "AMAZON_MANUAL";
+  const launchStrategy = input.launchContext.launchStrategy ?? null;
+  const eligible = (input.presets ?? []).filter((preset) => {
+    if (preset.channelCode !== channelCode) return false;
+    if (preset.status && preset.status !== "ACTIVE") return false;
+    if (!preset.autoApplyEnabled && !preset.defaultForChannel) return false;
+    if (!Array.isArray(preset.defaultLaunchStrategies)) return true;
+    if (!launchStrategy) return true;
+    return preset.defaultLaunchStrategies.includes(launchStrategy);
+  });
+
+  const sorted = [...eligible].sort((left, right) => {
+    const leftDefault = left.defaultForChannel ? 1 : 0;
+    const rightDefault = right.defaultForChannel ? 1 : 0;
+    if (leftDefault !== rightDefault) return rightDefault - leftDefault;
+    const leftPriority = left.priority ?? 0;
+    const rightPriority = right.priority ?? 0;
+    if (leftPriority !== rightPriority) return rightPriority - leftPriority;
+    return left.name.localeCompare(right.name);
+  });
+
+  return sorted[0] ?? null;
+}
+
+export function buildPresetSelectionSummary(input: {
+  preset?: {
+    id: string;
+    name: string;
+    channelCode: string;
+    defaultForChannel?: boolean | null;
+    priority?: number | null;
+    autoApplyEnabled?: boolean | null;
+  } | null;
+  launchContext: Record<string, unknown>;
+  autoApplied?: boolean;
+  manualReason?: string | null;
+}) {
+  const autoApplied = Boolean(input.autoApplied);
+  return {
+    presetId: input.preset?.id ?? null,
+    presetLabel: input.preset?.name ?? null,
+    channelCode: input.preset?.channelCode ?? input.launchContext.channelCode ?? "AMAZON_MANUAL",
+    autoApplied,
+    launchContext: input.launchContext,
+    summary: input.preset
+      ? autoApplied
+        ? `Preset "${input.preset.name}" was auto-applied from launch context.`
+        : `Preset "${input.preset.name}" was selected manually.`
+      : "No channel preset is applied.",
+    selectionReason: autoApplied
+      ? "Matched channel and launch-context defaults."
+      : input.manualReason ?? null,
+    priority: input.preset?.priority ?? null,
+    defaultForChannel: Boolean(input.preset?.defaultForChannel),
+    autoApplyEnabled: Boolean(input.preset?.autoApplyEnabled)
+  };
+}
+
 export function buildOverrideHistorySnapshot(input: {
   existingHistory?: Array<Record<string, unknown>> | null;
   latestOverride?: Record<string, unknown> | null;
@@ -288,6 +382,48 @@ export function buildOverrideHistorySnapshot(input: {
   return {
     activeOverride: nextEntry.overrideApproved || nextEntry.overrideRequested ? nextEntry : null,
     latestOverride: nextEntry,
+    history: combined
+  };
+}
+
+export function buildApprovalHistorySnapshot(input: {
+  existingHistory?: Array<Record<string, unknown>> | null;
+  nextAction?: "APPROVED" | "APPROVED_WITH_OVERRIDE" | "MARKED_REVIEW" | "BLOCKED" | "ARCHIVED" | "PRESET_APPLIED" | null;
+  actorMembershipId?: string | null;
+  reason?: string | null;
+  details?: Record<string, unknown> | null;
+  createdAt?: string | Date | null;
+}) {
+  const history = Array.isArray(input.existingHistory) ? [...input.existingHistory] : [];
+  if (!input.nextAction) {
+    return {
+      latest: history[0] ?? null,
+      history
+    };
+  }
+
+  const nextEntry = {
+    action: input.nextAction,
+    actorMembershipId: input.actorMembershipId ?? null,
+    reason: input.reason ?? null,
+    details: input.details ?? null,
+    createdAt:
+      input.createdAt instanceof Date
+        ? input.createdAt.toISOString()
+        : (input.createdAt as string | null | undefined) ?? new Date().toISOString()
+  };
+
+  const deduped = history.filter((entry) => {
+    return !(
+      entry.action === nextEntry.action &&
+      entry.reason === nextEntry.reason &&
+      JSON.stringify(entry.details ?? null) === JSON.stringify(nextEntry.details ?? null)
+    );
+  });
+
+  const combined = [nextEntry, ...deduped].slice(0, 10);
+  return {
+    latest: nextEntry,
     history: combined
   };
 }
@@ -431,6 +567,7 @@ export function calculateApprovalState(input: {
   readyForListingPrepSummary?: Record<string, unknown> | null;
   overrideSnapshot?: Record<string, unknown> | null;
   manualAmazonExportSnapshot?: Record<string, unknown> | null;
+  explicitApproval?: boolean;
 }) {
   const readyStatus = String(input.readyForListingPrepSummary?.readyForListingPrepStatus ?? "NEEDS_REVIEW");
   const blockingReasons = Array.isArray(input.readyForListingPrepSummary?.blockingReasons)
@@ -451,6 +588,16 @@ export function calculateApprovalState(input: {
     return {
       approvalState: "READY_FOR_REVIEW",
       approvalWarnings: ["Package still needs review before approval."],
+      approvalBlockingReasons: []
+    };
+  }
+
+  if (!input.explicitApproval) {
+    return {
+      approvalState: "READY_FOR_REVIEW",
+      approvalWarnings: overrideApproved
+        ? ["Package is ready for internal approval with an override review attached."]
+        : ["Package is ready for internal approval."],
       approvalBlockingReasons: []
     };
   }
@@ -547,5 +694,81 @@ export function buildManualAmazonExportSnapshot(input: {
       input.approvedAt instanceof Date
         ? input.approvedAt.toISOString()
         : (input.approvedAt as string | null | undefined) ?? null
+  };
+}
+
+export function buildManualListingWorksheet(input: {
+  worksheetVersion?: string | null;
+  packageId: string;
+  packageApprovalState: string;
+  currentApprovedArtifact: boolean;
+  selectedScenarioId: string;
+  selectedScenarioName?: string | null;
+  exportShapeSnapshot?: Record<string, unknown> | null;
+  approvalSummarySnapshot?: Record<string, unknown> | null;
+  readyForListingPrepSummary?: Record<string, unknown> | null;
+  overrideSummary?: Record<string, unknown> | null;
+  presetSelectionSummary?: Record<string, unknown> | null;
+  approvedAt?: string | Date | null;
+}) {
+  const snapshot = input.exportShapeSnapshot ?? {};
+  const marketplaceFieldSnapshot =
+    (snapshot.marketplaceFieldSnapshot as Record<string, unknown> | null | undefined) ?? null;
+  return {
+    worksheetVersion: input.worksheetVersion ?? "manual-listing-v1",
+    packageId: input.packageId,
+    packageApprovalState: input.packageApprovalState,
+    currentApprovedArtifact: input.currentApprovedArtifact,
+    selectedScenarioId: input.selectedScenarioId,
+    selectedScenarioName: input.selectedScenarioName ?? null,
+    productLabel: snapshot.productLabel ?? null,
+    internalSku: snapshot.internalSku ?? null,
+    dimensionsSummary: snapshot.dimensionsSummary ?? null,
+    thicknessSummary: snapshot.thicknessSummary ?? null,
+    materialSummary: snapshot.materialSummary ?? null,
+    edgeBandSummary: snapshot.edgeBandSummary ?? null,
+    packagingSummary: snapshot.packagingSummary ?? null,
+    shippingSummary: snapshot.shippingSummary ?? null,
+    channelPresetLabel: snapshot.channelPresetLabel ?? null,
+    launchStrategyLabel: snapshot.launchStrategyLabel ?? null,
+    feePresetLabel: snapshot.feePresetLabel ?? null,
+    shippingZoneLabel: snapshot.shippingZoneLabel ?? null,
+    recommendedLaunchPrice: snapshot.pricingSummary ?? null,
+    minimumPrice: marketplaceFieldSnapshot?.minimumPrice ?? null,
+    saferMarginPrice: marketplaceFieldSnapshot?.saferMarginPrice ?? null,
+    warningSummary: snapshot.warningsSummary ?? [],
+    overrideSummary: input.overrideSummary ?? null,
+    readinessSummary: input.readyForListingPrepSummary ?? null,
+    approvalSummary: input.approvalSummarySnapshot ?? null,
+    presetSelectionSummary: input.presetSelectionSummary ?? null,
+    manualReviewPrompts: [
+      "Confirm title and SKU before manual listing entry.",
+      "Review warnings and override notes before publishing."
+    ],
+    assumptionsSnapshot: snapshot.assumptionsSnapshot ?? null,
+    resultSnapshot: snapshot.resultSnapshot ?? null,
+    generatedAt: new Date().toISOString(),
+    approvedAt:
+      input.approvedAt instanceof Date
+        ? input.approvedAt.toISOString()
+        : (input.approvedAt as string | null | undefined) ?? null
+  };
+}
+
+export function buildWorksheetSummarySnapshot(input: {
+  worksheet?: Record<string, unknown> | null;
+  presetSelectionSummary?: Record<string, unknown> | null;
+}) {
+  return {
+    worksheetVersion: input.worksheet?.worksheetVersion ?? null,
+    productLabel: input.worksheet?.productLabel ?? null,
+    channelPresetLabel: input.worksheet?.channelPresetLabel ?? null,
+    approvalState: input.worksheet?.packageApprovalState ?? null,
+    manualReviewPrompts: input.worksheet?.manualReviewPrompts ?? [],
+    presetSelectionSummary: input.presetSelectionSummary ?? null,
+    summary:
+      typeof input.worksheet?.productLabel === "string"
+        ? `Worksheet prepared for ${String(input.worksheet.productLabel)}.`
+        : "Worksheet prepared for manual listing prep."
   };
 }

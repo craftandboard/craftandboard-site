@@ -14,7 +14,7 @@ export function ListingPrepApprovalCard({
 }) {
   const approvalSummary = (listingPrepPackage?.approvalSummarySnapshot ?? null) as
     | {
-        approvalSummary?: string | null;
+        summary?: string | null;
         approvalWarnings?: string[];
         approvalBlockingReasons?: string[];
       }
@@ -42,7 +42,7 @@ export function ListingPrepApprovalCard({
         ) : null}
       </div>
       <p className="mt-3 text-sm text-slate-300">
-        {approvalSummary?.approvalSummary ?? "Approval state will update after validation, override review, and manual export checks complete."}
+        {approvalSummary?.summary ?? "Approval state will update after validation, override review, and manual export checks complete."}
       </p>
       <div className="mt-4 grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
@@ -69,7 +69,12 @@ export function ListingPrepApprovalCard({
       <button
         type="button"
         onClick={onApprove}
-        disabled={busy || listingPrepPackage.approvalState === "BLOCKED"}
+        disabled={
+          busy ||
+          listingPrepPackage.approvalState === "BLOCKED" ||
+          listingPrepPackage.approvalState === "APPROVED" ||
+          listingPrepPackage.approvalState === "APPROVED_WITH_OVERRIDE"
+        }
         className="mt-5 rounded-full border border-cyan-300/30 bg-cyan-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
       >
         Approve manual Amazon package

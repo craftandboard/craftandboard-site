@@ -2609,6 +2609,7 @@ model CalculationScenario {
   priceFloorOverrideSnapshot Json?
   latestOverrideSummarySnapshot Json?
   latestApprovalSummarySnapshot Json?
+  latestPresetSelectionSummarySnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
@@ -2639,6 +2640,8 @@ model CalculationComparisonSet {
   selectedListingPrepExportVersion String?
   selectedListingPrepApprovalSnapshot Json?
   selectedListingPrepExportContractVersion String?
+  selectedWorksheetVersion String?
+  selectedWorksheetSummarySnapshot Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2679,6 +2682,12 @@ model ListingPrepPackage {
   readyForListingPrep    Boolean                  @default(false)
   readyForListingPrepSummary Json?
   manualAmazonExportSnapshot Json?
+  approvalHistorySnapshot Json?
+  autoAppliedChannelPreset Boolean                @default(false)
+  channelPresetSelectionSummary Json?
+  manualListingWorksheetSnapshot Json?
+  worksheetVersion      String?
+  worksheetSummarySnapshot Json?
   currentApprovedArtifact Boolean                 @default(false)
   notes                  String?
   approvedAt             DateTime?
@@ -2701,7 +2710,9 @@ model ListingPrepPackage {
   @@index([organizationId, readyForListingPrep])
   @@index([organizationId, marketplaceMappingTemplateId])
   @@index([organizationId, channelMappingPresetId])
+  @@index([organizationId, autoAppliedChannelPreset])
   @@index([organizationId, currentApprovedArtifact])
+  @@index([organizationId, worksheetVersion])
 }
 
 model MarketplaceMappingTemplate {
@@ -2746,6 +2757,11 @@ model ChannelMappingPreset {
   packagingFormat      String?
   pricingFormat        String?
   fieldOrderingSnapshot Json?
+  defaultForChannel    Boolean                  @default(false)
+  defaultLaunchStrategies Json?
+  launchContextSnapshot Json?
+  priority             Int?
+  autoApplyEnabled     Boolean                  @default(false)
   notes                String?
   presetSnapshot       Json?
   createdAt            DateTime                 @default(now())
@@ -2756,7 +2772,9 @@ model ChannelMappingPreset {
 
   @@index([organizationId, status])
   @@index([organizationId, channelCode])
+  @@index([organizationId, channelCode, status])
   @@index([organizationId, costProfileId])
+  @@index([organizationId, defaultForChannel])
 }
 
 model ComparisonSetScenario {

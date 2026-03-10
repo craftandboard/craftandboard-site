@@ -94,6 +94,13 @@ export function ListingPrepPackageCard({
           <p className="mt-1 text-xs text-slate-400">Contract {listingPrepPackage.exportContractVersion ?? "manual-amazon-v1"}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Worksheet</p>
+          <p className="mt-2 font-semibold text-white">{listingPrepPackage.worksheetVersion ?? "manual-listing-v1"}</p>
+          <p className="mt-1 text-xs text-slate-400">
+            {listingPrepPackage.autoAppliedChannelPreset ? "Preset auto-applied from launch context" : "Preset chosen manually or not applied"}
+          </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Ready for listing prep</p>
           <p className="mt-2 font-semibold text-white">{listingPrepPackage.readyForListingPrep ? "Yes" : "Not yet"}</p>
           <p className="mt-1 text-xs text-slate-400">{String(readySummary.summary ?? "Run refresh and validation to finalize package readiness.")}</p>

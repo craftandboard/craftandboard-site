@@ -92,6 +92,12 @@
 81. Verify the worksheet ergonomics summary shows copy-group count, prompt count, missing critical fields, and ready-to-use state
 82. Edit a channel mapping preset to change review/completion prompts, copy-group order, or section labels
 83. Refresh the listing-prep package and confirm prompt/export/ergonomics snapshots update and persist
+84. Verify the quick-copy summary card shows “copy these first” fields and grouped priority copy blocks clearly
+85. Verify the final-review prompt card shows critical, warning-sensitive, and completion review prompts clearly
+86. Verify the artifact handoff summary card makes the current approved artifact unmistakable
+87. Verify the short plain-text summary is concise enough for fast manual Amazon entry
+88. Edit a channel mapping preset to change quick-copy ordering, final-review prompts, or short-summary formatting
+89. Refresh the listing-prep package and confirm quick-copy, final-review, and handoff snapshots update and persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -117,3 +123,6 @@
 - A user can see concise operator prompts that explain what to enter first, what still needs review, and what to confirm before final manual listing entry
 - A user can copy grouped worksheet values without digging through raw JSON
 - A user can fall back to a stable plain-text worksheet or a structured worksheet export when handing the package to another internal operator
+- A user can see the most important copy targets immediately instead of scanning the whole worksheet
+- A user can run a concise final-review pass before manual Amazon entry without digging through approval or warning cards
+- A user can tell at a glance whether the current artifact is still the package to use right now

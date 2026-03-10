@@ -34,6 +34,8 @@ import {
   getLaunchTemplate,
   getChannelMappingPreset,
   getListingPrepPackage,
+  getQuickCopySummary,
+  getFinalReviewPrompts,
   getManualListingWorksheet,
   getOperatorWorksheet,
   getPlainTextWorksheet,
@@ -1112,6 +1114,36 @@ router.get("/listing-prep-packages/:listingPrepPackageId/operator-worksheet", as
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getOperatorWorksheet({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/quick-copy-summary", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getQuickCopySummary({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/final-review-prompts", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getFinalReviewPrompts({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

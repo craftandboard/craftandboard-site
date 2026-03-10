@@ -2896,6 +2896,9 @@ export interface ChannelMappingPresetItem {
   operatorPromptTemplateSnapshot: Record<string, unknown> | null;
   copyGroupOrderingSnapshot: Record<string, unknown> | null;
   worksheetSectionLabelSnapshot: Record<string, unknown> | null;
+  finalReviewPromptTemplateSnapshot: Record<string, unknown> | null;
+  quickCopyOrderingSnapshot: Record<string, unknown> | null;
+  shortSummaryFormatSnapshot: Record<string, unknown> | null;
   notes: string | null;
   presetSnapshot: Record<string, unknown> | null;
   createdAt: string;
@@ -3400,6 +3403,7 @@ export interface CalculationScenarioRecord {
   latestPresetSelectionSummarySnapshot: Record<string, unknown> | null;
   latestWorksheetSummarySnapshot: Record<string, unknown> | null;
   latestOperatorPromptSummarySnapshot: Record<string, unknown> | null;
+  latestQuickCopySummarySnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3435,6 +3439,8 @@ export interface ComparisonSetRecord {
   selectedOperatorWorksheetVersion: string | null;
   selectedOperatorWorksheetSummarySnapshot: Record<string, unknown> | null;
   selectedWorksheetErgonomicsSummary: Record<string, unknown> | null;
+  selectedQuickCopySummarySnapshot: Record<string, unknown> | null;
+  selectedFinalReviewPromptSnapshot: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3504,6 +3510,11 @@ export interface ListingPrepPackageRecord {
   plainTextWorksheetSnapshot: Record<string, unknown> | null;
   structuredWorksheetExportSnapshot: Record<string, unknown> | null;
   worksheetErgonomicsSummary: Record<string, unknown> | null;
+  quickCopySummarySnapshot: Record<string, unknown> | null;
+  finalReviewPromptSnapshot: Record<string, unknown> | null;
+  artifactHandoffSummarySnapshot: Record<string, unknown> | null;
+  shortPlainTextSummarySnapshot: Record<string, unknown> | null;
+  quickCopyVersion: string | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4230,8 +4241,13 @@ export async function getListingPrepOperatorWorksheet(listingPrepPackageId: stri
     channelHandoffSummary: Record<string, unknown> | null;
     currentApprovedArtifactSummary: Record<string, unknown> | null;
     operatorPromptSummary: Record<string, unknown> | null;
+    quickCopySummary: Record<string, unknown> | null;
+    finalReviewPrompts: Record<string, unknown> | null;
+    artifactHandoffSummary: Record<string, unknown> | null;
+    shortPlainTextSummary: Record<string, unknown> | null;
     worksheetErgonomicsSummary: Record<string, unknown> | null;
     operatorWorksheetVersion: string | null;
+    quickCopyVersion: string | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/operator-worksheet`);
@@ -4242,10 +4258,36 @@ export async function getListingPrepWorksheetExport(listingPrepPackageId: string
     ok: true;
     worksheetExport: Record<string, unknown> | null;
     copyExportSummary: Record<string, unknown> | null;
+    quickCopySummary: Record<string, unknown> | null;
+    artifactHandoffSummary: Record<string, unknown> | null;
+    shortPlainTextSummary: Record<string, unknown> | null;
     worksheetErgonomicsSummary: Record<string, unknown> | null;
+    quickCopyVersion: string | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/worksheet-export`);
+}
+
+export async function getListingPrepQuickCopySummary(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    quickCopySummary: Record<string, unknown> | null;
+    shortPlainTextSummary: Record<string, unknown> | null;
+    artifactHandoffSummary: Record<string, unknown> | null;
+    quickCopyVersion: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/quick-copy-summary`);
+}
+
+export async function getListingPrepFinalReviewPrompts(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    finalReviewPrompts: Record<string, unknown> | null;
+    artifactHandoffSummary: Record<string, unknown> | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/final-review-prompts`);
 }
 
 export async function getListingPrepPlainTextWorksheet(listingPrepPackageId: string) {
@@ -4253,7 +4295,11 @@ export async function getListingPrepPlainTextWorksheet(listingPrepPackageId: str
     ok: true;
     plainTextWorksheet: Record<string, unknown> | null;
     operatorPromptSummary: Record<string, unknown> | null;
+    finalReviewPrompts: Record<string, unknown> | null;
+    shortPlainTextSummary: Record<string, unknown> | null;
+    artifactHandoffSummary: Record<string, unknown> | null;
     worksheetErgonomicsSummary: Record<string, unknown> | null;
+    quickCopyVersion: string | null;
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/plain-text-worksheet`);

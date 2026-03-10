@@ -1201,6 +1201,179 @@ export function buildWorksheetErgonomicsSummary(input: {
   };
 }
 
+export function buildQuickCopySummarySnapshot(input: {
+  exportShapeSnapshot?: Record<string, unknown> | null;
+  copyExportSnapshot?: Record<string, unknown> | null;
+  preset?: {
+    quickCopyOrderingSnapshot?: Record<string, unknown> | null;
+    shortSummaryFormatSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const exportShape = input.exportShapeSnapshot ?? {};
+  const ordering =
+    ((input.preset?.quickCopyOrderingSnapshot ?? null) as Record<string, unknown> | null) ??
+    ({ fields: ["productLabel", "dimensionsSummary", "materialSummary", "pricingSummary", "warningNotes"] } as Record<string, unknown>);
+  const copyFirstFields = Array.isArray(ordering.fields) ? (ordering.fields as string[]) : [];
+  const groups = (input.copyExportSnapshot?.groups ?? {}) as Record<string, { label?: string; value?: unknown }>;
+
+  return {
+    copyFirstFields,
+    priorityCopyBlocks: [
+      {
+        key: "identity",
+        label: "Copy these first",
+        value: {
+          productLabel: exportShape.productLabel ?? null,
+          internalSku: exportShape.internalSku ?? null,
+          dimensionsSummary: exportShape.dimensionsSummary ?? null
+        }
+      },
+      {
+        key: "pricing",
+        label: "Pricing",
+        value: {
+          pricingSummary: exportShape.pricingSummary ?? null
+        }
+      },
+      {
+        key: "warnings",
+        label: "Warnings and notes",
+        value: {
+          warnings: exportShape.warningsSummary ?? [],
+          overrideSummary: exportShape.overrideSummary ?? null
+        }
+      }
+    ],
+    quickCopySummary:
+      (input.copyExportSnapshot?.quickCopySummary as string | undefined) ??
+      [
+        exportShape.productLabel ?? "Unnamed product",
+        exportShape.dimensionsSummary ?? "No dimensions",
+        exportShape.pricingSummary ?? "No pricing summary"
+      ].join(" | "),
+    copyGroupCount: Object.keys(groups).length
+  };
+}
+
+export function buildFinalReviewPromptSnapshot(input: {
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  overrideSnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  exportShapeSnapshot?: Record<string, unknown> | null;
+  preset?: {
+    finalReviewPromptTemplateSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const warnings = input.warningSnapshot ?? [];
+  const requiredMissing = Array.isArray(input.checklistSnapshot?.requiredMissingFields)
+    ? (input.checklistSnapshot?.requiredMissingFields as string[])
+    : [];
+
+  const criticalReviewPrompts = [
+    ...(input.currentApprovedArtifact ? [] : ["Confirm this package is still the current approved artifact before copying anything."]),
+    ...(requiredMissing.length ? [`Resolve required fields before final manual entry: ${requiredMissing.join(", ")}.`] : []),
+    ...(Boolean(input.overrideSnapshot?.overrideApproved)
+      ? ["A price-floor override is attached. Confirm the override reason has been acknowledged."]
+      : [])
+  ];
+  const warningSensitivePrompts = Array.isArray(
+    input.preset?.finalReviewPromptTemplateSnapshot?.warningSensitivePrompts
+  )
+    ? (input.preset?.finalReviewPromptTemplateSnapshot?.warningSensitivePrompts as string[])
+    : [
+        "Verify packaging and shipping values still match the chosen launch scenario.",
+        "Re-check warning-sensitive fields before final Amazon entry."
+      ];
+  const completionReviewPrompts = Array.isArray(
+    input.preset?.finalReviewPromptTemplateSnapshot?.completionReviewPrompts
+  )
+    ? (input.preset?.finalReviewPromptTemplateSnapshot?.completionReviewPrompts as string[])
+    : [
+        "Confirm the launch price selected is the one intended for this package.",
+        "Treat this worksheet as final only after the last warning review pass."
+      ];
+
+  return {
+    criticalReviewPrompts,
+    warningSensitivePrompts: [
+      ...warningSensitivePrompts,
+      ...(warnings.some((warning) => warning.severity === "BLOCKING")
+        ? ["Blocking warning remains present. Do not proceed until it has been intentionally resolved or acknowledged."]
+        : [])
+    ],
+    completionReviewPrompts,
+    summary:
+      input.approvalState === "APPROVED" || input.approvalState === "APPROVED_WITH_OVERRIDE"
+        ? "Final review prompts are ready for the last manual listing check."
+        : "Final review prompts are still highlighting what must be confirmed before manual listing work."
+  };
+}
+
+export function buildArtifactHandoffSummarySnapshot(input: {
+  packageId: string;
+  packageName?: string | null;
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  exportContractVersion?: string | null;
+  worksheetVersion?: string | null;
+  operatorWorksheetVersion?: string | null;
+  quickCopyVersion?: string | null;
+  approvedAt?: string | Date | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+}) {
+  return {
+    artifactIdentity: {
+      packageId: input.packageId,
+      packageName: input.packageName ?? null
+    },
+    artifactUseNowBoolean: input.currentApprovedArtifact,
+    artifactVersionSummary: {
+      exportContractVersion: input.exportContractVersion ?? null,
+      worksheetVersion: input.worksheetVersion ?? null,
+      operatorWorksheetVersion: input.operatorWorksheetVersion ?? null,
+      quickCopyVersion: input.quickCopyVersion ?? null
+    },
+    artifactStatusSummary: {
+      approvalState: input.approvalState,
+      approvedAt:
+        input.approvedAt instanceof Date
+          ? input.approvedAt.toISOString()
+          : (input.approvedAt as string | null | undefined) ?? null,
+      hasOverride: Boolean(input.overrideSnapshot?.overrideApproved)
+    },
+    summary: input.currentApprovedArtifact
+      ? "This is the package to use now for manual listing prep."
+      : "This package is not the active handoff artifact."
+  };
+}
+
+export function buildShortPlainTextSummary(input: {
+  exportShapeSnapshot?: Record<string, unknown> | null;
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  readyForListingPrepSummary?: Record<string, unknown> | null;
+  preset?: {
+    shortSummaryFormatSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const exportShape = input.exportShapeSnapshot ?? {};
+  const parts = [
+    exportShape.productLabel ?? "Unnamed product",
+    exportShape.dimensionsSummary ?? "No dimensions",
+    exportShape.pricingSummary ?? "No pricing summary",
+    input.currentApprovedArtifact ? "Use now" : "Historical",
+    String(input.readyForListingPrepSummary?.readyForListingPrepStatus ?? input.approvalState)
+  ];
+
+  return {
+    text: parts.join(" | "),
+    formatLabel:
+      (input.preset?.shortSummaryFormatSnapshot as Record<string, unknown> | null)?.label ?? "default-short-summary"
+  };
+}
+
 export function buildWorksheetSummarySnapshot(input: {
   worksheet?: Record<string, unknown> | null;
   presetSelectionSummary?: Record<string, unknown> | null;

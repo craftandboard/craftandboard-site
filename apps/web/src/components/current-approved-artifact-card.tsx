@@ -32,7 +32,7 @@ export function CurrentApprovedArtifactCard({
       <p className="mt-3 text-sm text-slate-300">
         {String(summary?.summary ?? "This card tells Brandon and Hugo which package should be used for manual listing prep right now.")}
       </p>
-      <div className="mt-4 grid gap-3 md:grid-cols-4">
+      <div className="mt-4 grid gap-3 md:grid-cols-5">
         <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Export</p>
           <p className="mt-2 font-semibold text-white">{String(summary?.exportContractVersion ?? listingPrepPackage.exportContractVersion ?? "manual-amazon-v1")}</p>
@@ -40,6 +40,10 @@ export function CurrentApprovedArtifactCard({
         <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Worksheet</p>
           <p className="mt-2 font-semibold text-white">{String(summary?.operatorWorksheetVersion ?? listingPrepPackage.operatorWorksheetVersion ?? "operator-listing-v1")}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Quick-copy</p>
+          <p className="mt-2 font-semibold text-white">{String(listingPrepPackage.quickCopyVersion ?? "quick-copy-v1")}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Approved at</p>

@@ -10,6 +10,10 @@ export function WorksheetExportSummaryCard({
   const structured = (listingPrepPackage?.structuredWorksheetExportSnapshot ?? null) as Record<string, unknown> | null;
   const plainText = (listingPrepPackage?.plainTextWorksheetSnapshot ?? null) as Record<string, unknown> | null;
   const ergonomics = (listingPrepPackage?.worksheetErgonomicsSummary ?? null) as Record<string, unknown> | null;
+  const shortSummary =
+    typeof listingPrepPackage?.shortPlainTextSummarySnapshot?.["summary"] === "string"
+      ? String(listingPrepPackage.shortPlainTextSummarySnapshot.summary)
+      : null;
 
   if (!listingPrepPackage) {
     return (
@@ -37,6 +41,10 @@ export function WorksheetExportSummaryCard({
           <p className="mt-2 font-semibold text-white">{String(ergonomics?.missingCriticalFieldCount ?? 0)}</p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Quick-copy version</p>
+          <p className="mt-2 font-semibold text-white">{String(listingPrepPackage.quickCopyVersion ?? "quick-copy-v1")}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Ready to use</p>
           <p className="mt-2 font-semibold text-white">{ergonomics?.readyToUseBoolean ? "Yes" : "Needs review"}</p>
         </div>
@@ -44,6 +52,11 @@ export function WorksheetExportSummaryCard({
       <p className="mt-4 text-sm text-slate-300">
         {String(ergonomics?.summary ?? "Worksheet ergonomics summary will appear here after refresh.")}
       </p>
+      {shortSummary ? (
+        <div className="mt-4 rounded-2xl border border-cyan-300/20 bg-cyan-300/10 px-4 py-3 text-sm text-cyan-50">
+          {shortSummary}
+        </div>
+      ) : null}
       <div className="mt-4 grid gap-4 xl:grid-cols-2">
         <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Plain-text worksheet</p>

@@ -14,6 +14,8 @@ import {
   buildChannelHandoffSummary,
   buildCopyExportSnapshot,
   buildCurrentApprovedArtifactSummary,
+  buildFinalReviewPromptSnapshot,
+  buildArtifactHandoffSummarySnapshot,
   buildLaunchContextSnapshot,
   buildManualAmazonExportSnapshot,
   buildManualListingWorksheet,
@@ -22,6 +24,8 @@ import {
   buildOperatorWorksheetPackage,
   buildPlainTextWorksheet,
   buildPresetSelectionSummary,
+  buildQuickCopySummarySnapshot,
+  buildShortPlainTextSummary,
   applyMarketplaceMappingTemplate,
   buildMarketplaceFieldValidationResult,
   buildOverrideHistorySnapshot,
@@ -260,6 +264,9 @@ function mapChannelMappingPreset(record: any) {
     operatorPromptTemplateSnapshot: record.operatorPromptTemplateSnapshot ?? null,
     copyGroupOrderingSnapshot: record.copyGroupOrderingSnapshot ?? null,
     worksheetSectionLabelSnapshot: record.worksheetSectionLabelSnapshot ?? null,
+    finalReviewPromptTemplateSnapshot: record.finalReviewPromptTemplateSnapshot ?? null,
+    quickCopyOrderingSnapshot: record.quickCopyOrderingSnapshot ?? null,
+    shortSummaryFormatSnapshot: record.shortSummaryFormatSnapshot ?? null,
     notes: record.notes ?? null,
     presetSnapshot: record.presetSnapshot ?? null
   };
@@ -687,6 +694,56 @@ function buildListingArtifactsForScenario(input: {
     copyExportSnapshot,
     currentApprovedArtifact: Boolean(input.currentApprovedArtifact)
   });
+  const quickCopyVersion = "quick-copy-v1";
+  const quickCopySummarySnapshot = buildQuickCopySummarySnapshot({
+    exportShapeSnapshot,
+    copyExportSnapshot,
+    preset: input.channelPreset
+      ? {
+          quickCopyOrderingSnapshot:
+            input.channelPreset.quickCopyOrderingSnapshot ?? null,
+          shortSummaryFormatSnapshot:
+            input.channelPreset.shortSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+  const finalReviewPromptSnapshot = buildFinalReviewPromptSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    overrideSnapshot,
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    checklistSnapshot: operatorChecklistSnapshot,
+    exportShapeSnapshot,
+    preset: input.channelPreset
+      ? {
+          finalReviewPromptTemplateSnapshot:
+            input.channelPreset.finalReviewPromptTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const artifactHandoffSummarySnapshot = buildArtifactHandoffSummarySnapshot({
+    packageId: input.packageId ?? "pending-package",
+    packageName: `${input.scenarioRecord.name} listing prep`,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    exportContractVersion,
+    worksheetVersion: input.worksheetVersion ?? "manual-listing-v1",
+    operatorWorksheetVersion,
+    quickCopyVersion,
+    overrideSnapshot
+  });
+  const shortPlainTextSummarySnapshot = buildShortPlainTextSummary({
+    exportShapeSnapshot,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    readyForListingPrepSummary,
+    preset: input.channelPreset
+      ? {
+          shortSummaryFormatSnapshot:
+            input.channelPreset.shortSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: input.presetSelectionSummary ?? null
@@ -736,6 +793,11 @@ function buildListingArtifactsForScenario(input: {
     plainTextWorksheetSnapshot,
     structuredWorksheetExportSnapshot,
     worksheetErgonomicsSummary,
+    quickCopySummarySnapshot,
+    finalReviewPromptSnapshot,
+    artifactHandoffSummarySnapshot,
+    shortPlainTextSummarySnapshot,
+    quickCopyVersion,
     channelPresetSelectionSummary: input.presetSelectionSummary ?? null
   };
 }
@@ -844,6 +906,7 @@ function mapScenario(record: any) {
     latestPresetSelectionSummarySnapshot: record.latestPresetSelectionSummarySnapshot ?? null,
     latestWorksheetSummarySnapshot: record.latestWorksheetSummarySnapshot ?? null,
     latestOperatorPromptSummarySnapshot: record.latestOperatorPromptSummarySnapshot ?? null,
+    latestQuickCopySummarySnapshot: record.latestQuickCopySummarySnapshot ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -884,6 +947,10 @@ function mapComparisonSet(record: any) {
       record.selectedOperatorWorksheetSummarySnapshot ?? null,
     selectedWorksheetErgonomicsSummary:
       record.selectedWorksheetErgonomicsSummary ?? null,
+    selectedQuickCopySummarySnapshot:
+      record.selectedQuickCopySummarySnapshot ?? null,
+    selectedFinalReviewPromptSnapshot:
+      record.selectedFinalReviewPromptSnapshot ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -938,6 +1005,11 @@ function mapListingPrepPackage(record: any) {
     plainTextWorksheetSnapshot: record.plainTextWorksheetSnapshot ?? null,
     structuredWorksheetExportSnapshot: record.structuredWorksheetExportSnapshot ?? null,
     worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
+    quickCopySummarySnapshot: record.quickCopySummarySnapshot ?? null,
+    finalReviewPromptSnapshot: record.finalReviewPromptSnapshot ?? null,
+    artifactHandoffSummarySnapshot: record.artifactHandoffSummarySnapshot ?? null,
+    shortPlainTextSummarySnapshot: record.shortPlainTextSummarySnapshot ?? null,
+    quickCopyVersion: record.quickCopyVersion ?? null,
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
     notes: record.notes ?? null,
     approvedAt: record.approvedAt?.toISOString() ?? null,
@@ -1485,6 +1557,12 @@ export async function createChannelMappingPreset(input: {
   worksheetPromptSnapshot?: unknown;
   requiredFieldChecklistSnapshot?: unknown;
   optionalFieldChecklistSnapshot?: unknown;
+  operatorPromptTemplateSnapshot?: unknown;
+  copyGroupOrderingSnapshot?: unknown;
+  finalReviewPromptTemplateSnapshot?: unknown;
+  quickCopyOrderingSnapshot?: unknown;
+  shortSummaryFormatSnapshot?: unknown;
+  worksheetSectionLabelSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -2178,7 +2256,8 @@ export async function saveComparisonSet(input: {
         marketplaceFieldSnapshot: selectedArtifacts.marketplaceFieldSnapshot,
         strongerAlertSnapshot: selectedArtifacts.strongerAlertSnapshot,
         exportSnapshot: selectedArtifacts.exportSnapshot,
-        handoffSnapshot: selectedArtifacts.handoffSummary
+        handoffSnapshot: selectedArtifacts.handoffSummary,
+        latestQuickCopySummarySnapshot: selectedArtifacts.quickCopySummarySnapshot
       })
     });
   }
@@ -2197,7 +2276,9 @@ export async function saveComparisonSet(input: {
     ,
     selectedLaunchExportSnapshot: selectedArtifacts?.exportSnapshot ?? null,
     selectedLaunchReadinessStatus: selectedArtifacts?.listingReadinessStatus ?? null,
-    selectedLaunchWarningSnapshot: selectedArtifacts?.strongerAlertSnapshot?.warnings ?? null
+    selectedLaunchWarningSnapshot: selectedArtifacts?.strongerAlertSnapshot?.warnings ?? null,
+    selectedQuickCopySummarySnapshot: selectedArtifacts?.quickCopySummarySnapshot ?? null,
+    selectedFinalReviewPromptSnapshot: selectedArtifacts?.finalReviewPromptSnapshot ?? null
   });
 
   for (const [index, scenarioRecord] of scenarioRecords.entries()) {
@@ -2329,7 +2410,8 @@ export async function rankComparisonSet(input: {
         listingReadinessSnapshot: selectedArtifacts.listingReadinessSnapshot,
         marketplaceFieldSnapshot: selectedArtifacts.marketplaceFieldSnapshot,
         strongerAlertSnapshot: selectedArtifacts.strongerAlertSnapshot,
-        exportSnapshot: selectedLaunchExportSnapshot
+        exportSnapshot: selectedLaunchExportSnapshot,
+        latestQuickCopySummarySnapshot: selectedArtifacts.quickCopySummarySnapshot
       }
     });
   }
@@ -2362,7 +2444,14 @@ export async function rankComparisonSet(input: {
       riskSummary: riskSummary ?? undefined,
       selectedLaunchExportSnapshot: selectedLaunchExportSnapshot ?? undefined,
       selectedLaunchReadinessStatus: selectedLaunchReadinessStatus ?? undefined,
-      selectedLaunchWarningSnapshot: selectedLaunchWarningSnapshot ?? undefined
+      selectedLaunchWarningSnapshot: selectedLaunchWarningSnapshot ?? undefined,
+      selectedQuickCopySummarySnapshot: selectedScenarioRecord
+        ? (selectedScenarioRecord.latestQuickCopySummarySnapshot ??
+          buildListingArtifactsForScenario({ scenarioRecord: selectedScenarioRecord }).quickCopySummarySnapshot)
+        : undefined,
+      selectedFinalReviewPromptSnapshot: selectedScenarioRecord
+        ? buildListingArtifactsForScenario({ scenarioRecord: selectedScenarioRecord }).finalReviewPromptSnapshot
+        : undefined
     }
   });
 
@@ -2526,7 +2615,8 @@ export async function evaluateComparisonSetListingReadiness(input: {
       listingReadinessSnapshot: artifacts.listingReadinessSnapshot,
       marketplaceFieldSnapshot: artifacts.marketplaceFieldSnapshot,
       strongerAlertSnapshot: artifacts.strongerAlertSnapshot,
-      exportSnapshot: artifacts.exportSnapshot
+      exportSnapshot: artifacts.exportSnapshot,
+      latestQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot
     })
   });
 
@@ -2538,7 +2628,9 @@ export async function evaluateComparisonSetListingReadiness(input: {
       selectedLaunchSummary: artifacts.handoffSummary,
       selectedLaunchExportSnapshot: artifacts.exportSnapshot,
       selectedLaunchReadinessStatus: artifacts.listingReadinessStatus,
-      selectedLaunchWarningSnapshot: artifacts.strongerAlertSnapshot?.warnings ?? null
+      selectedLaunchWarningSnapshot: artifacts.strongerAlertSnapshot?.warnings ?? null,
+      selectedQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
+      selectedFinalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot
     })
   });
 
@@ -2683,6 +2775,11 @@ export async function buildListingPrepPackage(input: {
     plainTextWorksheetSnapshot: artifacts.plainTextWorksheetSnapshot,
     structuredWorksheetExportSnapshot: artifacts.structuredWorksheetExportSnapshot,
     worksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary,
+    quickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
+    finalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot,
+    artifactHandoffSummarySnapshot: artifacts.artifactHandoffSummarySnapshot,
+    shortPlainTextSummarySnapshot: artifacts.shortPlainTextSummarySnapshot,
+    quickCopyVersion: artifacts.quickCopyVersion,
     currentApprovedArtifact: false,
     notes: input.notes ?? null,
     approvedAt: null
@@ -2700,6 +2797,7 @@ export async function buildListingPrepPackage(input: {
       latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot,
       latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
       latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+      latestQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: artifacts.operatorPromptSnapshot?.summary ?? null,
         criticalPrompts: artifacts.operatorPromptSnapshot?.criticalPrompts ?? [],
@@ -2738,7 +2836,9 @@ export async function buildListingPrepPackage(input: {
       selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
       selectedOperatorWorksheetVersion: artifacts.operatorWorksheetVersion,
       selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot,
-      selectedWorksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary
+      selectedWorksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary,
+      selectedQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
+      selectedFinalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot
     })
   });
 
@@ -2866,6 +2966,11 @@ export async function refreshListingPrepPackage(input: {
       plainTextWorksheetSnapshot: artifacts.plainTextWorksheetSnapshot,
       structuredWorksheetExportSnapshot: artifacts.structuredWorksheetExportSnapshot,
       worksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary,
+      quickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
+      finalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot,
+      artifactHandoffSummarySnapshot: artifacts.artifactHandoffSummarySnapshot,
+      shortPlainTextSummarySnapshot: artifacts.shortPlainTextSummarySnapshot,
+      quickCopyVersion: artifacts.quickCopyVersion,
       channelMappingPresetId: presetResolution.preset?.id ?? null,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
@@ -2881,6 +2986,7 @@ export async function refreshListingPrepPackage(input: {
       latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot,
       latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
       latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+      latestQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: artifacts.operatorPromptSnapshot?.summary ?? null,
         criticalPrompts: artifacts.operatorPromptSnapshot?.criticalPrompts ?? [],
@@ -2921,7 +3027,9 @@ export async function refreshListingPrepPackage(input: {
         selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
         selectedOperatorWorksheetVersion: artifacts.operatorWorksheetVersion,
         selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot,
-        selectedWorksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary
+        selectedWorksheetErgonomicsSummary: artifacts.worksheetErgonomicsSummary,
+        selectedQuickCopySummarySnapshot: artifacts.quickCopySummarySnapshot,
+        selectedFinalReviewPromptSnapshot: artifacts.finalReviewPromptSnapshot
       })
     });
   }
@@ -3113,6 +3221,51 @@ export async function evaluateMarketplaceFieldValidation(input: {
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
+  const quickCopySummarySnapshot = buildQuickCopySummarySnapshot({
+    copyExportSnapshot,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    preset: record.channelMappingPreset
+      ? {
+          quickCopyOrderingSnapshot:
+            record.channelMappingPreset.quickCopyOrderingSnapshot ?? null
+        }
+      : null
+  });
+  const finalReviewPromptSnapshot = buildFinalReviewPromptSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    warningSnapshot: strongerAlerts.warnings as any,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          finalReviewPromptTemplateSnapshot:
+            record.channelMappingPreset.finalReviewPromptTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const artifactHandoffSummarySnapshot = buildArtifactHandoffSummarySnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    exportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    operatorWorksheetVersion: "operator-listing-v1",
+    quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1"
+  });
+  const shortPlainTextSummarySnapshot = buildShortPlainTextSummary({
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    readyForListingPrepSummary,
+    preset: record.channelMappingPreset
+      ? {
+          shortSummaryFormatSnapshot:
+            record.channelMappingPreset.shortSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
 
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -3137,6 +3290,11 @@ export async function evaluateMarketplaceFieldValidation(input: {
       plainTextWorksheetSnapshot,
       structuredWorksheetExportSnapshot,
       worksheetErgonomicsSummary,
+      quickCopySummarySnapshot,
+      finalReviewPromptSnapshot,
+      artifactHandoffSummarySnapshot,
+      shortPlainTextSummarySnapshot,
+      quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1",
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
       approvedAt: null
@@ -3171,7 +3329,9 @@ export async function evaluateMarketplaceFieldValidation(input: {
         selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
         selectedOperatorWorksheetVersion: "operator-listing-v1",
         selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
-        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary
+        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary,
+        selectedQuickCopySummarySnapshot: quickCopySummarySnapshot,
+        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot
       })
     });
   }
@@ -3375,6 +3535,51 @@ export async function requestPriceFloorOverride(input: {
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
+  const quickCopySummarySnapshot = buildQuickCopySummarySnapshot({
+    copyExportSnapshot,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    preset: record.channelMappingPreset
+      ? {
+          quickCopyOrderingSnapshot:
+            record.channelMappingPreset.quickCopyOrderingSnapshot ?? null
+        }
+      : null
+  });
+  const finalReviewPromptSnapshot = buildFinalReviewPromptSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    warningSnapshot: strongerAlerts.warnings as any,
+    overrideSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          finalReviewPromptTemplateSnapshot:
+            record.channelMappingPreset.finalReviewPromptTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const artifactHandoffSummarySnapshot = buildArtifactHandoffSummarySnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    exportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    operatorWorksheetVersion: "operator-listing-v1",
+    quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1"
+  });
+  const shortPlainTextSummarySnapshot = buildShortPlainTextSummary({
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    readyForListingPrepSummary,
+    preset: record.channelMappingPreset
+      ? {
+          shortSummaryFormatSnapshot:
+            record.channelMappingPreset.shortSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
 
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -3401,6 +3606,11 @@ export async function requestPriceFloorOverride(input: {
       plainTextWorksheetSnapshot,
       structuredWorksheetExportSnapshot,
       worksheetErgonomicsSummary,
+      quickCopySummarySnapshot,
+      finalReviewPromptSnapshot,
+      artifactHandoffSummarySnapshot,
+      shortPlainTextSummarySnapshot,
+      quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1",
       currentApprovedArtifact: false,
       approvedAt: null,
       approvedByMembershipId: input.approvedByMembershipId ?? null
@@ -3418,6 +3628,7 @@ export async function requestPriceFloorOverride(input: {
       latestOverrideSummarySnapshot: overrideHistorySnapshot.latestOverride ?? null,
       latestApprovalSummarySnapshot: approvalSummarySnapshot,
       latestWorksheetSummarySnapshot: worksheetSummarySnapshot,
+      latestQuickCopySummarySnapshot: quickCopySummarySnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: operatorPromptSnapshot.summary ?? null,
         criticalPrompts: operatorPromptSnapshot.criticalPrompts ?? [],
@@ -3456,7 +3667,9 @@ export async function requestPriceFloorOverride(input: {
         selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
         selectedOperatorWorksheetVersion: "operator-listing-v1",
         selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
-        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary
+        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary,
+        selectedQuickCopySummarySnapshot: quickCopySummarySnapshot,
+        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot
       })
     });
   }
@@ -3729,6 +3942,51 @@ export async function approveListingPrepPackage(input: {
     worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
+  const quickCopySummarySnapshot = buildQuickCopySummarySnapshot({
+    copyExportSnapshot,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    preset: record.channelMappingPreset
+      ? {
+          quickCopyOrderingSnapshot:
+            record.channelMappingPreset.quickCopyOrderingSnapshot ?? null
+        }
+      : null
+  });
+  const finalReviewPromptSnapshot = buildFinalReviewPromptSnapshot({
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    warningSnapshot: Array.isArray(record.warningSnapshot) ? (record.warningSnapshot as any) : [],
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
+    checklistSnapshot: operatorChecklistSnapshot,
+    preset: record.channelMappingPreset
+      ? {
+          finalReviewPromptTemplateSnapshot:
+            record.channelMappingPreset.finalReviewPromptTemplateSnapshot ?? null
+        }
+      : null
+  });
+  const artifactHandoffSummarySnapshot = buildArtifactHandoffSummarySnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    exportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    operatorWorksheetVersion: "operator-listing-v1",
+    quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1"
+  });
+  const shortPlainTextSummarySnapshot = buildShortPlainTextSummary({
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    readyForListingPrepSummary: (record.readyForListingPrepSummary ?? null) as Record<string, unknown> | null,
+    preset: record.channelMappingPreset
+      ? {
+          shortSummaryFormatSnapshot:
+            record.channelMappingPreset.shortSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
 
   await clearCurrentApprovedArtifactsForScope({
     organizationId: input.organizationId,
@@ -3757,6 +4015,11 @@ export async function approveListingPrepPackage(input: {
       plainTextWorksheetSnapshot,
       structuredWorksheetExportSnapshot,
       worksheetErgonomicsSummary,
+      quickCopySummarySnapshot,
+      finalReviewPromptSnapshot,
+      artifactHandoffSummarySnapshot,
+      shortPlainTextSummarySnapshot,
+      quickCopyVersion: record.quickCopyVersion ?? "quick-copy-v1",
       approvedAt,
       approvedByMembershipId: input.approvedByMembershipId ?? null,
       currentApprovedArtifact: true
@@ -3769,6 +4032,7 @@ export async function approveListingPrepPackage(input: {
     data: normalizeUpdateData({
       latestApprovalSummarySnapshot: approvalSummarySnapshot,
       latestWorksheetSummarySnapshot: worksheetSummarySnapshot,
+      latestQuickCopySummarySnapshot: quickCopySummarySnapshot,
       latestOperatorPromptSummarySnapshot: {
         summary: operatorPromptSnapshot.summary ?? null,
         criticalPrompts: operatorPromptSnapshot.criticalPrompts ?? [],
@@ -3790,7 +4054,9 @@ export async function approveListingPrepPackage(input: {
         selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
         selectedOperatorWorksheetVersion: "operator-listing-v1",
         selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot,
-        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary
+        selectedWorksheetErgonomicsSummary: worksheetErgonomicsSummary,
+        selectedQuickCopySummarySnapshot: quickCopySummarySnapshot,
+        selectedFinalReviewPromptSnapshot: finalReviewPromptSnapshot
       })
     });
   }
@@ -3835,8 +4101,13 @@ export async function getOperatorWorksheet(input: {
     channelHandoffSummary: record.channelHandoffSummarySnapshot ?? null,
     currentApprovedArtifactSummary: record.currentApprovedArtifactSummary ?? null,
     operatorPromptSummary: record.operatorPromptSnapshot ?? null,
+    quickCopySummary: record.quickCopySummarySnapshot ?? null,
+    finalReviewPrompts: record.finalReviewPromptSnapshot ?? null,
+    artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    shortPlainTextSummary: record.shortPlainTextSummarySnapshot ?? null,
     worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
     operatorWorksheetVersion: record.operatorWorksheetVersion ?? null,
+    quickCopyVersion: record.quickCopyVersion ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };
@@ -3854,7 +4125,47 @@ export async function getWorksheetExport(input: {
     ok: true,
     worksheetExport: record.structuredWorksheetExportSnapshot ?? null,
     copyExportSummary: record.copyExportSnapshot ?? null,
+    quickCopySummary: record.quickCopySummarySnapshot ?? null,
+    artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    shortPlainTextSummary: record.shortPlainTextSummarySnapshot ?? null,
     worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
+    quickCopyVersion: record.quickCopyVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getQuickCopySummary(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    quickCopySummary: record.quickCopySummarySnapshot ?? null,
+    shortPlainTextSummary: record.shortPlainTextSummarySnapshot ?? null,
+    artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
+    quickCopyVersion: record.quickCopyVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getFinalReviewPrompts(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    finalReviewPrompts: record.finalReviewPromptSnapshot ?? null,
+    artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };
@@ -3872,7 +4183,11 @@ export async function getPlainTextWorksheet(input: {
     ok: true,
     plainTextWorksheet: record.plainTextWorksheetSnapshot ?? null,
     operatorPromptSummary: record.operatorPromptSnapshot ?? null,
+    finalReviewPrompts: record.finalReviewPromptSnapshot ?? null,
+    shortPlainTextSummary: record.shortPlainTextSummarySnapshot ?? null,
+    artifactHandoffSummary: record.artifactHandoffSummarySnapshot ?? null,
     worksheetErgonomicsSummary: record.worksheetErgonomicsSummary ?? null,
+    quickCopyVersion: record.quickCopyVersion ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };

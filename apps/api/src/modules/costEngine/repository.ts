@@ -671,6 +671,10 @@ export async function createCalculationScenarioRecord(input: {
   priceFloorOverrideSnapshot?: unknown;
   latestOverrideSummarySnapshot?: unknown;
   latestApprovalSummarySnapshot?: unknown;
+  latestPresetSelectionSummarySnapshot?: unknown;
+  latestWorksheetSummarySnapshot?: unknown;
+  latestOperatorPromptSummarySnapshot?: unknown;
+  latestQuickCopySummarySnapshot?: unknown;
   assumptionsSnapshot: unknown;
   resultSnapshot: unknown;
 }) {
@@ -706,6 +710,10 @@ export async function createCalculationScenarioRecord(input: {
       priceFloorOverrideSnapshot: normalizeMetadata(input.priceFloorOverrideSnapshot),
       latestOverrideSummarySnapshot: normalizeMetadata(input.latestOverrideSummarySnapshot),
       latestApprovalSummarySnapshot: normalizeMetadata(input.latestApprovalSummarySnapshot),
+      latestPresetSelectionSummarySnapshot: normalizeMetadata(input.latestPresetSelectionSummarySnapshot),
+      latestWorksheetSummarySnapshot: normalizeMetadata(input.latestWorksheetSummarySnapshot),
+      latestOperatorPromptSummarySnapshot: normalizeMetadata(input.latestOperatorPromptSummarySnapshot),
+      latestQuickCopySummarySnapshot: normalizeMetadata(input.latestQuickCopySummarySnapshot),
       assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
       resultSnapshot: normalizeMetadata(input.resultSnapshot)
     }
@@ -726,6 +734,8 @@ export async function createCalculationComparisonSetRecord(input: {
   selectedLaunchExportSnapshot?: unknown;
   selectedLaunchReadinessStatus?: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
   selectedLaunchWarningSnapshot?: unknown;
+  selectedQuickCopySummarySnapshot?: unknown;
+  selectedFinalReviewPromptSnapshot?: unknown;
   selectedListingPrepPackageId?: string | null;
   listingPrepSummarySnapshot?: unknown;
   selectedListingPrepReadySnapshot?: unknown;
@@ -748,6 +758,8 @@ export async function createCalculationComparisonSetRecord(input: {
       selectedLaunchExportSnapshot: normalizeMetadata(input.selectedLaunchExportSnapshot),
       selectedLaunchReadinessStatus: input.selectedLaunchReadinessStatus ?? undefined,
       selectedLaunchWarningSnapshot: normalizeMetadata(input.selectedLaunchWarningSnapshot),
+      selectedQuickCopySummarySnapshot: normalizeMetadata(input.selectedQuickCopySummarySnapshot),
+      selectedFinalReviewPromptSnapshot: normalizeMetadata(input.selectedFinalReviewPromptSnapshot),
       selectedListingPrepPackageId: input.selectedListingPrepPackageId ?? undefined,
       listingPrepSummarySnapshot: normalizeMetadata(input.listingPrepSummarySnapshot),
       selectedListingPrepReadySnapshot: normalizeMetadata(input.selectedListingPrepReadySnapshot),
@@ -920,6 +932,11 @@ export async function createListingPrepPackageRecord(input: {
   plainTextWorksheetSnapshot?: unknown;
   structuredWorksheetExportSnapshot?: unknown;
   worksheetErgonomicsSummary?: unknown;
+  quickCopySummarySnapshot?: unknown;
+  finalReviewPromptSnapshot?: unknown;
+  artifactHandoffSummarySnapshot?: unknown;
+  shortPlainTextSummarySnapshot?: unknown;
+  quickCopyVersion?: string | null;
   currentApprovedArtifact?: boolean;
   notes?: string | null;
   approvedAt?: Date | null;
@@ -965,6 +982,11 @@ export async function createListingPrepPackageRecord(input: {
       plainTextWorksheetSnapshot: normalizeMetadata(input.plainTextWorksheetSnapshot),
       structuredWorksheetExportSnapshot: normalizeMetadata(input.structuredWorksheetExportSnapshot),
       worksheetErgonomicsSummary: normalizeMetadata(input.worksheetErgonomicsSummary),
+      quickCopySummarySnapshot: normalizeMetadata(input.quickCopySummarySnapshot),
+      finalReviewPromptSnapshot: normalizeMetadata(input.finalReviewPromptSnapshot),
+      artifactHandoffSummarySnapshot: normalizeMetadata(input.artifactHandoffSummarySnapshot),
+      shortPlainTextSummarySnapshot: normalizeMetadata(input.shortPlainTextSummarySnapshot),
+      quickCopyVersion: input.quickCopyVersion ?? undefined,
       currentApprovedArtifact: input.currentApprovedArtifact ?? false,
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
@@ -1123,6 +1145,8 @@ export async function createChannelMappingPresetRecord(input: {
   optionalFieldChecklistSnapshot?: unknown;
   operatorPromptTemplateSnapshot?: unknown;
   copyGroupOrderingSnapshot?: unknown;
+  finalReviewPromptTemplateSnapshot?: unknown;
+  shortSummaryFormatSnapshot?: unknown;
   worksheetSectionLabelSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
@@ -1154,6 +1178,8 @@ export async function createChannelMappingPresetRecord(input: {
       optionalFieldChecklistSnapshot: normalizeMetadata(input.optionalFieldChecklistSnapshot),
       operatorPromptTemplateSnapshot: normalizeMetadata(input.operatorPromptTemplateSnapshot),
       copyGroupOrderingSnapshot: normalizeMetadata(input.copyGroupOrderingSnapshot),
+      finalReviewPromptTemplateSnapshot: normalizeMetadata(input.finalReviewPromptTemplateSnapshot),
+      shortSummaryFormatSnapshot: normalizeMetadata(input.shortSummaryFormatSnapshot),
       worksheetSectionLabelSnapshot: normalizeMetadata(input.worksheetSectionLabelSnapshot),
       notes: input.notes ?? null,
       presetSnapshot: normalizeMetadata(input.presetSnapshot)

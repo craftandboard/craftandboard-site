@@ -70,6 +70,7 @@ import { LaunchReadinessCard } from "./launch-readiness-card";
 import { LaunchRecommendationCard } from "./launch-recommendation-card";
 import { LaunchRiskSummaryCard } from "./launch-risk-summary-card";
 import { LaunchTemplateEditor } from "./launch-template-editor";
+import { QuickCopySummaryCard } from "./quick-copy-summary-card";
 import { ListingPrepPackageCard } from "./listing-prep-package-card";
 import { ListingPrepApprovalCard } from "./listing-prep-approval-card";
 import { ListingPrepFieldCard } from "./listing-prep-field-card";
@@ -81,6 +82,8 @@ import { MarketplaceMappingValidationCard } from "./marketplace-mapping-validati
 import { OperatorFieldChecklistCard } from "./operator-field-checklist-card";
 import { OperatorPromptCard } from "./operator-prompt-card";
 import { OperatorWorksheetPackageCard } from "./operator-worksheet-package-card";
+import { FinalReviewPromptCard } from "./final-review-prompt-card";
+import { ArtifactHandoffSummaryCard } from "./artifact-handoff-summary-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { OverrideHistoryCard } from "./override-history-card";
 import { PriceFloorOverrideReviewCard } from "./price-floor-override-review-card";
@@ -1153,6 +1156,19 @@ export function CostCalculatorForm() {
             (parseSnapshotLines(formData.get("completionPrompts"), "completionPrompts")?.completionPrompts as string[] | undefined) ?? []
         },
         copyGroupOrderingSnapshot: parseSnapshotLines(formData.get("copyGroupOrdering"), "groups"),
+        finalReviewPromptTemplateSnapshot: {
+          criticalReviewPrompts:
+            (parseSnapshotLines(formData.get("finalReviewCriticalPrompts"), "criticalReviewPrompts")?.criticalReviewPrompts as string[] | undefined) ?? [],
+          warningSensitivePrompts:
+            (parseSnapshotLines(formData.get("finalReviewWarningPrompts"), "warningSensitivePrompts")?.warningSensitivePrompts as string[] | undefined) ?? [],
+          completionReviewPrompts:
+            (parseSnapshotLines(formData.get("finalReviewCompletionPrompts"), "completionReviewPrompts")?.completionReviewPrompts as string[] | undefined) ?? []
+        },
+        quickCopyOrderingSnapshot: parseSnapshotLines(formData.get("quickCopyOrdering"), "groups"),
+        shortSummaryFormatSnapshot: {
+          headline: String(formData.get("shortSummaryHeadline") ?? "") || null,
+          footer: String(formData.get("shortSummaryFooter") ?? "") || null
+        },
         worksheetSectionLabelSnapshot: {
           identity: String(formData.get("sectionLabelIdentity") ?? "") || null,
           specs: String(formData.get("sectionLabelSpecs") ?? "") || null,
@@ -1204,6 +1220,19 @@ export function CostCalculatorForm() {
             (parseSnapshotLines(formData.get("completionPrompts"), "completionPrompts")?.completionPrompts as string[] | undefined) ?? []
         },
         copyGroupOrderingSnapshot: parseSnapshotLines(formData.get("copyGroupOrdering"), "groups"),
+        finalReviewPromptTemplateSnapshot: {
+          criticalReviewPrompts:
+            (parseSnapshotLines(formData.get("finalReviewCriticalPrompts"), "criticalReviewPrompts")?.criticalReviewPrompts as string[] | undefined) ?? [],
+          warningSensitivePrompts:
+            (parseSnapshotLines(formData.get("finalReviewWarningPrompts"), "warningSensitivePrompts")?.warningSensitivePrompts as string[] | undefined) ?? [],
+          completionReviewPrompts:
+            (parseSnapshotLines(formData.get("finalReviewCompletionPrompts"), "completionReviewPrompts")?.completionReviewPrompts as string[] | undefined) ?? []
+        },
+        quickCopyOrderingSnapshot: parseSnapshotLines(formData.get("quickCopyOrdering"), "groups"),
+        shortSummaryFormatSnapshot: {
+          headline: String(formData.get("shortSummaryHeadline") ?? "") || null,
+          footer: String(formData.get("shortSummaryFooter") ?? "") || null
+        },
         worksheetSectionLabelSnapshot: {
           identity: String(formData.get("sectionLabelIdentity") ?? "") || null,
           specs: String(formData.get("sectionLabelSpecs") ?? "") || null,
@@ -1546,6 +1575,9 @@ export function CostCalculatorForm() {
           <OverrideHistoryCard listingPrepPackage={listingPrepPackage} />
           <OperatorFieldChecklistCard listingPrepPackage={listingPrepPackage} />
           <OperatorPromptCard listingPrepPackage={listingPrepPackage} />
+          <QuickCopySummaryCard listingPrepPackage={listingPrepPackage} />
+          <FinalReviewPromptCard listingPrepPackage={listingPrepPackage} />
+          <ArtifactHandoffSummaryCard listingPrepPackage={listingPrepPackage} />
           <LaunchCandidateHandoffCard comparison={comparison} />
           <ListingPrepFieldCard comparison={comparison} />
           <PriceFloorOverrideReviewCard

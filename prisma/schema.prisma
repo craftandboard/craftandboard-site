@@ -2612,6 +2612,7 @@ model CalculationScenario {
   latestPresetSelectionSummarySnapshot Json?
   latestWorksheetSummarySnapshot Json?
   latestOperatorPromptSummarySnapshot Json?
+  latestQuickCopySummarySnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
@@ -2647,6 +2648,8 @@ model CalculationComparisonSet {
   selectedOperatorWorksheetVersion String?
   selectedOperatorWorksheetSummarySnapshot Json?
   selectedWorksheetErgonomicsSummary Json?
+  selectedQuickCopySummarySnapshot Json?
+  selectedFinalReviewPromptSnapshot Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2703,6 +2706,11 @@ model ListingPrepPackage {
   plainTextWorksheetSnapshot Json?
   structuredWorksheetExportSnapshot Json?
   worksheetErgonomicsSummary Json?
+  quickCopySummarySnapshot Json?
+  finalReviewPromptSnapshot Json?
+  artifactHandoffSummarySnapshot Json?
+  shortPlainTextSummarySnapshot Json?
+  quickCopyVersion String?
   currentApprovedArtifact Boolean                 @default(false)
   notes                  String?
   approvedAt             DateTime?
@@ -2729,6 +2737,7 @@ model ListingPrepPackage {
   @@index([organizationId, currentApprovedArtifact])
   @@index([organizationId, worksheetVersion])
   @@index([organizationId, operatorWorksheetVersion])
+  @@index([organizationId, quickCopyVersion])
 }
 
 model MarketplaceMappingTemplate {
@@ -2785,6 +2794,9 @@ model ChannelMappingPreset {
   operatorPromptTemplateSnapshot Json?
   copyGroupOrderingSnapshot Json?
   worksheetSectionLabelSnapshot Json?
+  finalReviewPromptTemplateSnapshot Json?
+  quickCopyOrderingSnapshot Json?
+  shortSummaryFormatSnapshot Json?
   notes                String?
   presetSnapshot       Json?
   createdAt            DateTime                 @default(now())

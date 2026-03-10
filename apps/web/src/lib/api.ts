@@ -2754,6 +2754,414 @@ export async function getActiveContainerSessions() {
   return readJson<{ ok: true; sessions: ActiveContainerSessionRecord[] }>("/containers/active-container-sessions");
 }
 
+export interface CostProfileSummaryItem {
+  id: string;
+  orgId: string;
+  name: string;
+  status: "ACTIVE" | "ARCHIVED";
+  isDefault: boolean;
+  currency: "USD";
+  targetMarginPct: number | null;
+  growthMarginPct: number | null;
+  updatedAt: string;
+}
+
+export interface MaterialCostRuleItem {
+  id: string;
+  orgId: string;
+  costProfileId: string;
+  materialCode: string;
+  materialName: string;
+  thicknessLabel: string | null;
+  sheetLengthIn: number;
+  sheetWidthIn: number;
+  sheetCostCents: number;
+  usableYieldPct: number | null;
+  wastePct: number | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EdgeBandCostRuleItem {
+  id: string;
+  orgId: string;
+  costProfileId: string;
+  edgeBandCode: string;
+  edgeBandName: string;
+  costCentsPerLinearFoot: number;
+  wastePct: number | null;
+  setupAllowanceLinearFt: number | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PackagingCostRuleItem {
+  id: string;
+  orgId: string;
+  costProfileId: string;
+  packagingCode: string;
+  packagingName: string;
+  boxCostCents: number | null;
+  bubbleWrapCostCents: number | null;
+  tapeCostCents: number | null;
+  labelCostCents: number | null;
+  insertFlyerCostCents: number | null;
+  shrinkWrapCostCents: number | null;
+  otherPackagingCostCents: number | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShippingCostRuleItem {
+  id: string;
+  orgId: string;
+  costProfileId: string;
+  shippingCode: string;
+  shippingName: string;
+  baseCostCents: number;
+  costPerPoundCents: number | null;
+  costPerCubicInchCents: number | null;
+  flatOverride: number | null;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CostProfileDetail {
+  id: string;
+  orgId: string;
+  name: string;
+  status: "ACTIVE" | "ARCHIVED";
+  isDefault: boolean;
+  currency: "USD";
+  defaultMaterialWastePct: number;
+  defaultEdgeBandWastePct: number;
+  defaultLaborRateCentsPerHour: number;
+  defaultMachineRateCentsPerHour: number;
+  defaultOverheadRateCentsPerHour: number | null;
+  defaultPackagingAllowanceCents: number | null;
+  defaultShippingAllowanceCents: number | null;
+  targetMarginPct: number | null;
+  growthMarginPct: number | null;
+  notes: string | null;
+  metadata: Record<string, unknown> | null;
+  materialRules: MaterialCostRuleItem[];
+  edgeBandRules: EdgeBandCostRuleItem[];
+  packagingRules: PackagingCostRuleItem[];
+  shippingRules: ShippingCostRuleItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CostCalculationInput {
+  costProfileId: string;
+  name?: string | null;
+  sku?: string | null;
+  quantity: number;
+  lengthIn: number;
+  depthIn: number;
+  thicknessIn?: number | null;
+  weightLb?: number | null;
+  materialCode: string;
+  edgeBandCode?: string | null;
+  edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
+  packagingCode?: string | null;
+  shippingCode?: string | null;
+  laborMinutes: number;
+  machineMinutes: number;
+  overheadMinutes?: number | null;
+  targetMarginPct?: number | null;
+  growthMarginPct?: number | null;
+}
+
+export interface CostCalculationPreview {
+  name: string | null;
+  sku: string | null;
+  quantity: number;
+  lengthIn: number;
+  depthIn: number;
+  thicknessIn: number | null;
+  materialCode: string;
+  edgeBandCode: string | null;
+  edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
+  packagingCode: string | null;
+  shippingCode: string | null;
+  laborMinutes: number;
+  machineMinutes: number;
+  overheadMinutes: number | null;
+  materialCostCents: number;
+  edgeBandCostCents: number;
+  laborCostCents: number;
+  machineCostCents: number;
+  packagingCostCents: number;
+  shippingCostCents: number;
+  overheadCostCents: number;
+  subtotalCostCents: number;
+  recommendedInternalPriceCents: number;
+  recommendedSellPriceCents: number;
+}
+
+export interface CostCalculationResult {
+  currency: string;
+  quantity: number;
+  breakdown: {
+    materialCostCents: number;
+    edgeBandCostCents: number;
+    laborCostCents: number;
+    machineCostCents: number;
+    packagingCostCents: number;
+    shippingCostCents: number;
+    overheadCostCents: number;
+    subtotalCostCents: number;
+    recommendedInternalPriceCents: number;
+    recommendedSellPriceCents: number;
+  };
+  geometry: {
+    requiredAreaSqFt: number;
+    sheetAreaSqFt: number;
+    sheetsRequired: number;
+    edgeBandLinearFeet: number;
+    effectiveEdgeBandLinearFeet: number;
+  };
+  pricing: {
+    targetMarginPct: number | null;
+    growthMarginPct: number | null;
+  };
+}
+
+export interface ShelfCostCalculationRecord {
+  id: string;
+  orgId: string;
+  costProfileId: string;
+  costProfileName: string | null;
+  name: string | null;
+  sku: string | null;
+  quantity: number;
+  lengthIn: number;
+  depthIn: number;
+  thicknessIn: number | null;
+  materialCode: string;
+  edgeBandCode: string | null;
+  edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
+  packagingCode: string | null;
+  shippingCode: string | null;
+  laborMinutes: number;
+  machineMinutes: number;
+  overheadMinutes: number | null;
+  materialCostCents: number;
+  edgeBandCostCents: number;
+  laborCostCents: number;
+  machineCostCents: number;
+  packagingCostCents: number;
+  shippingCostCents: number;
+  overheadCostCents: number;
+  subtotalCostCents: number;
+  targetMarginPct: number | null;
+  growthMarginPct: number | null;
+  recommendedInternalPriceCents: number | null;
+  recommendedSellPriceCents: number | null;
+  assumptionsSnapshot: Record<string, unknown>;
+  resultSnapshot: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getCostProfiles() {
+  return readJson<{ ok: true; profiles: CostProfileSummaryItem[] }>("/cost-profiles");
+}
+
+export async function getCostProfile(costProfileId: string) {
+  return readJson<{ ok: true; profile: CostProfileDetail }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}`
+  );
+}
+
+export async function createCostProfile(input: {
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  currency?: "USD";
+  defaultMaterialWastePct?: number;
+  defaultEdgeBandWastePct?: number;
+  defaultLaborRateCentsPerHour?: number;
+  defaultMachineRateCentsPerHour?: number;
+  defaultOverheadRateCentsPerHour?: number | null;
+  defaultPackagingAllowanceCents?: number | null;
+  defaultShippingAllowanceCents?: number | null;
+  targetMarginPct?: number | null;
+  growthMarginPct?: number | null;
+  notes?: string | null;
+}) {
+  return sendJson<{ ok: true; profile: CostProfileDetail }>("/cost-profiles", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateCostProfile(costProfileId: string, input: Record<string, unknown>) {
+  return sendJson<{ ok: true; profile: CostProfileDetail }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function createMaterialCostRule(
+  costProfileId: string,
+  input: {
+    materialCode: string;
+    materialName: string;
+    thicknessLabel?: string | null;
+    sheetLengthIn: number;
+    sheetWidthIn: number;
+    sheetCostCents: number;
+    usableYieldPct?: number | null;
+    wastePct?: number | null;
+    active?: boolean;
+  }
+) {
+  return sendJson<{ ok: true; profile: CostProfileDetail }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/material-rules`,
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function updateMaterialCostRule(materialRuleId: string, input: Record<string, unknown>) {
+  return sendJson<{ ok: true }>(`/material-rules/${encodeURIComponent(materialRuleId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createEdgeBandCostRule(
+  costProfileId: string,
+  input: {
+    edgeBandCode: string;
+    edgeBandName: string;
+    costCentsPerLinearFoot: number;
+    wastePct?: number | null;
+    setupAllowanceLinearFt?: number | null;
+    active?: boolean;
+  }
+) {
+  return sendJson<{ ok: true; profile: CostProfileDetail }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/edge-band-rules`,
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function updateEdgeBandCostRule(edgeBandRuleId: string, input: Record<string, unknown>) {
+  return sendJson<{ ok: true }>(`/edge-band-rules/${encodeURIComponent(edgeBandRuleId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createPackagingCostRule(
+  costProfileId: string,
+  input: {
+    packagingCode: string;
+    packagingName: string;
+    boxCostCents?: number | null;
+    bubbleWrapCostCents?: number | null;
+    tapeCostCents?: number | null;
+    labelCostCents?: number | null;
+    insertFlyerCostCents?: number | null;
+    shrinkWrapCostCents?: number | null;
+    otherPackagingCostCents?: number | null;
+    active?: boolean;
+  }
+) {
+  return sendJson<{ ok: true; profile: CostProfileDetail }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/packaging-rules`,
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function updatePackagingCostRule(packagingRuleId: string, input: Record<string, unknown>) {
+  return sendJson<{ ok: true }>(`/packaging-rules/${encodeURIComponent(packagingRuleId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createShippingCostRule(
+  costProfileId: string,
+  input: {
+    shippingCode: string;
+    shippingName: string;
+    baseCostCents: number;
+    costPerPoundCents?: number | null;
+    costPerCubicInchCents?: number | null;
+    flatOverride?: number | null;
+    active?: boolean;
+  }
+) {
+  return sendJson<{ ok: true; profile: CostProfileDetail }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/shipping-rules`,
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function updateShippingCostRule(shippingRuleId: string, input: Record<string, unknown>) {
+  return sendJson<{ ok: true }>(`/shipping-rules/${encodeURIComponent(shippingRuleId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function calculateShelfCost(input: CostCalculationInput) {
+  return sendJson<{
+    ok: true;
+    calculation: CostCalculationPreview;
+    assumptions: Record<string, unknown>;
+    result: CostCalculationResult;
+  }>("/cost-calculations/calculate", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function saveShelfCostCalculation(input: CostCalculationInput) {
+  return sendJson<{ ok: true; calculation: ShelfCostCalculationRecord }>("/cost-calculations", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getShelfCostCalculations(input?: { costProfileId?: string }) {
+  const params = new URLSearchParams();
+  if (input?.costProfileId) {
+    params.set("costProfileId", input.costProfileId);
+  }
+  const query = params.toString();
+  return readJson<{ ok: true; calculations: ShelfCostCalculationRecord[] }>(
+    `/cost-calculations${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getShelfCostCalculation(calculationId: string) {
+  return readJson<{ ok: true; calculation: ShelfCostCalculationRecord }>(
+    `/cost-calculations/${encodeURIComponent(calculationId)}`
+  );
+}
+
 export interface LeadListItem {
   id: string;
   name: string;

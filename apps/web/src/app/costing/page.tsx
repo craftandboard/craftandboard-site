@@ -32,7 +32,7 @@ export default async function CostingPage(props: {
   return (
     <div className="space-y-8">
       <section className="rounded-[2rem] border border-white/10 bg-white/5 p-8">
-        <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Costing</p>
+        <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Legacy Costing</p>
         <h2 className="mt-3 text-3xl font-semibold text-white">Shelf-job and order estimate breakdowns</h2>
         <p className="mt-3 max-w-3xl text-sm text-slate-300">
           This view surfaces the persisted cost-engine platform estimates tied to canonical

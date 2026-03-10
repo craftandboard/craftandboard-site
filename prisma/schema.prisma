@@ -20,6 +20,18 @@ enum EdgeBandPattern {
   ALL_FOUR
 }
 
+enum CostProfileStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum ShelfCostEdgeBandPattern {
+  NONE
+  LONG_EDGES
+  SHORT_EDGES
+  ALL_FOUR
+}
+
 enum OrderStatus {
   DRAFT
   IMPORTED
@@ -767,6 +779,11 @@ model Organization {
   costProfiles CostProfile[]
   costRates CostRate[]
   costScenarios CostScenario[]
+  materialCostRules MaterialCostRule[]
+  edgeBandCostRules EdgeBandCostRule[]
+  packagingCostRules PackagingCostRule[]
+  shippingCostRules ShippingCostRule[]
+  shelfCostCalculations ShelfCostCalculation[]
   shelfCostEstimates ShelfCostEstimate[]
   orderCostEstimates OrderCostEstimate[]
   shelfProducts ShelfProduct[]
@@ -2225,23 +2242,164 @@ model TrustedAutoApplyRule {
 }
 
 model CostProfile {
-  id             String        @id @default(cuid())
-  organizationId String
-  name           String
-  isDefault      Boolean       @default(false)
-  currency       String
-  notes          String?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  rates          CostRate[]
-  scenarios      CostScenario[]
-  pricingScenarios PricingScenario[]
-  shelfJobs      ShelfJob[]
-  shelfCostEstimates ShelfCostEstimate[]
-  orderCostEstimates OrderCostEstimate[]
+  id                                String            @id @default(cuid())
+  organizationId                    String
+  name                              String
+  status                            CostProfileStatus @default(ACTIVE)
+  isDefault                         Boolean           @default(false)
+  currency                          String            @default("USD")
+  defaultMaterialWastePct           Decimal           @default(10) @db.Decimal(8, 3)
+  defaultEdgeBandWastePct           Decimal           @default(8) @db.Decimal(8, 3)
+  defaultLaborRateCentsPerHour      Int               @default(4500)
+  defaultMachineRateCentsPerHour    Int               @default(7200)
+  defaultOverheadRateCentsPerHour   Int?              @default(1800)
+  defaultPackagingAllowanceCents    Int?              @default(0)
+  defaultShippingAllowanceCents     Int?              @default(0)
+  targetMarginPct                   Decimal?          @default(20) @db.Decimal(8, 3)
+  growthMarginPct                   Decimal?          @default(10) @db.Decimal(8, 3)
+  notes                             String?
+  metadata                          Json?
+  createdAt                         DateTime          @default(now())
+  updatedAt                         DateTime          @updatedAt
+  organization                      Organization      @relation(fields: [organizationId], references: [id])
+  rates                             CostRate[]
+  scenarios                         CostScenario[]
+  pricingScenarios                  PricingScenario[]
+  shelfJobs                         ShelfJob[]
+  shelfCostEstimates                ShelfCostEstimate[]
+  orderCostEstimates                OrderCostEstimate[]
+  materialCostRules                 MaterialCostRule[]
+  edgeBandCostRules                 EdgeBandCostRule[]
+  packagingCostRules                PackagingCostRule[]
+  shippingCostRules                 ShippingCostRule[]
+  shelfCostCalculations             ShelfCostCalculation[]
 
   @@index([organizationId, isDefault])
+  @@index([organizationId, status])
+}
+
+model MaterialCostRule {
+  id              String      @id @default(cuid())
+  organizationId  String
+  costProfileId   String
+  materialCode    String
+  materialName    String
+  thicknessLabel  String?
+  sheetLengthIn   Decimal     @db.Decimal(8, 3)
+  sheetWidthIn    Decimal     @db.Decimal(8, 3)
+  sheetCostCents  Int
+  usableYieldPct  Decimal?    @db.Decimal(8, 3)
+  wastePct        Decimal?    @db.Decimal(8, 3)
+  active          Boolean     @default(true)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  organization    Organization @relation(fields: [organizationId], references: [id])
+  costProfile     CostProfile @relation(fields: [costProfileId], references: [id])
+
+  @@index([organizationId, costProfileId])
+  @@index([organizationId, materialCode])
+}
+
+model EdgeBandCostRule {
+  id                     String      @id @default(cuid())
+  organizationId         String
+  costProfileId          String
+  edgeBandCode           String
+  edgeBandName           String
+  costCentsPerLinearFoot Int
+  wastePct               Decimal?    @db.Decimal(8, 3)
+  setupAllowanceLinearFt Decimal?    @db.Decimal(8, 3)
+  active                 Boolean     @default(true)
+  createdAt              DateTime    @default(now())
+  updatedAt              DateTime    @updatedAt
+  organization           Organization @relation(fields: [organizationId], references: [id])
+  costProfile            CostProfile @relation(fields: [costProfileId], references: [id])
+
+  @@index([organizationId, costProfileId])
+  @@index([organizationId, edgeBandCode])
+}
+
+model PackagingCostRule {
+  id                        String      @id @default(cuid())
+  organizationId            String
+  costProfileId             String
+  packagingCode             String
+  packagingName             String
+  boxCostCents              Int?
+  bubbleWrapCostCents       Int?
+  tapeCostCents             Int?
+  labelCostCents            Int?
+  insertFlyerCostCents      Int?
+  shrinkWrapCostCents       Int?
+  otherPackagingCostCents   Int?
+  active                    Boolean     @default(true)
+  createdAt                 DateTime    @default(now())
+  updatedAt                 DateTime    @updatedAt
+  organization              Organization @relation(fields: [organizationId], references: [id])
+  costProfile               CostProfile @relation(fields: [costProfileId], references: [id])
+
+  @@index([organizationId, costProfileId])
+  @@index([organizationId, packagingCode])
+}
+
+model ShippingCostRule {
+  id                   String      @id @default(cuid())
+  organizationId       String
+  costProfileId        String
+  shippingCode         String
+  shippingName         String
+  baseCostCents        Int
+  costPerPoundCents    Int?
+  costPerCubicInchCents Int?
+  flatOverride         Int?
+  active               Boolean     @default(true)
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+  organization         Organization @relation(fields: [organizationId], references: [id])
+  costProfile          CostProfile @relation(fields: [costProfileId], references: [id])
+
+  @@index([organizationId, costProfileId])
+  @@index([organizationId, shippingCode])
+}
+
+model ShelfCostCalculation {
+  id                           String                   @id @default(cuid())
+  organizationId               String
+  costProfileId                String
+  name                         String?
+  sku                          String?
+  quantity                     Int
+  lengthIn                     Decimal                  @db.Decimal(8, 3)
+  depthIn                      Decimal                  @db.Decimal(8, 3)
+  thicknessIn                  Decimal?                 @db.Decimal(8, 3)
+  materialCode                 String
+  edgeBandCode                 String?
+  edgeBandPattern              ShelfCostEdgeBandPattern
+  packagingCode                String?
+  shippingCode                 String?
+  laborMinutes                 Decimal                  @db.Decimal(8, 3)
+  machineMinutes               Decimal                  @db.Decimal(8, 3)
+  overheadMinutes              Decimal?                 @db.Decimal(8, 3)
+  materialCostCents            Int
+  edgeBandCostCents            Int
+  laborCostCents               Int
+  machineCostCents             Int
+  packagingCostCents           Int
+  shippingCostCents            Int
+  overheadCostCents            Int
+  subtotalCostCents            Int
+  targetMarginPct              Decimal?                 @db.Decimal(8, 3)
+  growthMarginPct              Decimal?                 @db.Decimal(8, 3)
+  recommendedInternalPriceCents Int?
+  recommendedSellPriceCents    Int?
+  assumptionsSnapshot          Json
+  resultSnapshot               Json
+  createdAt                    DateTime                 @default(now())
+  updatedAt                    DateTime                 @updatedAt
+  organization                 Organization             @relation(fields: [organizationId], references: [id])
+  costProfile                  CostProfile              @relation(fields: [costProfileId], references: [id])
+
+  @@index([organizationId, costProfileId, createdAt])
 }
 
 model CostRate {

@@ -32,6 +32,10 @@ export type ApiCapability =
   | "project_task_write"
   | "costing_read"
   | "costing_manage"
+  | "cost_profile_read"
+  | "cost_profile_write"
+  | "cost_calculation_read"
+  | "cost_calculation_write"
   | "pricing_read"
   | "pricing_manage"
   | "order_intake_read"
@@ -90,6 +94,10 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
   project_task_write: ["OWNER", "ADMIN"],
   costing_read: ["OWNER", "ADMIN"],
   costing_manage: ["OWNER", "ADMIN"],
+  cost_profile_read: ["OWNER", "ADMIN"],
+  cost_profile_write: ["OWNER", "ADMIN"],
+  cost_calculation_read: ["OWNER", "ADMIN"],
+  cost_calculation_write: ["OWNER", "ADMIN"],
   pricing_read: ["OWNER", "ADMIN"],
   pricing_manage: ["OWNER", "ADMIN"],
   order_intake_read: ["OWNER", "ADMIN"],
@@ -149,6 +157,10 @@ const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   project_task_write: "project task management",
   costing_read: "costing access",
   costing_manage: "costing management",
+  cost_profile_read: "cost profile access",
+  cost_profile_write: "cost profile management",
+  cost_calculation_read: "cost calculation access",
+  cost_calculation_write: "cost calculation management",
   pricing_read: "pricing access",
   pricing_manage: "pricing management",
   order_intake_read: "order intake access",

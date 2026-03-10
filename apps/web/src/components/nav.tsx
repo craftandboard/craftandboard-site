@@ -21,6 +21,7 @@ const sections = [
       { href: "/orders", label: "Orders" },
       { href: "/manufacturing", label: "Manufacturing" },
       { href: "/parts-scans", label: "Parts & Scans" },
+      { href: "/cost-calculator", label: "Cost Calculator" },
       { href: "/costing", label: "Costing" },
       { href: "/machines", label: "Machines" },
       { href: "/inventory", label: "Inventory" },

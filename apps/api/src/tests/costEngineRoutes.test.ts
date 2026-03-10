@@ -1,0 +1,184 @@
+import express from "express";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const contextMocks = vi.hoisted(() => ({
+  getCostProfileReadContext: vi.fn(() => ({
+    currentOrganization: { id: "org_local_craft_board" }
+  })),
+  getCostProfileWriteContext: vi.fn(() => ({
+    currentOrganization: { id: "org_local_craft_board" }
+  })),
+  getCostCalculationReadContext: vi.fn(() => ({
+    currentOrganization: { id: "org_local_craft_board" }
+  })),
+  getCostCalculationWriteContext: vi.fn(() => ({
+    currentOrganization: { id: "org_local_craft_board" }
+  }))
+}));
+
+const requestContextMocks = vi.hoisted(() => ({
+  RequestAuthenticationError: class RequestAuthenticationError extends Error {}
+}));
+
+const authorizationMocks = vi.hoisted(() => ({
+  AuthorizationError: class AuthorizationError extends Error {}
+}));
+
+const serviceMocks = vi.hoisted(() => ({
+  createCostProfile: vi.fn(),
+  listCostProfiles: vi.fn(),
+  getCostProfile: vi.fn(),
+  updateCostProfile: vi.fn(),
+  createMaterialCostRule: vi.fn(),
+  updateMaterialCostRule: vi.fn(),
+  createEdgeBandCostRule: vi.fn(),
+  updateEdgeBandCostRule: vi.fn(),
+  createPackagingCostRule: vi.fn(),
+  updatePackagingCostRule: vi.fn(),
+  createShippingCostRule: vi.fn(),
+  updateShippingCostRule: vi.fn(),
+  calculateShelfCostView: vi.fn(),
+  saveShelfCostCalculation: vi.fn(),
+  listShelfCostCalculations: vi.fn(),
+  getShelfCostCalculation: vi.fn()
+}));
+
+vi.mock("../modules/costEngine/contextAdapter.js", () => contextMocks);
+vi.mock("../modules/costEngine/service.js", () => serviceMocks);
+vi.mock("../lib/requestContext.js", () => requestContextMocks);
+vi.mock("../lib/authorization.js", () => authorizationMocks);
+
+import costEngineRouter from "../routes/costEngine.js";
+
+let server: any;
+let baseUrl = "";
+
+beforeEach(async () => {
+  const app = express();
+  app.use(express.json());
+  app.use("/", costEngineRouter);
+
+  server = await new Promise((resolve) => {
+    const instance = app.listen(0, () => resolve(instance));
+  });
+
+  const address = server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("Failed to bind test server.");
+  }
+
+  baseUrl = `http://127.0.0.1:${address.port}`;
+  vi.clearAllMocks();
+  serviceMocks.listCostProfiles.mockResolvedValue({ ok: true, profiles: [] });
+  serviceMocks.createCostProfile.mockResolvedValue({ ok: true, profile: { id: "profile_1" } });
+  serviceMocks.getCostProfile.mockResolvedValue({ ok: true, profile: { id: "profile_1" } });
+  serviceMocks.updateCostProfile.mockResolvedValue({ ok: true, profile: { id: "profile_1" } });
+  serviceMocks.createMaterialCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.updateMaterialCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.createEdgeBandCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.updateEdgeBandCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.createPackagingCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.updatePackagingCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.createShippingCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.updateShippingCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.calculateShelfCostView.mockResolvedValue({ ok: true, calculation: { subtotalCostCents: 1000 } });
+  serviceMocks.saveShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
+  serviceMocks.listShelfCostCalculations.mockResolvedValue({ ok: true, calculations: [] });
+  serviceMocks.getShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
+});
+
+afterEach(async () => {
+  await new Promise<void>((resolve, reject) => {
+    server.close((error: Error | undefined) => {
+      if (error) {
+        reject(error);
+        return;
+      }
+      resolve();
+    });
+  });
+});
+
+describe("cost engine routes", () => {
+  it("lists cost profiles in org scope", async () => {
+    const response = await fetch(`${baseUrl}/cost-profiles`);
+    expect(response.status).toBe(200);
+    expect(serviceMocks.listCostProfiles).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board"
+    });
+  });
+
+  it("creates a cost profile", async () => {
+    const response = await fetch(`${baseUrl}/cost-profiles`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Hugo Base" })
+    });
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createCostProfile).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      name: "Hugo Base"
+    });
+  });
+
+  it("creates a material rule in org scope", async () => {
+    const response = await fetch(`${baseUrl}/cost-profiles/profile_1/material-rules`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        materialCode: "WHITE_MELAMINE_075",
+        materialName: "White Melamine 3/4",
+        sheetLengthIn: 96,
+        sheetWidthIn: 48,
+        sheetCostCents: 6500
+      })
+    });
+    expect(response.status).toBe(201);
+  });
+
+  it("calculates shelf cost in org scope", async () => {
+    const response = await fetch(`${baseUrl}/cost-calculations/calculate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        costProfileId: "profile_1",
+        quantity: 1,
+        lengthIn: 30,
+        depthIn: 12,
+        materialCode: "WHITE_MELAMINE_075",
+        edgeBandPattern: "NONE",
+        laborMinutes: 10,
+        machineMinutes: 8
+      })
+    });
+    expect(response.status).toBe(200);
+    expect(serviceMocks.calculateShelfCostView).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      quantity: 1,
+      lengthIn: 30,
+      depthIn: 12,
+      materialCode: "WHITE_MELAMINE_075",
+      edgeBandPattern: "NONE",
+      laborMinutes: 10,
+      machineMinutes: 8
+    });
+  });
+
+  it("lists saved calculations", async () => {
+    const response = await fetch(`${baseUrl}/cost-calculations?costProfileId=profile_1`);
+    expect(response.status).toBe(200);
+    expect(serviceMocks.listShelfCostCalculations).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1"
+    });
+  });
+
+  it("returns 403 for capability failures", async () => {
+    contextMocks.getCostProfileReadContext.mockImplementationOnce(() => {
+      throw new authorizationMocks.AuthorizationError("Forbidden.");
+    });
+    const response = await fetch(`${baseUrl}/cost-profiles`);
+    expect(response.status).toBe(403);
+  });
+});

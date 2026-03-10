@@ -1,0 +1,308 @@
+import { Router } from "express";
+import { z } from "zod";
+import { AuthorizationError } from "../lib/authorization.js";
+import { RequestAuthenticationError } from "../lib/requestContext.js";
+import {
+  getCostCalculationReadContext,
+  getCostCalculationWriteContext,
+  getCostProfileReadContext,
+  getCostProfileWriteContext
+} from "../modules/costEngine/contextAdapter.js";
+import {
+  calculateShelfCostView,
+  createCostProfile,
+  createEdgeBandCostRule,
+  createMaterialCostRule,
+  createPackagingCostRule,
+  createShippingCostRule,
+  getCostProfile,
+  getShelfCostCalculation,
+  listCostProfiles,
+  listShelfCostCalculations,
+  saveShelfCostCalculation,
+  updateCostProfile,
+  updateEdgeBandCostRule,
+  updateMaterialCostRule,
+  updatePackagingCostRule,
+  updateShippingCostRule
+} from "../modules/costEngine/service.js";
+import {
+  calculateShelfCostSchema,
+  calculationIdParamsSchema,
+  costProfileIdParamsSchema,
+  createCostProfileSchema,
+  createEdgeBandCostRuleSchema,
+  createMaterialCostRuleSchema,
+  createPackagingCostRuleSchema,
+  createShippingCostRuleSchema,
+  listShelfCostCalculationsQuerySchema,
+  materialRuleIdParamsSchema,
+  edgeBandRuleIdParamsSchema,
+  packagingRuleIdParamsSchema,
+  saveShelfCostCalculationSchema,
+  shippingRuleIdParamsSchema,
+  updateCostProfileSchema,
+  updateEdgeBandCostRuleSchema,
+  updateMaterialCostRuleSchema,
+  updatePackagingCostRuleSchema,
+  updateShippingCostRuleSchema
+} from "../modules/costEngine/schemas.js";
+
+const router = Router();
+
+function handleCostEngineRouteError(error: unknown, res: any, next: any) {
+  if (error instanceof RequestAuthenticationError) {
+    res.status(401).json({ ok: false, error: error.message });
+    return;
+  }
+  if (error instanceof AuthorizationError) {
+    res.status(403).json({ ok: false, error: error.message });
+    return;
+  }
+  if (error instanceof z.ZodError) {
+    res.status(400).json({ ok: false, error: error.issues[0]?.message ?? error.message });
+    return;
+  }
+  if (error instanceof Error) {
+    const notFoundErrors = new Set(["Cost profile not found.", "Shelf cost calculation not found."]);
+    res.status(notFoundErrors.has(error.message) ? 404 : 400).json({ ok: false, error: error.message });
+    return;
+  }
+  next(error);
+}
+
+router.post("/cost-profiles", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const body = createCostProfileSchema.parse(req.body);
+    res.status(201).json(await createCostProfile({ organizationId: context.currentOrganization.id, ...body }));
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-profiles", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    res.json(await listCostProfiles({ organizationId: context.currentOrganization.id }));
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-profiles/:costProfileId", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    res.json(
+      await getCostProfile({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/cost-profiles/:costProfileId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = updateCostProfileSchema.parse(req.body);
+    res.json(
+      await updateCostProfile({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-profiles/:costProfileId/material-rules", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createMaterialCostRuleSchema.parse(req.body);
+    res.status(201).json(
+      await createMaterialCostRule({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/material-rules/:materialRuleId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = materialRuleIdParamsSchema.parse(req.params);
+    const body = updateMaterialCostRuleSchema.parse(req.body);
+    res.json(
+      await updateMaterialCostRule({
+        organizationId: context.currentOrganization.id,
+        materialRuleId: params.materialRuleId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-profiles/:costProfileId/edge-band-rules", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createEdgeBandCostRuleSchema.parse(req.body);
+    res.status(201).json(
+      await createEdgeBandCostRule({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/edge-band-rules/:edgeBandRuleId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = edgeBandRuleIdParamsSchema.parse(req.params);
+    const body = updateEdgeBandCostRuleSchema.parse(req.body);
+    res.json(
+      await updateEdgeBandCostRule({
+        organizationId: context.currentOrganization.id,
+        edgeBandRuleId: params.edgeBandRuleId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-profiles/:costProfileId/packaging-rules", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createPackagingCostRuleSchema.parse(req.body);
+    res.status(201).json(
+      await createPackagingCostRule({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/packaging-rules/:packagingRuleId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = packagingRuleIdParamsSchema.parse(req.params);
+    const body = updatePackagingCostRuleSchema.parse(req.body);
+    res.json(
+      await updatePackagingCostRule({
+        organizationId: context.currentOrganization.id,
+        packagingRuleId: params.packagingRuleId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-profiles/:costProfileId/shipping-rules", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createShippingCostRuleSchema.parse(req.body);
+    res.status(201).json(
+      await createShippingCostRule({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/shipping-rules/:shippingRuleId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = shippingRuleIdParamsSchema.parse(req.params);
+    const body = updateShippingCostRuleSchema.parse(req.body);
+    res.json(
+      await updateShippingCostRule({
+        organizationId: context.currentOrganization.id,
+        shippingRuleId: params.shippingRuleId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-calculations/calculate", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const body = calculateShelfCostSchema.parse(req.body);
+    res.json(await calculateShelfCostView({ organizationId: context.currentOrganization.id, ...body }));
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-calculations", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const body = saveShelfCostCalculationSchema.parse(req.body);
+    res.status(201).json(
+      await saveShelfCostCalculation({ organizationId: context.currentOrganization.id, ...body })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-calculations", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const query = listShelfCostCalculationsQuerySchema.parse(req.query);
+    res.json(await listShelfCostCalculations({ organizationId: context.currentOrganization.id, ...query }));
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-calculations/:calculationId", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = calculationIdParamsSchema.parse(req.params);
+    res.json(
+      await getShelfCostCalculation({
+        organizationId: context.currentOrganization.id,
+        calculationId: params.calculationId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+export default router;

@@ -1,0 +1,106 @@
+import { decimalToNumber } from "./normalization.js";
+import { getCostProfileRecord } from "./repository.js";
+
+export async function resolveCostEngineAssumptions(input: {
+  organizationId: string;
+  costProfileId: string;
+  materialCode: string;
+  edgeBandCode?: string | null;
+  packagingCode?: string | null;
+  shippingCode?: string | null;
+  edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
+}) {
+  const profile = await getCostProfileRecord({
+    organizationId: input.organizationId,
+    costProfileId: input.costProfileId
+  });
+
+  if (!profile) {
+    throw new Error("Cost profile not found.");
+  }
+
+  const materialRule = profile.materialCostRules.find((rule: any) => rule.materialCode === input.materialCode);
+  if (!materialRule) {
+    throw new Error("Material cost rule not found for the selected profile.");
+  }
+
+  const edgeBandRule =
+    input.edgeBandPattern === "NONE"
+      ? null
+      : profile.edgeBandCostRules.find((rule: any) => rule.edgeBandCode === input.edgeBandCode);
+
+  if (input.edgeBandPattern !== "NONE" && !edgeBandRule) {
+    throw new Error("Edge band rule is required for the selected edge band pattern.");
+  }
+
+  const packagingRule = input.packagingCode
+    ? profile.packagingCostRules.find((rule: any) => rule.packagingCode === input.packagingCode)
+    : null;
+
+  const shippingRule = input.shippingCode
+    ? profile.shippingCostRules.find((rule: any) => rule.shippingCode === input.shippingCode)
+    : null;
+
+  return {
+    profile: {
+      id: profile.id,
+      name: profile.name,
+      currency: profile.currency,
+      defaultMaterialWastePct: decimalToNumber(profile.defaultMaterialWastePct) ?? 0,
+      defaultEdgeBandWastePct: decimalToNumber(profile.defaultEdgeBandWastePct) ?? 0,
+      defaultLaborRateCentsPerHour: profile.defaultLaborRateCentsPerHour,
+      defaultMachineRateCentsPerHour: profile.defaultMachineRateCentsPerHour,
+      defaultOverheadRateCentsPerHour: profile.defaultOverheadRateCentsPerHour ?? 0,
+      defaultPackagingAllowanceCents: profile.defaultPackagingAllowanceCents ?? 0,
+      defaultShippingAllowanceCents: profile.defaultShippingAllowanceCents ?? 0,
+      targetMarginPct: decimalToNumber(profile.targetMarginPct),
+      growthMarginPct: decimalToNumber(profile.growthMarginPct)
+    },
+    materialRule: {
+      id: materialRule.id,
+      materialCode: materialRule.materialCode,
+      materialName: materialRule.materialName,
+      thicknessLabel: materialRule.thicknessLabel ?? null,
+      sheetLengthIn: decimalToNumber(materialRule.sheetLengthIn) ?? 0,
+      sheetWidthIn: decimalToNumber(materialRule.sheetWidthIn) ?? 0,
+      sheetCostCents: materialRule.sheetCostCents,
+      usableYieldPct: decimalToNumber(materialRule.usableYieldPct),
+      wastePct: decimalToNumber(materialRule.wastePct)
+    },
+    edgeBandRule: edgeBandRule
+      ? {
+          id: edgeBandRule.id,
+          edgeBandCode: edgeBandRule.edgeBandCode,
+          edgeBandName: edgeBandRule.edgeBandName,
+          costCentsPerLinearFoot: edgeBandRule.costCentsPerLinearFoot,
+          wastePct: decimalToNumber(edgeBandRule.wastePct),
+          setupAllowanceLinearFt: decimalToNumber(edgeBandRule.setupAllowanceLinearFt)
+        }
+      : null,
+    packagingRule: packagingRule
+      ? {
+          id: packagingRule.id,
+          packagingCode: packagingRule.packagingCode,
+          packagingName: packagingRule.packagingName,
+          boxCostCents: packagingRule.boxCostCents,
+          bubbleWrapCostCents: packagingRule.bubbleWrapCostCents,
+          tapeCostCents: packagingRule.tapeCostCents,
+          labelCostCents: packagingRule.labelCostCents,
+          insertFlyerCostCents: packagingRule.insertFlyerCostCents,
+          shrinkWrapCostCents: packagingRule.shrinkWrapCostCents,
+          otherPackagingCostCents: packagingRule.otherPackagingCostCents
+        }
+      : null,
+    shippingRule: shippingRule
+      ? {
+          id: shippingRule.id,
+          shippingCode: shippingRule.shippingCode,
+          shippingName: shippingRule.shippingName,
+          baseCostCents: shippingRule.baseCostCents,
+          costPerPoundCents: shippingRule.costPerPoundCents,
+          costPerCubicInchCents: shippingRule.costPerCubicInchCents,
+          flatOverride: shippingRule.flatOverride
+        }
+      : null
+  };
+}

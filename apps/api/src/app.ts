@@ -6,6 +6,7 @@ import authRouter from "./routes/auth.js";
 import configuratorRouter from "./routes/configurator.js";
 import containersRouter from "./routes/containers.js";
 import costingRouter from "./routes/costing.js";
+import costEngineRouter from "./routes/costEngine.js";
 import edgeBandingRouter from "./routes/edgeBanding.js";
 import healthRouter from "./routes/health.js";
 import jobsRouter from "./routes/jobs.js";
@@ -76,6 +77,7 @@ export function createApp() {
   app.use("/configurator", configuratorRouter);
   app.use("/containers", containersRouter);
   app.use("/costing", costingRouter);
+  app.use("/", costEngineRouter);
   app.use("/edge-banding", edgeBandingRouter);
   app.use("/optimization", optimizationRouter);
   app.use("/order-intake", orderIntakeRouter);

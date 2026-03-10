@@ -44,6 +44,20 @@ function mapCostProfile(profile: any) {
     defaultOverheadRateCentsPerHour: profile.defaultOverheadRateCentsPerHour,
     defaultPackagingAllowanceCents: profile.defaultPackagingAllowanceCents,
     defaultShippingAllowanceCents: profile.defaultShippingAllowanceCents,
+    defaultPackingLaborRateCentsPerHour: profile.defaultPackingLaborRateCentsPerHour,
+    defaultPackingMinutes: decimalToNumber(profile.defaultPackingMinutes),
+    defaultMarketplaceFeePct: decimalToNumber(profile.defaultMarketplaceFeePct),
+    defaultReturnReservePct: decimalToNumber(profile.defaultReturnReservePct),
+    defaultDamageReservePct: decimalToNumber(profile.defaultDamageReservePct),
+    defaultShippingBufferPct: decimalToNumber(profile.defaultShippingBufferPct),
+    defaultShippingBufferCents: profile.defaultShippingBufferCents,
+    defaultPackagingOverheadCents: profile.defaultPackagingOverheadCents,
+    defaultRecommendedMinMarginPct: decimalToNumber(
+      profile.defaultRecommendedMinMarginPct
+    ),
+    defaultRecommendedTargetMarginPct: decimalToNumber(
+      profile.defaultRecommendedTargetMarginPct
+    ),
     targetMarginPct: decimalToNumber(profile.targetMarginPct),
     growthMarginPct: decimalToNumber(profile.growthMarginPct),
     notes: profile.notes ?? null,
@@ -67,12 +81,24 @@ function mapCostProfile(profile: any) {
     packagingRules: (profile.packagingCostRules ?? []).map((rule: any) => ({
       ...mapRuleDates(rule),
       orgId: rule.organizationId,
-      costProfileId: rule.costProfileId
+      costProfileId: rule.costProfileId,
+      foamCostCents: rule.foamCostCents,
+      cornerProtectorCostCents: rule.cornerProtectorCostCents,
+      packingMinutes: decimalToNumber(rule.packingMinutes),
+      packingLaborOverrideCents: rule.packingLaborOverrideCents,
+      packagingOverheadCents: rule.packagingOverheadCents,
+      sortOrder: rule.sortOrder
     })),
     shippingRules: (profile.shippingCostRules ?? []).map((rule: any) => ({
       ...mapRuleDates(rule),
       orgId: rule.organizationId,
-      costProfileId: rule.costProfileId
+      costProfileId: rule.costProfileId,
+      dimensionalDivisor: decimalToNumber(rule.dimensionalDivisor),
+      dimensionalRateCents: rule.dimensionalRateCents,
+      shippingBufferPct: decimalToNumber(rule.shippingBufferPct),
+      shippingBufferCents: rule.shippingBufferCents,
+      marketplaceHandlingCents: rule.marketplaceHandlingCents,
+      sortOrder: rule.sortOrder
     })),
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString()
@@ -109,19 +135,31 @@ function mapCalculation(record: any) {
     laborMinutes: decimalToNumber(record.laborMinutes) ?? 0,
     machineMinutes: decimalToNumber(record.machineMinutes) ?? 0,
     overheadMinutes: decimalToNumber(record.overheadMinutes),
+    packingMinutes: decimalToNumber(record.packingMinutes),
     materialCostCents: record.materialCostCents,
     edgeBandCostCents: record.edgeBandCostCents,
     laborCostCents: record.laborCostCents,
     machineCostCents: record.machineCostCents,
     packagingCostCents: record.packagingCostCents,
+    packingLaborCostCents: record.packingLaborCostCents,
     shippingCostCents: record.shippingCostCents,
+    shippingBufferCostCents: record.shippingBufferCostCents,
     overheadCostCents: record.overheadCostCents,
+    marketplaceFeeCostCents: record.marketplaceFeeCostCents,
+    returnReserveCostCents: record.returnReserveCostCents,
+    damageReserveCostCents: record.damageReserveCostCents,
     subtotalCostCents: record.subtotalCostCents,
+    breakEvenPriceCents: record.breakEvenPriceCents,
+    recommendedMinSellPriceCents: record.recommendedMinSellPriceCents,
+    recommendedTargetSellPriceCents: record.recommendedTargetSellPriceCents,
     targetMarginPct: decimalToNumber(record.targetMarginPct),
     growthMarginPct: decimalToNumber(record.growthMarginPct),
     recommendedInternalPriceCents: record.recommendedInternalPriceCents,
     recommendedSellPriceCents: record.recommendedSellPriceCents,
     assumptionsSnapshot: record.assumptionsSnapshot,
+    packagingSnapshot: record.packagingSnapshot,
+    shippingSnapshot: record.shippingSnapshot,
+    pricingSnapshot: record.pricingSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString()
@@ -140,6 +178,16 @@ export async function createCostProfile(input: {
   defaultOverheadRateCentsPerHour?: number | null;
   defaultPackagingAllowanceCents?: number | null;
   defaultShippingAllowanceCents?: number | null;
+  defaultPackingLaborRateCentsPerHour?: number | null;
+  defaultPackingMinutes?: number | null;
+  defaultMarketplaceFeePct?: number | null;
+  defaultReturnReservePct?: number | null;
+  defaultDamageReservePct?: number | null;
+  defaultShippingBufferPct?: number | null;
+  defaultShippingBufferCents?: number | null;
+  defaultPackagingOverheadCents?: number | null;
+  defaultRecommendedMinMarginPct?: number | null;
+  defaultRecommendedTargetMarginPct?: number | null;
   targetMarginPct?: number | null;
   growthMarginPct?: number | null;
   notes?: string | null;
@@ -281,7 +329,13 @@ export async function createPackagingCostRule(input: {
   labelCostCents?: number | null;
   insertFlyerCostCents?: number | null;
   shrinkWrapCostCents?: number | null;
+  foamCostCents?: number | null;
+  cornerProtectorCostCents?: number | null;
+  packingMinutes?: number | null;
+  packingLaborOverrideCents?: number | null;
+  packagingOverheadCents?: number | null;
   otherPackagingCostCents?: number | null;
+  sortOrder?: number | null;
   active?: boolean;
 }) {
   await createPackagingCostRuleRecord(input);
@@ -311,6 +365,12 @@ export async function createShippingCostRule(input: {
   baseCostCents: number;
   costPerPoundCents?: number | null;
   costPerCubicInchCents?: number | null;
+  dimensionalDivisor?: number | null;
+  dimensionalRateCents?: number | null;
+  shippingBufferPct?: number | null;
+  shippingBufferCents?: number | null;
+  marketplaceHandlingCents?: number | null;
+  sortOrder?: number | null;
   flatOverride?: number | null;
   active?: boolean;
 }) {
@@ -351,8 +411,14 @@ export async function calculateShelfCostView(input: {
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes?: number | null;
+  packingMinutes?: number | null;
   targetMarginPct?: number | null;
   growthMarginPct?: number | null;
+  marketplaceFeePct?: number | null;
+  returnReservePct?: number | null;
+  damageReservePct?: number | null;
+  shippingBufferPct?: number | null;
+  shippingBufferCents?: number | null;
 }) {
   const assumptions = await resolveCostEngineAssumptions(input);
   const result = calculateShelfCost(input, assumptions);
@@ -374,6 +440,7 @@ export async function calculateShelfCostView(input: {
       laborMinutes: input.laborMinutes,
       machineMinutes: input.machineMinutes,
       overheadMinutes: input.overheadMinutes ?? null,
+      packingMinutes: input.packingMinutes ?? null,
       ...result.breakdown
     },
     assumptions: {
@@ -405,8 +472,14 @@ export async function saveShelfCostCalculation(input: {
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes?: number | null;
+  packingMinutes?: number | null;
   targetMarginPct?: number | null;
   growthMarginPct?: number | null;
+  marketplaceFeePct?: number | null;
+  returnReservePct?: number | null;
+  damageReservePct?: number | null;
+  shippingBufferPct?: number | null;
+  shippingBufferCents?: number | null;
 }) {
   const payload = await calculateShelfCostView(input);
   const record = await createShelfCostCalculationRecord({
@@ -426,19 +499,31 @@ export async function saveShelfCostCalculation(input: {
     laborMinutes: input.laborMinutes,
     machineMinutes: input.machineMinutes,
     overheadMinutes: input.overheadMinutes,
+    packingMinutes: payload.calculation.packingMinutes,
     materialCostCents: payload.calculation.materialCostCents,
     edgeBandCostCents: payload.calculation.edgeBandCostCents,
     laborCostCents: payload.calculation.laborCostCents,
     machineCostCents: payload.calculation.machineCostCents,
     packagingCostCents: payload.calculation.packagingCostCents,
+    packingLaborCostCents: payload.calculation.packingLaborCostCents,
     shippingCostCents: payload.calculation.shippingCostCents,
+    shippingBufferCostCents: payload.calculation.shippingBufferCostCents,
     overheadCostCents: payload.calculation.overheadCostCents,
+    marketplaceFeeCostCents: payload.calculation.marketplaceFeeCostCents,
+    returnReserveCostCents: payload.calculation.returnReserveCostCents,
+    damageReserveCostCents: payload.calculation.damageReserveCostCents,
     subtotalCostCents: payload.calculation.subtotalCostCents,
+    breakEvenPriceCents: payload.calculation.breakEvenPriceCents,
+    recommendedMinSellPriceCents: payload.calculation.recommendedMinSellPriceCents,
+    recommendedTargetSellPriceCents: payload.calculation.recommendedTargetSellPriceCents,
     targetMarginPct: payload.result.pricing.targetMarginPct,
     growthMarginPct: payload.result.pricing.growthMarginPct,
     recommendedInternalPriceCents: payload.calculation.recommendedInternalPriceCents,
     recommendedSellPriceCents: payload.calculation.recommendedSellPriceCents,
     assumptionsSnapshot: payload.assumptions,
+    packagingSnapshot: payload.result.packaging,
+    shippingSnapshot: payload.result.shipping,
+    pricingSnapshot: payload.result.pricing,
     resultSnapshot: payload.result
   });
 

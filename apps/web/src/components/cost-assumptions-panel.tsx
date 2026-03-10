@@ -1,7 +1,13 @@
 "use client";
 
 import type { CostProfileDetail } from "../lib/api";
-import { formatCostLabel, formatMoney, formatPercent } from "../lib/cost-engine";
+import {
+  formatCostLabel,
+  formatMoney,
+  formatPercent,
+  getPackagingRuleSummary,
+  getShippingRuleSummary
+} from "../lib/cost-engine";
 
 export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail | null }) {
   if (!profile) {
@@ -41,6 +47,10 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
             Overhead:{" "}
             <span className="font-semibold">{formatMoney(profile.defaultOverheadRateCentsPerHour ?? 0)}</span> / hr
           </p>
+          <p className="mt-1 text-sm text-slate-200">
+            Packing labor:{" "}
+            <span className="font-semibold">{formatMoney(profile.defaultPackingLaborRateCentsPerHour ?? 0)}</span> / hr
+          </p>
         </div>
         <div className="rounded-2xl border border-white/10 bg-slate-950/30 p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Default Margins / Waste</p>
@@ -55,6 +65,18 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
           </p>
           <p className="mt-1 text-sm text-slate-200">
             Growth margin: <span className="font-semibold">{formatPercent(profile.growthMarginPct)}</span>
+          </p>
+          <p className="mt-1 text-sm text-slate-200">
+            Marketplace fee:{" "}
+            <span className="font-semibold">{formatPercent(profile.defaultMarketplaceFeePct)}</span>
+          </p>
+          <p className="mt-1 text-sm text-slate-200">
+            Return reserve:{" "}
+            <span className="font-semibold">{formatPercent(profile.defaultReturnReservePct)}</span>
+          </p>
+          <p className="mt-1 text-sm text-slate-200">
+            Damage reserve:{" "}
+            <span className="font-semibold">{formatPercent(profile.defaultDamageReservePct)}</span>
           </p>
         </div>
       </div>
@@ -86,13 +108,14 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
               <div key={rule.id} className="rounded-xl border border-white/10 px-3 py-3">
                 <p className="font-medium text-white">{rule.packagingName}</p>
                 <p className="mt-1 text-xs text-slate-400">{formatCostLabel(rule.packagingCode)}</p>
+                <p className="mt-1 text-xs text-slate-300">{getPackagingRuleSummary(rule)}</p>
               </div>
             ))}
             {profile.shippingRules.slice(0, 2).map((rule) => (
               <div key={rule.id} className="rounded-xl border border-white/10 px-3 py-3">
                 <p className="font-medium text-white">{rule.shippingName}</p>
                 <p className="mt-1 text-xs text-slate-400">{formatCostLabel(rule.shippingCode)}</p>
-                <p className="mt-1">{formatMoney(rule.baseCostCents)} base</p>
+                <p className="mt-1 text-xs text-slate-300">{getShippingRuleSummary(rule)}</p>
               </div>
             ))}
             {profile.packagingRules.length === 0 && profile.shippingRules.length === 0 ? (

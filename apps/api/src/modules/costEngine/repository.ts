@@ -18,6 +18,16 @@ export async function createCostProfileRecord(input: {
   defaultOverheadRateCentsPerHour?: number | null;
   defaultPackagingAllowanceCents?: number | null;
   defaultShippingAllowanceCents?: number | null;
+  defaultPackingLaborRateCentsPerHour?: number | null;
+  defaultPackingMinutes?: number | null;
+  defaultMarketplaceFeePct?: number | null;
+  defaultReturnReservePct?: number | null;
+  defaultDamageReservePct?: number | null;
+  defaultShippingBufferPct?: number | null;
+  defaultShippingBufferCents?: number | null;
+  defaultPackagingOverheadCents?: number | null;
+  defaultRecommendedMinMarginPct?: number | null;
+  defaultRecommendedTargetMarginPct?: number | null;
   targetMarginPct?: number | null;
   growthMarginPct?: number | null;
   notes?: string | null;
@@ -36,6 +46,16 @@ export async function createCostProfileRecord(input: {
       defaultOverheadRateCentsPerHour: input.defaultOverheadRateCentsPerHour ?? undefined,
       defaultPackagingAllowanceCents: input.defaultPackagingAllowanceCents ?? undefined,
       defaultShippingAllowanceCents: input.defaultShippingAllowanceCents ?? undefined,
+      defaultPackingLaborRateCentsPerHour: input.defaultPackingLaborRateCentsPerHour ?? undefined,
+      defaultPackingMinutes: input.defaultPackingMinutes ?? undefined,
+      defaultMarketplaceFeePct: input.defaultMarketplaceFeePct ?? undefined,
+      defaultReturnReservePct: input.defaultReturnReservePct ?? undefined,
+      defaultDamageReservePct: input.defaultDamageReservePct ?? undefined,
+      defaultShippingBufferPct: input.defaultShippingBufferPct ?? undefined,
+      defaultShippingBufferCents: input.defaultShippingBufferCents ?? undefined,
+      defaultPackagingOverheadCents: input.defaultPackagingOverheadCents ?? undefined,
+      defaultRecommendedMinMarginPct: input.defaultRecommendedMinMarginPct ?? undefined,
+      defaultRecommendedTargetMarginPct: input.defaultRecommendedTargetMarginPct ?? undefined,
       targetMarginPct: input.targetMarginPct ?? undefined,
       growthMarginPct: input.growthMarginPct ?? undefined,
       notes: input.notes ?? null,
@@ -188,7 +208,13 @@ export async function createPackagingCostRuleRecord(input: {
   labelCostCents?: number | null;
   insertFlyerCostCents?: number | null;
   shrinkWrapCostCents?: number | null;
+  foamCostCents?: number | null;
+  cornerProtectorCostCents?: number | null;
+  packingMinutes?: number | null;
+  packingLaborOverrideCents?: number | null;
+  packagingOverheadCents?: number | null;
   otherPackagingCostCents?: number | null;
+  sortOrder?: number | null;
   active?: boolean;
 }) {
   return prismaClient.packagingCostRule.create({
@@ -203,7 +229,13 @@ export async function createPackagingCostRuleRecord(input: {
       labelCostCents: input.labelCostCents ?? undefined,
       insertFlyerCostCents: input.insertFlyerCostCents ?? undefined,
       shrinkWrapCostCents: input.shrinkWrapCostCents ?? undefined,
+      foamCostCents: input.foamCostCents ?? undefined,
+      cornerProtectorCostCents: input.cornerProtectorCostCents ?? undefined,
+      packingMinutes: input.packingMinutes ?? undefined,
+      packingLaborOverrideCents: input.packingLaborOverrideCents ?? undefined,
+      packagingOverheadCents: input.packagingOverheadCents ?? undefined,
       otherPackagingCostCents: input.otherPackagingCostCents ?? undefined,
+      sortOrder: input.sortOrder ?? undefined,
       active: input.active ?? true
     }
   });
@@ -231,6 +263,12 @@ export async function createShippingCostRuleRecord(input: {
   baseCostCents: number;
   costPerPoundCents?: number | null;
   costPerCubicInchCents?: number | null;
+  dimensionalDivisor?: number | null;
+  dimensionalRateCents?: number | null;
+  shippingBufferPct?: number | null;
+  shippingBufferCents?: number | null;
+  marketplaceHandlingCents?: number | null;
+  sortOrder?: number | null;
   flatOverride?: number | null;
   active?: boolean;
 }) {
@@ -243,6 +281,12 @@ export async function createShippingCostRuleRecord(input: {
       baseCostCents: input.baseCostCents,
       costPerPoundCents: input.costPerPoundCents ?? undefined,
       costPerCubicInchCents: input.costPerCubicInchCents ?? undefined,
+      dimensionalDivisor: input.dimensionalDivisor ?? undefined,
+      dimensionalRateCents: input.dimensionalRateCents ?? undefined,
+      shippingBufferPct: input.shippingBufferPct ?? undefined,
+      shippingBufferCents: input.shippingBufferCents ?? undefined,
+      marketplaceHandlingCents: input.marketplaceHandlingCents ?? undefined,
+      sortOrder: input.sortOrder ?? undefined,
       flatOverride: input.flatOverride ?? undefined,
       active: input.active ?? true
     }
@@ -280,19 +324,31 @@ export async function createShelfCostCalculationRecord(input: {
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes?: number | null;
+  packingMinutes?: number | null;
   materialCostCents: number;
   edgeBandCostCents: number;
   laborCostCents: number;
   machineCostCents: number;
   packagingCostCents: number;
+  packingLaborCostCents: number;
   shippingCostCents: number;
+  shippingBufferCostCents: number;
   overheadCostCents: number;
+  marketplaceFeeCostCents: number;
+  returnReserveCostCents: number;
+  damageReserveCostCents: number;
   subtotalCostCents: number;
+  breakEvenPriceCents?: number | null;
+  recommendedMinSellPriceCents?: number | null;
+  recommendedTargetSellPriceCents?: number | null;
   targetMarginPct?: number | null;
   growthMarginPct?: number | null;
   recommendedInternalPriceCents?: number | null;
   recommendedSellPriceCents?: number | null;
   assumptionsSnapshot: unknown;
+  packagingSnapshot?: unknown;
+  shippingSnapshot?: unknown;
+  pricingSnapshot?: unknown;
   resultSnapshot: unknown;
 }) {
   return prismaClient.shelfCostCalculation.create({
@@ -313,19 +369,31 @@ export async function createShelfCostCalculationRecord(input: {
       laborMinutes: input.laborMinutes,
       machineMinutes: input.machineMinutes,
       overheadMinutes: input.overheadMinutes ?? undefined,
+      packingMinutes: input.packingMinutes ?? undefined,
       materialCostCents: input.materialCostCents,
       edgeBandCostCents: input.edgeBandCostCents,
       laborCostCents: input.laborCostCents,
       machineCostCents: input.machineCostCents,
       packagingCostCents: input.packagingCostCents,
+      packingLaborCostCents: input.packingLaborCostCents,
       shippingCostCents: input.shippingCostCents,
+      shippingBufferCostCents: input.shippingBufferCostCents,
       overheadCostCents: input.overheadCostCents,
+      marketplaceFeeCostCents: input.marketplaceFeeCostCents,
+      returnReserveCostCents: input.returnReserveCostCents,
+      damageReserveCostCents: input.damageReserveCostCents,
       subtotalCostCents: input.subtotalCostCents,
+      breakEvenPriceCents: input.breakEvenPriceCents ?? undefined,
+      recommendedMinSellPriceCents: input.recommendedMinSellPriceCents ?? undefined,
+      recommendedTargetSellPriceCents: input.recommendedTargetSellPriceCents ?? undefined,
       targetMarginPct: input.targetMarginPct ?? undefined,
       growthMarginPct: input.growthMarginPct ?? undefined,
       recommendedInternalPriceCents: input.recommendedInternalPriceCents ?? undefined,
       recommendedSellPriceCents: input.recommendedSellPriceCents ?? undefined,
       assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
+      packagingSnapshot: normalizeMetadata(input.packagingSnapshot),
+      shippingSnapshot: normalizeMetadata(input.shippingSnapshot),
+      pricingSnapshot: normalizeMetadata(input.pricingSnapshot),
       resultSnapshot: normalizeMetadata(input.resultSnapshot)
     }
   });

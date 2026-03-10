@@ -42,6 +42,16 @@ function makeProfile() {
     defaultOverheadRateCentsPerHour: 1800,
     defaultPackagingAllowanceCents: 0,
     defaultShippingAllowanceCents: 0,
+    defaultPackingLaborRateCentsPerHour: 4200,
+    defaultPackingMinutes: { toNumber: () => 6 },
+    defaultMarketplaceFeePct: { toNumber: () => 15 },
+    defaultReturnReservePct: { toNumber: () => 2 },
+    defaultDamageReservePct: { toNumber: () => 1 },
+    defaultShippingBufferPct: { toNumber: () => 5 },
+    defaultShippingBufferCents: 0,
+    defaultPackagingOverheadCents: 25,
+    defaultRecommendedMinMarginPct: { toNumber: () => 10 },
+    defaultRecommendedTargetMarginPct: { toNumber: () => 20 },
     targetMarginPct: { toNumber: () => 20 },
     growthMarginPct: { toNumber: () => 10 },
     notes: null,
@@ -94,7 +104,13 @@ function makeProfile() {
         labelCostCents: 10,
         insertFlyerCostCents: 5,
         shrinkWrapCostCents: 0,
+        foamCostCents: 40,
+        cornerProtectorCostCents: 16,
+        packingMinutes: { toNumber: () => 7 },
+        packingLaborOverrideCents: null,
+        packagingOverheadCents: 15,
         otherPackagingCostCents: 0,
+        sortOrder: 1,
         active: true,
         createdAt: new Date("2026-03-10T00:00:00.000Z"),
         updatedAt: new Date("2026-03-10T00:00:00.000Z")
@@ -110,6 +126,12 @@ function makeProfile() {
         baseCostCents: 1295,
         costPerPoundCents: null,
         costPerCubicInchCents: 0.1,
+        dimensionalDivisor: { toNumber: () => 139 },
+        dimensionalRateCents: 14,
+        shippingBufferPct: { toNumber: () => 6 },
+        shippingBufferCents: 45,
+        marketplaceHandlingCents: 35,
+        sortOrder: 1,
         flatOverride: null,
         active: true,
         createdAt: new Date("2026-03-10T00:00:00.000Z"),
@@ -132,7 +154,7 @@ describe("cost engine service", () => {
     expect(payload.profiles[0]?.name).toBe("Hugo Base");
   });
 
-  it("calculates a shelf cost breakdown with material, edge band, packaging, shipping, and margin", async () => {
+  it("calculates a shelf cost breakdown with richer packaging, shipping, and pricing outputs", async () => {
     const payload = await calculateShelfCostView({
       organizationId: "org_local_craft_board",
       costProfileId: "profile_1",
@@ -147,13 +169,30 @@ describe("cost engine service", () => {
       shippingCode: "GROUND",
       laborMinutes: 12,
       machineMinutes: 8,
-      overheadMinutes: 10
+      overheadMinutes: 10,
+      packingMinutes: 9,
+      marketplaceFeePct: 15,
+      returnReservePct: 2,
+      damageReservePct: 1,
+      shippingBufferPct: 8
     });
 
     expect(payload.calculation.materialCostCents).toBeGreaterThan(0);
     expect(payload.calculation.edgeBandCostCents).toBeGreaterThan(0);
-    expect(payload.calculation.packagingCostCents).toBe(230);
+    expect(payload.calculation.packagingCostCents).toBeGreaterThan(0);
+    expect(payload.calculation.packingLaborCostCents).toBeGreaterThan(0);
     expect(payload.calculation.shippingCostCents).toBeGreaterThanOrEqual(1295);
+    expect(payload.calculation.shippingBufferCostCents).toBeGreaterThan(0);
+    expect(payload.calculation.marketplaceFeeCostCents).toBeGreaterThan(0);
+    expect(payload.calculation.breakEvenPriceCents).toBeGreaterThan(
+      payload.calculation.subtotalCostCents
+    );
+    expect(payload.calculation.recommendedMinSellPriceCents).toBeGreaterThan(
+      payload.calculation.breakEvenPriceCents
+    );
+    expect(payload.calculation.recommendedTargetSellPriceCents).toBeGreaterThan(
+      payload.calculation.recommendedMinSellPriceCents
+    );
     expect(payload.calculation.recommendedSellPriceCents).toBeGreaterThan(
       payload.calculation.subtotalCostCents
     );
@@ -201,19 +240,31 @@ describe("cost engine service", () => {
       laborMinutes: { toNumber: () => 12 },
       machineMinutes: { toNumber: () => 8 },
       overheadMinutes: { toNumber: () => 10 },
+      packingMinutes: { toNumber: () => 9 },
       materialCostCents: 1200,
       edgeBandCostCents: 300,
       laborCostCents: 900,
       machineCostCents: 960,
-      packagingCostCents: 230,
-      shippingCostCents: 1295,
+      packagingCostCents: 956,
+      packingLaborCostCents: 630,
+      shippingCostCents: 1560,
+      shippingBufferCostCents: 125,
       overheadCostCents: 300,
-      subtotalCostCents: 4985,
+      marketplaceFeeCostCents: 1180,
+      returnReserveCostCents: 157,
+      damageReserveCostCents: 78,
+      subtotalCostCents: 5276,
+      breakEvenPriceCents: 6600,
+      recommendedMinSellPriceCents: 7334,
+      recommendedTargetSellPriceCents: 7914,
       targetMarginPct: { toNumber: () => 20 },
       growthMarginPct: { toNumber: () => 10 },
       recommendedInternalPriceCents: 6231,
       recommendedSellPriceCents: 6923,
       assumptionsSnapshot: {},
+      packagingSnapshot: {},
+      shippingSnapshot: {},
+      pricingSnapshot: {},
       resultSnapshot: {},
       createdAt: new Date("2026-03-10T00:00:00.000Z"),
       updatedAt: new Date("2026-03-10T00:00:00.000Z")
@@ -234,10 +285,29 @@ describe("cost engine service", () => {
       shippingCode: "GROUND",
       laborMinutes: 12,
       machineMinutes: 8,
-      overheadMinutes: 10
+      overheadMinutes: 10,
+      packingMinutes: 9,
+      marketplaceFeePct: 15,
+      returnReservePct: 2,
+      damageReservePct: 1,
+      shippingBufferPct: 8
     });
 
     expect(repositoryMocks.createShelfCostCalculationRecord).toHaveBeenCalled();
+    expect(repositoryMocks.createShelfCostCalculationRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        packingLaborCostCents: expect.any(Number),
+        marketplaceFeeCostCents: expect.any(Number),
+        returnReserveCostCents: expect.any(Number),
+        damageReserveCostCents: expect.any(Number),
+        breakEvenPriceCents: expect.any(Number),
+        recommendedMinSellPriceCents: expect.any(Number),
+        recommendedTargetSellPriceCents: expect.any(Number),
+        packagingSnapshot: expect.any(Object),
+        shippingSnapshot: expect.any(Object),
+        pricingSnapshot: expect.any(Object)
+      })
+    );
     expect(payload.calculation.id).toBe("calc_1");
   });
 
@@ -261,19 +331,31 @@ describe("cost engine service", () => {
       laborMinutes: { toNumber: () => 12 },
       machineMinutes: { toNumber: () => 8 },
       overheadMinutes: { toNumber: () => 10 },
+      packingMinutes: { toNumber: () => 9 },
       materialCostCents: 1200,
       edgeBandCostCents: 300,
       laborCostCents: 900,
       machineCostCents: 960,
-      packagingCostCents: 230,
-      shippingCostCents: 1295,
+      packagingCostCents: 956,
+      packingLaborCostCents: 630,
+      shippingCostCents: 1560,
+      shippingBufferCostCents: 125,
       overheadCostCents: 300,
-      subtotalCostCents: 4985,
+      marketplaceFeeCostCents: 1180,
+      returnReserveCostCents: 157,
+      damageReserveCostCents: 78,
+      subtotalCostCents: 5276,
+      breakEvenPriceCents: 6600,
+      recommendedMinSellPriceCents: 7334,
+      recommendedTargetSellPriceCents: 7914,
       targetMarginPct: { toNumber: () => 20 },
       growthMarginPct: { toNumber: () => 10 },
       recommendedInternalPriceCents: 6231,
       recommendedSellPriceCents: 6923,
       assumptionsSnapshot: {},
+      packagingSnapshot: {},
+      shippingSnapshot: {},
+      pricingSnapshot: {},
       resultSnapshot: {},
       createdAt: new Date("2026-03-10T00:00:00.000Z"),
       updatedAt: new Date("2026-03-10T00:00:00.000Z")

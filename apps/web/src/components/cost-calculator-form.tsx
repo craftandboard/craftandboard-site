@@ -12,6 +12,9 @@ import {
   getCostProfiles,
   getShelfCostCalculations,
   saveShelfCostCalculation,
+  updateCostProfile,
+  updatePackagingCostRule,
+  updateShippingCostRule,
   type CostCalculationPreview,
   type CostCalculationResult,
   type CostProfileDetail,
@@ -22,6 +25,7 @@ import { formatCostLabel, getEdgeBandPatternLabel } from "../lib/cost-engine";
 import { CostAssumptionsPanel } from "./cost-assumptions-panel";
 import { CostBreakdownCard } from "./cost-breakdown-card";
 import { CostHistoryList } from "./cost-history-list";
+import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { CostProfileEditor } from "./cost-profile-editor";
 
 const edgeBandOptions = ["NONE", "LONG_EDGES", "SHORT_EDGES", "ALL_FOUR"] as const;
@@ -61,8 +65,14 @@ export function CostCalculatorForm() {
     laborMinutes: "12",
     machineMinutes: "8",
     overheadMinutes: "10",
+    packingMinutes: "",
     targetMarginPct: "",
-    growthMarginPct: ""
+    growthMarginPct: "",
+    marketplaceFeePct: "",
+    returnReservePct: "",
+    damageReservePct: "",
+    shippingBufferPct: "",
+    shippingBufferCents: ""
   });
 
   const refreshAll = useCallback(
@@ -137,7 +147,27 @@ export function CostCalculatorForm() {
       targetMarginPct:
         current.targetMarginPct || (selectedProfile.targetMarginPct !== null ? String(selectedProfile.targetMarginPct) : ""),
       growthMarginPct:
-        current.growthMarginPct || (selectedProfile.growthMarginPct !== null ? String(selectedProfile.growthMarginPct) : "")
+        current.growthMarginPct || (selectedProfile.growthMarginPct !== null ? String(selectedProfile.growthMarginPct) : ""),
+      packingMinutes:
+        current.packingMinutes ||
+        (selectedProfile.defaultPackingMinutes !== null ? String(selectedProfile.defaultPackingMinutes) : ""),
+      marketplaceFeePct:
+        current.marketplaceFeePct ||
+        (selectedProfile.defaultMarketplaceFeePct !== null ? String(selectedProfile.defaultMarketplaceFeePct) : ""),
+      returnReservePct:
+        current.returnReservePct ||
+        (selectedProfile.defaultReturnReservePct !== null ? String(selectedProfile.defaultReturnReservePct) : ""),
+      damageReservePct:
+        current.damageReservePct ||
+        (selectedProfile.defaultDamageReservePct !== null ? String(selectedProfile.defaultDamageReservePct) : ""),
+      shippingBufferPct:
+        current.shippingBufferPct ||
+        (selectedProfile.defaultShippingBufferPct !== null ? String(selectedProfile.defaultShippingBufferPct) : ""),
+      shippingBufferCents:
+        current.shippingBufferCents ||
+        (selectedProfile.defaultShippingBufferCents !== null
+          ? String(selectedProfile.defaultShippingBufferCents)
+          : "")
     }));
   }, [selectedProfile]);
 
@@ -177,8 +207,14 @@ export function CostCalculatorForm() {
       laborMinutes: Number(form.laborMinutes),
       machineMinutes: Number(form.machineMinutes),
       overheadMinutes: form.overheadMinutes ? Number(form.overheadMinutes) : null,
+      packingMinutes: form.packingMinutes ? Number(form.packingMinutes) : null,
       targetMarginPct: form.targetMarginPct ? Number(form.targetMarginPct) : null,
-      growthMarginPct: form.growthMarginPct ? Number(form.growthMarginPct) : null
+      growthMarginPct: form.growthMarginPct ? Number(form.growthMarginPct) : null,
+      marketplaceFeePct: form.marketplaceFeePct ? Number(form.marketplaceFeePct) : null,
+      returnReservePct: form.returnReservePct ? Number(form.returnReservePct) : null,
+      damageReservePct: form.damageReservePct ? Number(form.damageReservePct) : null,
+      shippingBufferPct: form.shippingBufferPct ? Number(form.shippingBufferPct) : null,
+      shippingBufferCents: form.shippingBufferCents ? Number(form.shippingBufferCents) : null
     };
   }
 
@@ -234,14 +270,23 @@ export function CostCalculatorForm() {
       laborMinutes: calculation.laborMinutes,
       machineMinutes: calculation.machineMinutes,
       overheadMinutes: calculation.overheadMinutes,
+      packingMinutes: calculation.packingMinutes,
       materialCostCents: calculation.materialCostCents,
       edgeBandCostCents: calculation.edgeBandCostCents,
       laborCostCents: calculation.laborCostCents,
       machineCostCents: calculation.machineCostCents,
       packagingCostCents: calculation.packagingCostCents,
+      packingLaborCostCents: calculation.packingLaborCostCents,
       shippingCostCents: calculation.shippingCostCents,
+      shippingBufferCostCents: calculation.shippingBufferCostCents,
       overheadCostCents: calculation.overheadCostCents,
+      marketplaceFeeCostCents: calculation.marketplaceFeeCostCents,
+      returnReserveCostCents: calculation.returnReserveCostCents,
+      damageReserveCostCents: calculation.damageReserveCostCents,
       subtotalCostCents: calculation.subtotalCostCents,
+      breakEvenPriceCents: calculation.breakEvenPriceCents,
+      recommendedMinSellPriceCents: calculation.recommendedMinSellPriceCents,
+      recommendedTargetSellPriceCents: calculation.recommendedTargetSellPriceCents,
       recommendedInternalPriceCents: calculation.recommendedInternalPriceCents ?? 0,
       recommendedSellPriceCents: calculation.recommendedSellPriceCents ?? 0
     });
@@ -262,8 +307,29 @@ export function CostCalculatorForm() {
       laborMinutes: String(calculation.laborMinutes),
       machineMinutes: String(calculation.machineMinutes),
       overheadMinutes: calculation.overheadMinutes !== null ? String(calculation.overheadMinutes) : "",
+      packingMinutes: calculation.packingMinutes !== null ? String(calculation.packingMinutes) : "",
       targetMarginPct: calculation.targetMarginPct !== null ? String(calculation.targetMarginPct) : "",
-      growthMarginPct: calculation.growthMarginPct !== null ? String(calculation.growthMarginPct) : ""
+      growthMarginPct: calculation.growthMarginPct !== null ? String(calculation.growthMarginPct) : "",
+      marketplaceFeePct:
+        typeof calculation.pricingSnapshot?.["marketplaceFeePct"] === "number"
+          ? String(calculation.pricingSnapshot["marketplaceFeePct"])
+          : "",
+      returnReservePct:
+        typeof calculation.pricingSnapshot?.["returnReservePct"] === "number"
+          ? String(calculation.pricingSnapshot["returnReservePct"])
+          : "",
+      damageReservePct:
+        typeof calculation.pricingSnapshot?.["damageReservePct"] === "number"
+          ? String(calculation.pricingSnapshot["damageReservePct"])
+          : "",
+      shippingBufferPct:
+        typeof calculation.shippingSnapshot?.["shippingBufferPct"] === "number"
+          ? String(calculation.shippingSnapshot["shippingBufferPct"])
+          : "",
+      shippingBufferCents:
+        typeof calculation.shippingSnapshot?.["shippingBufferCents"] === "number"
+          ? String(calculation.shippingSnapshot["shippingBufferCents"])
+          : ""
     });
   }
 
@@ -279,13 +345,61 @@ export function CostCalculatorForm() {
             growthMarginPct: toOptionalNumber(formData.get("growthMarginPct")) ?? null,
             defaultLaborRateCentsPerHour: toOptionalNumber(formData.get("defaultLaborRateCentsPerHour")),
             defaultMachineRateCentsPerHour: toOptionalNumber(formData.get("defaultMachineRateCentsPerHour")),
-            defaultOverheadRateCentsPerHour: toOptionalNumber(formData.get("defaultOverheadRateCentsPerHour")) ?? null
+            defaultOverheadRateCentsPerHour: toOptionalNumber(formData.get("defaultOverheadRateCentsPerHour")) ?? null,
+            defaultPackingLaborRateCentsPerHour:
+              toOptionalNumber(formData.get("defaultPackingLaborRateCentsPerHour")) ?? null,
+            defaultPackingMinutes: toOptionalNumber(formData.get("defaultPackingMinutes")) ?? null,
+            defaultMarketplaceFeePct: toOptionalNumber(formData.get("defaultMarketplaceFeePct")) ?? null,
+            defaultReturnReservePct: toOptionalNumber(formData.get("defaultReturnReservePct")) ?? null,
+            defaultDamageReservePct: toOptionalNumber(formData.get("defaultDamageReservePct")) ?? null,
+            defaultShippingBufferPct: toOptionalNumber(formData.get("defaultShippingBufferPct")) ?? null,
+            defaultShippingBufferCents:
+              toOptionalNumber(formData.get("defaultShippingBufferCents")) ?? null,
+            defaultPackagingOverheadCents:
+              toOptionalNumber(formData.get("defaultPackagingOverheadCents")) ?? null,
+            defaultRecommendedMinMarginPct:
+              toOptionalNumber(formData.get("defaultRecommendedMinMarginPct")) ?? null,
+            defaultRecommendedTargetMarginPct:
+              toOptionalNumber(formData.get("defaultRecommendedTargetMarginPct")) ?? null
           });
           const nextId = payload?.profile?.id;
           setSuccess("Cost profile created.");
           await refreshAll(nextId);
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : "Failed to create cost profile.");
+        }
+      })();
+    });
+  }
+
+  function handleUpdateProfile(formData: FormData) {
+    if (!selectedProfileId) return;
+    startTransition(() => {
+      void (async () => {
+        try {
+          await updateCostProfile(selectedProfileId, {
+            targetMarginPct: toOptionalNumber(formData.get("targetMarginPct")) ?? null,
+            growthMarginPct: toOptionalNumber(formData.get("growthMarginPct")) ?? null,
+            defaultRecommendedMinMarginPct:
+              toOptionalNumber(formData.get("defaultRecommendedMinMarginPct")) ?? null,
+            defaultRecommendedTargetMarginPct:
+              toOptionalNumber(formData.get("defaultRecommendedTargetMarginPct")) ?? null,
+            defaultPackingLaborRateCentsPerHour:
+              toOptionalNumber(formData.get("defaultPackingLaborRateCentsPerHour")) ?? null,
+            defaultPackingMinutes: toOptionalNumber(formData.get("defaultPackingMinutes")) ?? null,
+            defaultMarketplaceFeePct: toOptionalNumber(formData.get("defaultMarketplaceFeePct")) ?? null,
+            defaultReturnReservePct: toOptionalNumber(formData.get("defaultReturnReservePct")) ?? null,
+            defaultDamageReservePct: toOptionalNumber(formData.get("defaultDamageReservePct")) ?? null,
+            defaultShippingBufferPct: toOptionalNumber(formData.get("defaultShippingBufferPct")) ?? null,
+            defaultShippingBufferCents:
+              toOptionalNumber(formData.get("defaultShippingBufferCents")) ?? null,
+            defaultPackagingOverheadCents:
+              toOptionalNumber(formData.get("defaultPackagingOverheadCents")) ?? null
+          });
+          setSuccess("Cost profile defaults updated.");
+          await refreshAll(selectedProfileId);
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : "Failed to update cost profile.");
         }
       })();
     });
@@ -344,12 +458,49 @@ export function CostCalculatorForm() {
             boxCostCents: toOptionalNumber(formData.get("boxCostCents")) ?? null,
             bubbleWrapCostCents: toOptionalNumber(formData.get("bubbleWrapCostCents")) ?? null,
             tapeCostCents: toOptionalNumber(formData.get("tapeCostCents")) ?? null,
-            labelCostCents: toOptionalNumber(formData.get("labelCostCents")) ?? null
+            labelCostCents: toOptionalNumber(formData.get("labelCostCents")) ?? null,
+            foamCostCents: toOptionalNumber(formData.get("foamCostCents")) ?? null,
+            cornerProtectorCostCents:
+              toOptionalNumber(formData.get("cornerProtectorCostCents")) ?? null,
+            packingMinutes: toOptionalNumber(formData.get("packingMinutes")) ?? null,
+            packagingOverheadCents:
+              toOptionalNumber(formData.get("packagingOverheadCents")) ?? null
           });
           setSuccess("Packaging rule added.");
           await refreshAll(selectedProfileId);
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : "Failed to add packaging rule.");
+        }
+      })();
+    });
+  }
+
+  function handleUpdatePackagingRule(ruleId: string, formData: FormData) {
+    startTransition(() => {
+      void (async () => {
+        try {
+          await updatePackagingCostRule(ruleId, {
+            boxCostCents: toOptionalNumber(formData.get("boxCostCents")) ?? null,
+            bubbleWrapCostCents: toOptionalNumber(formData.get("bubbleWrapCostCents")) ?? null,
+            foamCostCents: toOptionalNumber(formData.get("foamCostCents")) ?? null,
+            cornerProtectorCostCents:
+              toOptionalNumber(formData.get("cornerProtectorCostCents")) ?? null,
+            tapeCostCents: toOptionalNumber(formData.get("tapeCostCents")) ?? null,
+            labelCostCents: toOptionalNumber(formData.get("labelCostCents")) ?? null,
+            insertFlyerCostCents: toOptionalNumber(formData.get("insertFlyerCostCents")) ?? null,
+            shrinkWrapCostCents: toOptionalNumber(formData.get("shrinkWrapCostCents")) ?? null,
+            otherPackagingCostCents:
+              toOptionalNumber(formData.get("otherPackagingCostCents")) ?? null,
+            packingMinutes: toOptionalNumber(formData.get("packingMinutes")) ?? null,
+            packingLaborOverrideCents:
+              toOptionalNumber(formData.get("packingLaborOverrideCents")) ?? null,
+            packagingOverheadCents:
+              toOptionalNumber(formData.get("packagingOverheadCents")) ?? null
+          });
+          setSuccess("Packaging rule updated.");
+          await refreshAll(selectedProfileId);
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : "Failed to update packaging rule.");
         }
       })();
     });
@@ -364,12 +515,45 @@ export function CostCalculatorForm() {
             shippingCode: String(formData.get("shippingCode") ?? ""),
             shippingName: String(formData.get("shippingName") ?? ""),
             baseCostCents: Number(formData.get("baseCostCents") ?? 0),
-            costPerCubicInchCents: toOptionalNumber(formData.get("costPerCubicInchCents")) ?? null
+            costPerPoundCents: toOptionalNumber(formData.get("costPerPoundCents")) ?? null,
+            costPerCubicInchCents: toOptionalNumber(formData.get("costPerCubicInchCents")) ?? null,
+            dimensionalDivisor: toOptionalNumber(formData.get("dimensionalDivisor")) ?? null,
+            dimensionalRateCents: toOptionalNumber(formData.get("dimensionalRateCents")) ?? null,
+            shippingBufferPct: toOptionalNumber(formData.get("shippingBufferPct")) ?? null,
+            shippingBufferCents: toOptionalNumber(formData.get("shippingBufferCents")) ?? null,
+            marketplaceHandlingCents:
+              toOptionalNumber(formData.get("marketplaceHandlingCents")) ?? null
           });
           setSuccess("Shipping rule added.");
           await refreshAll(selectedProfileId);
         } catch (caught) {
           setError(caught instanceof Error ? caught.message : "Failed to add shipping rule.");
+        }
+      })();
+    });
+  }
+
+  function handleUpdateShippingRule(ruleId: string, formData: FormData) {
+    startTransition(() => {
+      void (async () => {
+        try {
+          await updateShippingCostRule(ruleId, {
+            baseCostCents: toOptionalNumber(formData.get("baseCostCents")) ?? 0,
+            costPerPoundCents: toOptionalNumber(formData.get("costPerPoundCents")) ?? null,
+            costPerCubicInchCents:
+              toOptionalNumber(formData.get("costPerCubicInchCents")) ?? null,
+            dimensionalDivisor: toOptionalNumber(formData.get("dimensionalDivisor")) ?? null,
+            dimensionalRateCents: toOptionalNumber(formData.get("dimensionalRateCents")) ?? null,
+            shippingBufferPct: toOptionalNumber(formData.get("shippingBufferPct")) ?? null,
+            shippingBufferCents: toOptionalNumber(formData.get("shippingBufferCents")) ?? null,
+            marketplaceHandlingCents:
+              toOptionalNumber(formData.get("marketplaceHandlingCents")) ?? null,
+            flatOverride: toOptionalNumber(formData.get("flatOverride")) ?? null
+          });
+          setSuccess("Shipping rule updated.");
+          await refreshAll(selectedProfileId);
+        } catch (caught) {
+          setError(caught instanceof Error ? caught.message : "Failed to update shipping rule.");
         }
       })();
     });
@@ -522,12 +706,20 @@ export function CostCalculatorForm() {
                 </select>
               </label>
               <label className="text-sm text-slate-300">
+                Weight (lb)
+                <input value={form.weightLb} onChange={(event) => updateField("weightLb", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
+              </label>
+              <label className="text-sm text-slate-300">
                 Labor minutes
                 <input value={form.laborMinutes} onChange={(event) => updateField("laborMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
               </label>
               <label className="text-sm text-slate-300">
                 Machine minutes
                 <input value={form.machineMinutes} onChange={(event) => updateField("machineMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
+              </label>
+              <label className="text-sm text-slate-300">
+                Packing minutes
+                <input value={form.packingMinutes} onChange={(event) => updateField("packingMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
               </label>
               <label className="text-sm text-slate-300">
                 Overhead minutes
@@ -540,6 +732,26 @@ export function CostCalculatorForm() {
               <label className="text-sm text-slate-300">
                 Growth margin %
                 <input value={form.growthMarginPct} onChange={(event) => updateField("growthMarginPct", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
+              </label>
+              <label className="text-sm text-slate-300">
+                Marketplace fee %
+                <input value={form.marketplaceFeePct} onChange={(event) => updateField("marketplaceFeePct", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
+              </label>
+              <label className="text-sm text-slate-300">
+                Return reserve %
+                <input value={form.returnReservePct} onChange={(event) => updateField("returnReservePct", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
+              </label>
+              <label className="text-sm text-slate-300">
+                Damage reserve %
+                <input value={form.damageReservePct} onChange={(event) => updateField("damageReservePct", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
+              </label>
+              <label className="text-sm text-slate-300">
+                Shipping buffer %
+                <input value={form.shippingBufferPct} onChange={(event) => updateField("shippingBufferPct", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
+              </label>
+              <label className="text-sm text-slate-300">
+                Shipping buffer cents
+                <input value={form.shippingBufferCents} onChange={(event) => updateField("shippingBufferCents", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" />
               </label>
             </div>
 
@@ -554,6 +766,7 @@ export function CostCalculatorForm() {
           </section>
 
           <CostBreakdownCard preview={preview} result={result} />
+          <CostPricingRecommendationCard preview={preview} result={result} />
           <CostHistoryList calculations={calculations} onSelect={hydrateFromCalculation} />
         </div>
 
@@ -562,10 +775,13 @@ export function CostCalculatorForm() {
           <CostProfileEditor
             profile={selectedProfile}
             onCreateProfile={handleCreateProfile}
+            onUpdateProfile={handleUpdateProfile}
             onCreateMaterialRule={handleCreateMaterialRule}
             onCreateEdgeBandRule={handleCreateEdgeBandRule}
             onCreatePackagingRule={handleCreatePackagingRule}
+            onUpdatePackagingRule={handleUpdatePackagingRule}
             onCreateShippingRule={handleCreateShippingRule}
+            onUpdateShippingRule={handleUpdateShippingRule}
             busy={isPending}
           />
           <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">

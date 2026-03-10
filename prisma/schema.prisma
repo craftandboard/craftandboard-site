@@ -2255,6 +2255,16 @@ model CostProfile {
   defaultOverheadRateCentsPerHour   Int?              @default(1800)
   defaultPackagingAllowanceCents    Int?              @default(0)
   defaultShippingAllowanceCents     Int?              @default(0)
+  defaultPackingLaborRateCentsPerHour Int?            @default(4500)
+  defaultPackingMinutes             Decimal?          @default(6) @db.Decimal(8, 3)
+  defaultMarketplaceFeePct          Decimal?          @default(15) @db.Decimal(8, 3)
+  defaultReturnReservePct           Decimal?          @default(2) @db.Decimal(8, 3)
+  defaultDamageReservePct           Decimal?          @default(1) @db.Decimal(8, 3)
+  defaultShippingBufferPct          Decimal?          @default(5) @db.Decimal(8, 3)
+  defaultShippingBufferCents        Int?              @default(0)
+  defaultPackagingOverheadCents     Int?              @default(0)
+  defaultRecommendedMinMarginPct    Decimal?          @default(10) @db.Decimal(8, 3)
+  defaultRecommendedTargetMarginPct Decimal?          @default(20) @db.Decimal(8, 3)
   targetMarginPct                   Decimal?          @default(20) @db.Decimal(8, 3)
   growthMarginPct                   Decimal?          @default(10) @db.Decimal(8, 3)
   notes                             String?
@@ -2331,7 +2341,13 @@ model PackagingCostRule {
   labelCostCents            Int?
   insertFlyerCostCents      Int?
   shrinkWrapCostCents       Int?
+  foamCostCents             Int?
+  cornerProtectorCostCents  Int?
+  packingMinutes            Decimal?    @db.Decimal(8, 3)
+  packingLaborOverrideCents Int?
+  packagingOverheadCents    Int?
   otherPackagingCostCents   Int?
+  sortOrder                 Int?
   active                    Boolean     @default(true)
   createdAt                 DateTime    @default(now())
   updatedAt                 DateTime    @updatedAt
@@ -2351,6 +2367,12 @@ model ShippingCostRule {
   baseCostCents        Int
   costPerPoundCents    Int?
   costPerCubicInchCents Int?
+  dimensionalDivisor   Decimal?    @db.Decimal(10, 3)
+  dimensionalRateCents Int?
+  shippingBufferPct    Decimal?    @db.Decimal(8, 3)
+  shippingBufferCents  Int?
+  marketplaceHandlingCents Int?
+  sortOrder            Int?
   flatOverride         Int?
   active               Boolean     @default(true)
   createdAt            DateTime    @default(now())
@@ -2385,14 +2407,25 @@ model ShelfCostCalculation {
   laborCostCents               Int
   machineCostCents             Int
   packagingCostCents           Int
+  packingLaborCostCents        Int               @default(0)
   shippingCostCents            Int
+  shippingBufferCostCents      Int               @default(0)
   overheadCostCents            Int
+  marketplaceFeeCostCents      Int               @default(0)
+  returnReserveCostCents       Int               @default(0)
+  damageReserveCostCents       Int               @default(0)
   subtotalCostCents            Int
+  breakEvenPriceCents          Int?
+  recommendedMinSellPriceCents Int?
+  recommendedTargetSellPriceCents Int?
   targetMarginPct              Decimal?                 @db.Decimal(8, 3)
   growthMarginPct              Decimal?                 @db.Decimal(8, 3)
   recommendedInternalPriceCents Int?
   recommendedSellPriceCents    Int?
   assumptionsSnapshot          Json
+  packagingSnapshot            Json?
+  shippingSnapshot             Json?
+  pricingSnapshot              Json?
   resultSnapshot               Json
   createdAt                    DateTime                 @default(now())
   updatedAt                    DateTime                 @updatedAt

@@ -43,6 +43,16 @@ export const createCostProfileSchema = z.object({
   defaultOverheadRateCentsPerHour: nullableNonNegativeCentsSchema,
   defaultPackagingAllowanceCents: nullableNonNegativeCentsSchema,
   defaultShippingAllowanceCents: nullableNonNegativeCentsSchema,
+  defaultPackingLaborRateCentsPerHour: nullableNonNegativeCentsSchema,
+  defaultPackingMinutes: z.number().min(0).nullable().optional(),
+  defaultMarketplaceFeePct: percentSchema.nullable().optional(),
+  defaultReturnReservePct: percentSchema.nullable().optional(),
+  defaultDamageReservePct: percentSchema.nullable().optional(),
+  defaultShippingBufferPct: percentSchema.nullable().optional(),
+  defaultShippingBufferCents: nullableNonNegativeCentsSchema,
+  defaultPackagingOverheadCents: nullableNonNegativeCentsSchema,
+  defaultRecommendedMinMarginPct: percentSchema.nullable().optional(),
+  defaultRecommendedTargetMarginPct: percentSchema.nullable().optional(),
   targetMarginPct: percentSchema.nullable().optional(),
   growthMarginPct: percentSchema.nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
@@ -98,7 +108,13 @@ export const createPackagingCostRuleSchema = z.object({
   labelCostCents: nullableNonNegativeCentsSchema,
   insertFlyerCostCents: nullableNonNegativeCentsSchema,
   shrinkWrapCostCents: nullableNonNegativeCentsSchema,
+  foamCostCents: nullableNonNegativeCentsSchema,
+  cornerProtectorCostCents: nullableNonNegativeCentsSchema,
+  packingMinutes: z.number().min(0).nullable().optional(),
+  packingLaborOverrideCents: nullableNonNegativeCentsSchema,
+  packagingOverheadCents: nullableNonNegativeCentsSchema,
   otherPackagingCostCents: nullableNonNegativeCentsSchema,
+  sortOrder: z.number().int().min(0).nullable().optional(),
   active: z.boolean().optional()
 });
 
@@ -113,6 +129,12 @@ export const createShippingCostRuleSchema = z.object({
   baseCostCents: nonNegativeCentsSchema,
   costPerPoundCents: nullableNonNegativeCentsSchema,
   costPerCubicInchCents: nullableNonNegativeCentsSchema,
+  dimensionalDivisor: z.number().positive().nullable().optional(),
+  dimensionalRateCents: nullableNonNegativeCentsSchema,
+  shippingBufferPct: percentSchema.nullable().optional(),
+  shippingBufferCents: nullableNonNegativeCentsSchema,
+  marketplaceHandlingCents: nullableNonNegativeCentsSchema,
+  sortOrder: z.number().int().min(0).nullable().optional(),
   flatOverride: nullableNonNegativeCentsSchema,
   active: z.boolean().optional()
 });
@@ -139,8 +161,14 @@ export const calculateShelfCostSchema = z.object({
   laborMinutes: z.number().min(0),
   machineMinutes: z.number().min(0),
   overheadMinutes: z.number().min(0).nullable().optional(),
+  packingMinutes: z.number().min(0).nullable().optional(),
   targetMarginPct: percentSchema.nullable().optional(),
-  growthMarginPct: percentSchema.nullable().optional()
+  growthMarginPct: percentSchema.nullable().optional(),
+  marketplaceFeePct: percentSchema.nullable().optional(),
+  returnReservePct: percentSchema.nullable().optional(),
+  damageReservePct: percentSchema.nullable().optional(),
+  shippingBufferPct: percentSchema.nullable().optional(),
+  shippingBufferCents: nullableNonNegativeCentsSchema
 });
 
 export const saveShelfCostCalculationSchema = calculateShelfCostSchema;

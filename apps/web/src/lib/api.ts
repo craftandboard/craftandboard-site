@@ -2809,7 +2809,13 @@ export interface PackagingCostRuleItem {
   labelCostCents: number | null;
   insertFlyerCostCents: number | null;
   shrinkWrapCostCents: number | null;
+  foamCostCents: number | null;
+  cornerProtectorCostCents: number | null;
+  packingMinutes: number | null;
+  packingLaborOverrideCents: number | null;
+  packagingOverheadCents: number | null;
   otherPackagingCostCents: number | null;
+  sortOrder: number | null;
   active: boolean;
   createdAt: string;
   updatedAt: string;
@@ -2824,6 +2830,12 @@ export interface ShippingCostRuleItem {
   baseCostCents: number;
   costPerPoundCents: number | null;
   costPerCubicInchCents: number | null;
+  dimensionalDivisor: number | null;
+  dimensionalRateCents: number | null;
+  shippingBufferPct: number | null;
+  shippingBufferCents: number | null;
+  marketplaceHandlingCents: number | null;
+  sortOrder: number | null;
   flatOverride: number | null;
   active: boolean;
   createdAt: string;
@@ -2844,6 +2856,16 @@ export interface CostProfileDetail {
   defaultOverheadRateCentsPerHour: number | null;
   defaultPackagingAllowanceCents: number | null;
   defaultShippingAllowanceCents: number | null;
+  defaultPackingLaborRateCentsPerHour: number | null;
+  defaultPackingMinutes: number | null;
+  defaultMarketplaceFeePct: number | null;
+  defaultReturnReservePct: number | null;
+  defaultDamageReservePct: number | null;
+  defaultShippingBufferPct: number | null;
+  defaultShippingBufferCents: number | null;
+  defaultPackagingOverheadCents: number | null;
+  defaultRecommendedMinMarginPct: number | null;
+  defaultRecommendedTargetMarginPct: number | null;
   targetMarginPct: number | null;
   growthMarginPct: number | null;
   notes: string | null;
@@ -2873,8 +2895,14 @@ export interface CostCalculationInput {
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes?: number | null;
+  packingMinutes?: number | null;
   targetMarginPct?: number | null;
   growthMarginPct?: number | null;
+  marketplaceFeePct?: number | null;
+  returnReservePct?: number | null;
+  damageReservePct?: number | null;
+  shippingBufferPct?: number | null;
+  shippingBufferCents?: number | null;
 }
 
 export interface CostCalculationPreview {
@@ -2892,14 +2920,23 @@ export interface CostCalculationPreview {
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes: number | null;
+  packingMinutes: number | null;
   materialCostCents: number;
   edgeBandCostCents: number;
   laborCostCents: number;
   machineCostCents: number;
   packagingCostCents: number;
+  packingLaborCostCents: number;
   shippingCostCents: number;
+  shippingBufferCostCents: number;
   overheadCostCents: number;
+  marketplaceFeeCostCents: number;
+  returnReserveCostCents: number;
+  damageReserveCostCents: number;
   subtotalCostCents: number;
+  breakEvenPriceCents: number | null;
+  recommendedMinSellPriceCents: number | null;
+  recommendedTargetSellPriceCents: number | null;
   recommendedInternalPriceCents: number;
   recommendedSellPriceCents: number;
 }
@@ -2913,9 +2950,19 @@ export interface CostCalculationResult {
     laborCostCents: number;
     machineCostCents: number;
     packagingCostCents: number;
+    packingLaborCostCents: number;
+    packagingComponentCostCents: number;
+    packagingOverheadCostCents: number;
     shippingCostCents: number;
+    shippingBufferCostCents: number;
     overheadCostCents: number;
     subtotalCostCents: number;
+    marketplaceFeeCostCents: number;
+    returnReserveCostCents: number;
+    damageReserveCostCents: number;
+    breakEvenPriceCents: number | null;
+    recommendedMinSellPriceCents: number | null;
+    recommendedTargetSellPriceCents: number | null;
     recommendedInternalPriceCents: number;
     recommendedSellPriceCents: number;
   };
@@ -2929,6 +2976,28 @@ export interface CostCalculationResult {
   pricing: {
     targetMarginPct: number | null;
     growthMarginPct: number | null;
+    marketplaceFeePct: number | null;
+    returnReservePct: number | null;
+    damageReservePct: number | null;
+    breakEvenPriceCents: number | null;
+    recommendedMinSellPriceCents: number | null;
+    recommendedTargetSellPriceCents: number | null;
+    recommendedInternalPriceCents: number;
+    recommendedSellPriceCents: number;
+  };
+  packaging: {
+    componentCostCents: number;
+    packingMinutes: number;
+    packingLaborCostCents: number;
+    packagingOverheadCents: number;
+  };
+  shipping: {
+    baseCostCents: number;
+    weightCostCents: number;
+    volumeCostCents: number;
+    dimensionalCostCents: number;
+    marketplaceHandlingCents: number;
+    bufferCostCents: number;
   };
 }
 
@@ -2951,19 +3020,31 @@ export interface ShelfCostCalculationRecord {
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes: number | null;
+  packingMinutes: number | null;
   materialCostCents: number;
   edgeBandCostCents: number;
   laborCostCents: number;
   machineCostCents: number;
   packagingCostCents: number;
+  packingLaborCostCents: number;
   shippingCostCents: number;
+  shippingBufferCostCents: number;
   overheadCostCents: number;
+  marketplaceFeeCostCents: number;
+  returnReserveCostCents: number;
+  damageReserveCostCents: number;
   subtotalCostCents: number;
+  breakEvenPriceCents: number | null;
+  recommendedMinSellPriceCents: number | null;
+  recommendedTargetSellPriceCents: number | null;
   targetMarginPct: number | null;
   growthMarginPct: number | null;
   recommendedInternalPriceCents: number | null;
   recommendedSellPriceCents: number | null;
   assumptionsSnapshot: Record<string, unknown>;
+  packagingSnapshot: Record<string, unknown> | null;
+  shippingSnapshot: Record<string, unknown> | null;
+  pricingSnapshot: Record<string, unknown> | null;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
@@ -2990,6 +3071,16 @@ export async function createCostProfile(input: {
   defaultOverheadRateCentsPerHour?: number | null;
   defaultPackagingAllowanceCents?: number | null;
   defaultShippingAllowanceCents?: number | null;
+  defaultPackingLaborRateCentsPerHour?: number | null;
+  defaultPackingMinutes?: number | null;
+  defaultMarketplaceFeePct?: number | null;
+  defaultReturnReservePct?: number | null;
+  defaultDamageReservePct?: number | null;
+  defaultShippingBufferPct?: number | null;
+  defaultShippingBufferCents?: number | null;
+  defaultPackagingOverheadCents?: number | null;
+  defaultRecommendedMinMarginPct?: number | null;
+  defaultRecommendedTargetMarginPct?: number | null;
   targetMarginPct?: number | null;
   growthMarginPct?: number | null;
   notes?: string | null;
@@ -3078,7 +3169,13 @@ export async function createPackagingCostRule(
     labelCostCents?: number | null;
     insertFlyerCostCents?: number | null;
     shrinkWrapCostCents?: number | null;
+    foamCostCents?: number | null;
+    cornerProtectorCostCents?: number | null;
+    packingMinutes?: number | null;
+    packingLaborOverrideCents?: number | null;
+    packagingOverheadCents?: number | null;
     otherPackagingCostCents?: number | null;
+    sortOrder?: number | null;
     active?: boolean;
   }
 ) {
@@ -3106,6 +3203,12 @@ export async function createShippingCostRule(
     baseCostCents: number;
     costPerPoundCents?: number | null;
     costPerCubicInchCents?: number | null;
+    dimensionalDivisor?: number | null;
+    dimensionalRateCents?: number | null;
+    shippingBufferPct?: number | null;
+    shippingBufferCents?: number | null;
+    marketplaceHandlingCents?: number | null;
+    sortOrder?: number | null;
     flatOverride?: number | null;
     active?: boolean;
   }

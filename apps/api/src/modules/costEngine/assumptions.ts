@@ -53,6 +53,16 @@ export async function resolveCostEngineAssumptions(input: {
       defaultOverheadRateCentsPerHour: profile.defaultOverheadRateCentsPerHour ?? 0,
       defaultPackagingAllowanceCents: profile.defaultPackagingAllowanceCents ?? 0,
       defaultShippingAllowanceCents: profile.defaultShippingAllowanceCents ?? 0,
+      defaultPackingLaborRateCentsPerHour: profile.defaultPackingLaborRateCentsPerHour ?? 0,
+      defaultPackingMinutes: decimalToNumber(profile.defaultPackingMinutes),
+      defaultMarketplaceFeePct: decimalToNumber(profile.defaultMarketplaceFeePct),
+      defaultReturnReservePct: decimalToNumber(profile.defaultReturnReservePct),
+      defaultDamageReservePct: decimalToNumber(profile.defaultDamageReservePct),
+      defaultShippingBufferPct: decimalToNumber(profile.defaultShippingBufferPct),
+      defaultShippingBufferCents: profile.defaultShippingBufferCents ?? 0,
+      defaultPackagingOverheadCents: profile.defaultPackagingOverheadCents ?? 0,
+      defaultRecommendedMinMarginPct: decimalToNumber(profile.defaultRecommendedMinMarginPct),
+      defaultRecommendedTargetMarginPct: decimalToNumber(profile.defaultRecommendedTargetMarginPct),
       targetMarginPct: decimalToNumber(profile.targetMarginPct),
       growthMarginPct: decimalToNumber(profile.growthMarginPct)
     },
@@ -88,6 +98,11 @@ export async function resolveCostEngineAssumptions(input: {
           labelCostCents: packagingRule.labelCostCents,
           insertFlyerCostCents: packagingRule.insertFlyerCostCents,
           shrinkWrapCostCents: packagingRule.shrinkWrapCostCents,
+          foamCostCents: packagingRule.foamCostCents,
+          cornerProtectorCostCents: packagingRule.cornerProtectorCostCents,
+          packingMinutes: decimalToNumber(packagingRule.packingMinutes),
+          packingLaborOverrideCents: packagingRule.packingLaborOverrideCents,
+          packagingOverheadCents: packagingRule.packagingOverheadCents,
           otherPackagingCostCents: packagingRule.otherPackagingCostCents
         }
       : null,
@@ -99,6 +114,11 @@ export async function resolveCostEngineAssumptions(input: {
           baseCostCents: shippingRule.baseCostCents,
           costPerPoundCents: shippingRule.costPerPoundCents,
           costPerCubicInchCents: shippingRule.costPerCubicInchCents,
+          dimensionalDivisor: decimalToNumber(shippingRule.dimensionalDivisor),
+          dimensionalRateCents: shippingRule.dimensionalRateCents,
+          shippingBufferPct: decimalToNumber(shippingRule.shippingBufferPct),
+          shippingBufferCents: shippingRule.shippingBufferCents,
+          marketplaceHandlingCents: shippingRule.marketplaceHandlingCents,
           flatOverride: shippingRule.flatOverride
         }
       : null

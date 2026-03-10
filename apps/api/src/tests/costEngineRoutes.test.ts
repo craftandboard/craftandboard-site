@@ -148,7 +148,12 @@ describe("cost engine routes", () => {
         materialCode: "WHITE_MELAMINE_075",
         edgeBandPattern: "NONE",
         laborMinutes: 10,
-        machineMinutes: 8
+        machineMinutes: 8,
+        packingMinutes: 6,
+        marketplaceFeePct: 15,
+        returnReservePct: 2,
+        damageReservePct: 1,
+        shippingBufferPct: 5
       })
     });
     expect(response.status).toBe(200);
@@ -161,7 +166,12 @@ describe("cost engine routes", () => {
       materialCode: "WHITE_MELAMINE_075",
       edgeBandPattern: "NONE",
       laborMinutes: 10,
-      machineMinutes: 8
+      machineMinutes: 8,
+      packingMinutes: 6,
+      marketplaceFeePct: 15,
+      returnReservePct: 2,
+      damageReservePct: 1,
+      shippingBufferPct: 5
     });
   });
 

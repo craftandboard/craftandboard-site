@@ -50,6 +50,9 @@ export function CostHistoryList({
                 <p className="mt-1 text-xs text-slate-400">
                   Cost {formatMoney(calculation.subtotalCostCents)}
                 </p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Break-even {formatMoney(calculation.breakEvenPriceCents)}
+                </p>
               </div>
             </button>
           ))}

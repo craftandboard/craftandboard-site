@@ -24,8 +24,11 @@ export function CostBreakdownCard({
     ["Edge band", preview.edgeBandCostCents],
     ["Labor", preview.laborCostCents],
     ["Machine", preview.machineCostCents],
-    ["Packaging", preview.packagingCostCents],
-    ["Shipping", preview.shippingCostCents],
+    ["Packaging components", result.packaging.componentCostCents],
+    ["Packing labor", preview.packingLaborCostCents],
+    ["Packaging total", preview.packagingCostCents],
+    ["Shipping total", preview.shippingCostCents],
+    ["Shipping buffer", preview.shippingBufferCostCents],
     ["Overhead", preview.overheadCostCents]
   ];
 
@@ -98,6 +101,10 @@ export function CostBreakdownCard({
           <p className="mt-1 text-sm text-slate-200">
             Edge band footage:{" "}
             <span className="font-semibold">{result.geometry.effectiveEdgeBandLinearFeet.toFixed(2)} ft</span>
+          </p>
+          <p className="mt-1 text-sm text-slate-200">
+            Packing minutes:{" "}
+            <span className="font-semibold">{result.packaging.packingMinutes.toFixed(1)} min</span>
           </p>
         </div>
       </div>

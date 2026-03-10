@@ -18,6 +18,16 @@ export interface CostEngineProfileDefaults {
   defaultOverheadRateCentsPerHour: number;
   defaultPackagingAllowanceCents: number;
   defaultShippingAllowanceCents: number;
+  defaultPackingLaborRateCentsPerHour: number;
+  defaultPackingMinutes: number | null;
+  defaultMarketplaceFeePct: number | null;
+  defaultReturnReservePct: number | null;
+  defaultDamageReservePct: number | null;
+  defaultShippingBufferPct: number | null;
+  defaultShippingBufferCents: number;
+  defaultPackagingOverheadCents: number;
+  defaultRecommendedMinMarginPct: number | null;
+  defaultRecommendedTargetMarginPct: number | null;
   targetMarginPct: number | null;
   growthMarginPct: number | null;
 }
@@ -53,6 +63,11 @@ export interface CostEnginePackagingRule {
   labelCostCents: number | null;
   insertFlyerCostCents: number | null;
   shrinkWrapCostCents: number | null;
+  foamCostCents: number | null;
+  cornerProtectorCostCents: number | null;
+  packingMinutes: number | null;
+  packingLaborOverrideCents: number | null;
+  packagingOverheadCents: number | null;
   otherPackagingCostCents: number | null;
 }
 
@@ -63,6 +78,11 @@ export interface CostEngineShippingRule {
   baseCostCents: number;
   costPerPoundCents: number | null;
   costPerCubicInchCents: number | null;
+  dimensionalDivisor: number | null;
+  dimensionalRateCents: number | null;
+  shippingBufferPct: number | null;
+  shippingBufferCents: number | null;
+  marketplaceHandlingCents: number | null;
   flatOverride: number | null;
 }
 
@@ -80,8 +100,14 @@ export interface CostEngineCalculationInput {
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes?: number | null;
+  packingMinutes?: number | null;
   targetMarginPct?: number | null;
   growthMarginPct?: number | null;
+  marketplaceFeePct?: number | null;
+  returnReservePct?: number | null;
+  damageReservePct?: number | null;
+  shippingBufferPct?: number | null;
+  shippingBufferCents?: number | null;
 }
 
 export interface CostEngineResolvedAssumptions {
@@ -156,20 +182,39 @@ function calculateEdgeBandCost(
 }
 
 function calculatePackagingCost(
+  input: CostEngineCalculationInput,
   profile: CostEngineProfileDefaults,
   rule?: CostEnginePackagingRule | null
 ) {
-  const parts = [
+  const componentCostCents = [
     rule?.boxCostCents ?? 0,
     rule?.bubbleWrapCostCents ?? 0,
     rule?.tapeCostCents ?? 0,
     rule?.labelCostCents ?? 0,
     rule?.insertFlyerCostCents ?? 0,
     rule?.shrinkWrapCostCents ?? 0,
+    rule?.foamCostCents ?? 0,
+    rule?.cornerProtectorCostCents ?? 0,
     rule?.otherPackagingCostCents ?? 0
   ];
 
-  return clampCurrency(parts.reduce((sum, value) => sum + value, profile.defaultPackagingAllowanceCents));
+  const basePackagingCostCents = clampCurrency(
+    componentCostCents.reduce((sum, value) => sum + value, profile.defaultPackagingAllowanceCents)
+  );
+  const packingMinutes = input.packingMinutes ?? rule?.packingMinutes ?? profile.defaultPackingMinutes ?? 0;
+  const packingLaborCostCents =
+    rule?.packingLaborOverrideCents ??
+    clampCurrency(minutesToHours(packingMinutes) * profile.defaultPackingLaborRateCentsPerHour);
+  const packagingOverheadCents =
+    (rule?.packagingOverheadCents ?? 0) + profile.defaultPackagingOverheadCents;
+
+  return {
+    componentCostCents: basePackagingCostCents,
+    packingMinutes,
+    packingLaborCostCents,
+    packagingOverheadCents,
+    costCents: basePackagingCostCents + packingLaborCostCents + packagingOverheadCents
+  };
 }
 
 function calculateShippingCost(
@@ -178,21 +223,113 @@ function calculateShippingCost(
   rule?: CostEngineShippingRule | null
 ) {
   if (!rule) {
-    return profile.defaultShippingAllowanceCents;
+    const bufferCostCents = clampCurrency(
+      profile.defaultShippingAllowanceCents *
+        percentToMultiplier(profile.defaultShippingBufferPct ?? 0)
+    ) + profile.defaultShippingBufferCents;
+    return {
+      baseCostCents: profile.defaultShippingAllowanceCents,
+      weightCostCents: 0,
+      volumeCostCents: 0,
+      dimensionalCostCents: 0,
+      marketplaceHandlingCents: 0,
+      bufferCostCents,
+      costCents: profile.defaultShippingAllowanceCents + bufferCostCents
+    };
   }
 
   if (rule.flatOverride !== null && rule.flatOverride !== undefined) {
-    return clampCurrency(rule.flatOverride);
+    const bufferPct = input.shippingBufferPct ?? rule.shippingBufferPct ?? profile.defaultShippingBufferPct ?? 0;
+    const bufferCents = input.shippingBufferCents ?? rule.shippingBufferCents ?? profile.defaultShippingBufferCents;
+    const bufferCostCents = clampCurrency(rule.flatOverride * percentToMultiplier(bufferPct)) + (bufferCents ?? 0);
+    const marketplaceHandlingCents = rule.marketplaceHandlingCents ?? 0;
+    return {
+      baseCostCents: rule.flatOverride,
+      weightCostCents: 0,
+      volumeCostCents: 0,
+      dimensionalCostCents: 0,
+      marketplaceHandlingCents,
+      bufferCostCents,
+      costCents: clampCurrency(rule.flatOverride + marketplaceHandlingCents + bufferCostCents)
+    };
   }
 
   const cubicInches =
     input.thicknessIn && input.thicknessIn > 0
       ? input.lengthIn * input.depthIn * input.thicknessIn * input.quantity
       : 0;
-  const weightCost = input.weightLb ? input.weightLb * (rule.costPerPoundCents ?? 0) : 0;
-  const volumeCost = cubicInches * (rule.costPerCubicInchCents ?? 0);
+  const weightCostCents = clampCurrency((input.weightLb ?? 0) * (rule.costPerPoundCents ?? 0));
+  const volumeCostCents = clampCurrency(cubicInches * (rule.costPerCubicInchCents ?? 0));
+  const dimensionalWeightLb =
+    rule.dimensionalDivisor && rule.dimensionalDivisor > 0 ? cubicInches / rule.dimensionalDivisor : 0;
+  const dimensionalCostCents = clampCurrency(dimensionalWeightLb * (rule.dimensionalRateCents ?? 0));
+  const marketplaceHandlingCents = rule.marketplaceHandlingCents ?? 0;
+  const bufferPct = input.shippingBufferPct ?? rule.shippingBufferPct ?? profile.defaultShippingBufferPct ?? 0;
+  const bufferCents = input.shippingBufferCents ?? rule.shippingBufferCents ?? profile.defaultShippingBufferCents;
+  const baseBeforeBuffer =
+    profile.defaultShippingAllowanceCents +
+    rule.baseCostCents +
+    weightCostCents +
+    volumeCostCents +
+    dimensionalCostCents +
+    marketplaceHandlingCents;
+  const bufferCostCents = clampCurrency(baseBeforeBuffer * percentToMultiplier(bufferPct)) + (bufferCents ?? 0);
 
-  return clampCurrency(profile.defaultShippingAllowanceCents + rule.baseCostCents + weightCost + volumeCost);
+  return {
+    baseCostCents: profile.defaultShippingAllowanceCents + rule.baseCostCents,
+    weightCostCents,
+    volumeCostCents,
+    dimensionalCostCents,
+    marketplaceHandlingCents,
+    bufferCostCents,
+    costCents: clampCurrency(baseBeforeBuffer + bufferCostCents)
+  };
+}
+
+function calculateRecommendedSellPrices(input: CostEngineCalculationInput, profile: CostEngineProfileDefaults, subtotalCostCents: number) {
+  const marketplaceFeePct = input.marketplaceFeePct ?? profile.defaultMarketplaceFeePct ?? 0;
+  const returnReservePct = input.returnReservePct ?? profile.defaultReturnReservePct ?? 0;
+  const damageReservePct = input.damageReservePct ?? profile.defaultDamageReservePct ?? 0;
+  const targetMarginPct = input.targetMarginPct ?? profile.targetMarginPct;
+  const growthMarginPct = input.growthMarginPct ?? profile.growthMarginPct;
+  const minMarginPct = profile.defaultRecommendedMinMarginPct ?? targetMarginPct ?? 0;
+  const targetSellMarginPct = profile.defaultRecommendedTargetMarginPct ?? growthMarginPct ?? targetMarginPct ?? 0;
+
+  const marketplaceFeeCostCents = clampCurrency(subtotalCostCents * percentToMultiplier(marketplaceFeePct));
+  const returnReserveCostCents = clampCurrency(subtotalCostCents * percentToMultiplier(returnReservePct));
+  const damageReserveCostCents = clampCurrency(subtotalCostCents * percentToMultiplier(damageReservePct));
+  const breakEvenPriceCents =
+    subtotalCostCents + marketplaceFeeCostCents + returnReserveCostCents + damageReserveCostCents;
+
+  const recommendedInternalPriceCents =
+    targetMarginPct && targetMarginPct > 0 && targetMarginPct < 100
+      ? clampCurrency(subtotalCostCents / (1 - percentToMultiplier(targetMarginPct)))
+      : subtotalCostCents;
+  const recommendedMinSellPriceCents =
+    minMarginPct > 0 && minMarginPct < 100
+      ? clampCurrency(breakEvenPriceCents / (1 - percentToMultiplier(minMarginPct)))
+      : breakEvenPriceCents;
+  const recommendedTargetSellPriceCents =
+    targetSellMarginPct > 0 && targetSellMarginPct < 100
+      ? clampCurrency(breakEvenPriceCents / (1 - percentToMultiplier(targetSellMarginPct)))
+      : breakEvenPriceCents;
+  const recommendedSellPriceCents = Math.max(recommendedMinSellPriceCents, recommendedTargetSellPriceCents);
+
+  return {
+    marketplaceFeePct,
+    returnReservePct,
+    damageReservePct,
+    growthMarginPct,
+    targetMarginPct,
+    marketplaceFeeCostCents,
+    returnReserveCostCents,
+    damageReserveCostCents,
+    breakEvenPriceCents,
+    recommendedInternalPriceCents,
+    recommendedMinSellPriceCents,
+    recommendedTargetSellPriceCents,
+    recommendedSellPriceCents
+  };
 }
 
 export function calculateShelfCost(
@@ -211,8 +348,8 @@ export function calculateShelfCost(
   const overheadCostCents = clampCurrency(
     minutesToHours(overheadMinutes) * assumptions.profile.defaultOverheadRateCentsPerHour
   );
-  const packagingCostCents = calculatePackagingCost(assumptions.profile, assumptions.packagingRule);
-  const shippingCostCents = calculateShippingCost(input, assumptions.profile, assumptions.shippingRule);
+  const packaging = calculatePackagingCost(input, assumptions.profile, assumptions.packagingRule);
+  const shipping = calculateShippingCost(input, assumptions.profile, assumptions.shippingRule);
 
   const subtotalCostCents =
     material.costCents +
@@ -220,24 +357,9 @@ export function calculateShelfCost(
     laborCostCents +
     machineCostCents +
     overheadCostCents +
-    packagingCostCents +
-    shippingCostCents;
-
-  const targetMarginPct = input.targetMarginPct ?? assumptions.profile.targetMarginPct;
-  const growthMarginPct = input.growthMarginPct ?? assumptions.profile.growthMarginPct;
-  const targetMarginMultiplier =
-    targetMarginPct && targetMarginPct > 0 && targetMarginPct < 100
-      ? 1 / (1 - percentToMultiplier(targetMarginPct))
-      : 1;
-  const growthMarginMultiplier =
-    growthMarginPct && growthMarginPct > 0 && growthMarginPct < 100
-      ? 1 / (1 - percentToMultiplier(growthMarginPct))
-      : 1;
-
-  const recommendedInternalPriceCents = clampCurrency(subtotalCostCents * targetMarginMultiplier);
-  const recommendedSellPriceCents = clampCurrency(
-    recommendedInternalPriceCents * growthMarginMultiplier
-  );
+    packaging.costCents +
+    shipping.costCents;
+  const pricing = calculateRecommendedSellPrices(input, assumptions.profile, subtotalCostCents);
 
   return {
     currency: assumptions.profile.currency,
@@ -247,12 +369,22 @@ export function calculateShelfCost(
       edgeBandCostCents: edgeBand.costCents,
       laborCostCents,
       machineCostCents,
-      packagingCostCents,
-      shippingCostCents,
+      packagingCostCents: packaging.costCents,
+      packingLaborCostCents: packaging.packingLaborCostCents,
+      packagingComponentCostCents: packaging.componentCostCents,
+      packagingOverheadCostCents: packaging.packagingOverheadCents,
+      shippingCostCents: shipping.costCents,
+      shippingBufferCostCents: shipping.bufferCostCents,
       overheadCostCents,
+      marketplaceFeeCostCents: pricing.marketplaceFeeCostCents,
+      returnReserveCostCents: pricing.returnReserveCostCents,
+      damageReserveCostCents: pricing.damageReserveCostCents,
       subtotalCostCents,
-      recommendedInternalPriceCents,
-      recommendedSellPriceCents
+      breakEvenPriceCents: pricing.breakEvenPriceCents,
+      recommendedInternalPriceCents: pricing.recommendedInternalPriceCents,
+      recommendedMinSellPriceCents: pricing.recommendedMinSellPriceCents,
+      recommendedTargetSellPriceCents: pricing.recommendedTargetSellPriceCents,
+      recommendedSellPriceCents: pricing.recommendedSellPriceCents
     },
     geometry: {
       requiredAreaSqFt: material.requiredAreaSqFt,
@@ -261,9 +393,29 @@ export function calculateShelfCost(
       edgeBandLinearFeet: edgeBand.linearFeet,
       effectiveEdgeBandLinearFeet: edgeBand.effectiveLinearFeet
     },
+    packaging: {
+      packingMinutes: packaging.packingMinutes,
+      componentCostCents: packaging.componentCostCents,
+      packingLaborCostCents: packaging.packingLaborCostCents,
+      packagingOverheadCents: packaging.packagingOverheadCents
+    },
+    shipping: {
+      baseCostCents: shipping.baseCostCents,
+      weightCostCents: shipping.weightCostCents,
+      volumeCostCents: shipping.volumeCostCents,
+      dimensionalCostCents: shipping.dimensionalCostCents,
+      marketplaceHandlingCents: shipping.marketplaceHandlingCents,
+      shippingBufferCostCents: shipping.bufferCostCents
+    },
     pricing: {
-      targetMarginPct,
-      growthMarginPct
+      targetMarginPct: pricing.targetMarginPct,
+      growthMarginPct: pricing.growthMarginPct,
+      marketplaceFeePct: pricing.marketplaceFeePct,
+      returnReservePct: pricing.returnReservePct,
+      damageReservePct: pricing.damageReservePct,
+      breakEvenPriceCents: pricing.breakEvenPriceCents,
+      recommendedMinSellPriceCents: pricing.recommendedMinSellPriceCents,
+      recommendedTargetSellPriceCents: pricing.recommendedTargetSellPriceCents
     }
   };
 }

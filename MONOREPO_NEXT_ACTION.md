@@ -3,9 +3,9 @@
 Safest canonical repo right now: `/Users/brandon/Projects/craft-and-board`
 
 Do not do yet:
-- do not bulk-copy backend folders from `fieldmetriq-core`
-- do not merge Prisma migration histories blindly
-- do not rewire deploys or providers yet
+- do not import source auth/session endpoints
+- do not merge Prisma models or migrations blindly
+- do not start payments or Stripe import first
 
-Exact next Phase 2 action:
-- reconcile auth/org and Prisma ownership boundaries on paper first, then import `fieldmetriq-core` project/work-module routes into `craft-and-board/apps/api` as the first backend slice
+Exact next Phase 3 action:
+- import a read-first `projects` and `workModules` slice from `fieldmetriq-core` into `craft-and-board/apps/api/src/modules`, using target-owned auth/org context and adapter boundaries

@@ -127,6 +127,7 @@ export async function createProposalForOrganization(input: {
   leadId?: string | null;
   title?: string | null;
   status?: string | null;
+  depositPolicy?: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
   version?: number;
   publicToken?: string | null;
 }) {
@@ -145,6 +146,7 @@ export async function createProposalForOrganization(input: {
       leadId: input.leadId?.trim() || null,
       title: input.title?.trim() || null,
       status: input.status?.trim() || null,
+      depositPolicy: input.depositPolicy ?? "NO_DEPOSIT_REQUIRED",
       version: input.version ?? 1,
       publicToken: input.publicToken?.trim() || null
     },
@@ -189,6 +191,7 @@ export async function updateProposalForOrganization(input: {
   leadId?: string | null;
   title?: string | null;
   status?: string | null;
+  depositPolicy?: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
   version?: number;
   publicToken?: string | null;
 }) {
@@ -218,6 +221,7 @@ export async function updateProposalForOrganization(input: {
       ...(input.leadId !== undefined ? { leadId: input.leadId?.trim() || null } : {}),
       ...(input.title !== undefined ? { title: input.title?.trim() || null } : {}),
       ...(input.status !== undefined ? { status: input.status?.trim() || null } : {}),
+      ...(input.depositPolicy !== undefined ? { depositPolicy: input.depositPolicy } : {}),
       ...(input.version !== undefined ? { version: input.version } : {}),
       ...(input.publicToken !== undefined ? { publicToken: input.publicToken?.trim() || null } : {})
     },

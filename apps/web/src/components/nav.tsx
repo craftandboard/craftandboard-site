@@ -5,6 +5,14 @@ import { usePathname } from "next/navigation";
 
 const sections = [
   {
+    title: "MVP Pilot",
+    links: [
+      { href: "/leads", label: "Leads" },
+      { href: "/projects", label: "Projects" },
+      { href: "/settings", label: "Settings" }
+    ]
+  },
+  {
     title: "Operations",
     links: [
       { href: "/", label: "Dashboard" },

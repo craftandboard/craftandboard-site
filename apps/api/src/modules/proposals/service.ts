@@ -66,6 +66,7 @@ function mapProposalRow(proposal: Awaited<ReturnType<typeof createProposalForOrg
     id: proposal.id,
     title: proposal.title,
     publicToken: proposal.publicToken,
+    depositPolicy: proposal.depositPolicy,
     rawStatus: proposal.status,
     canonicalStatus: translatedStatus.canonicalStatus,
     statusLabel: translatedStatus.statusLabel,
@@ -95,6 +96,7 @@ export async function listProposalsView(input: {
         id: proposal.id,
         title: proposal.title,
         publicToken: proposal.publicToken,
+        depositPolicy: proposal.depositPolicy,
         rawStatus: proposal.status,
         canonicalStatus: translatedStatus.canonicalStatus,
         statusLabel: translatedStatus.statusLabel,
@@ -130,6 +132,7 @@ export async function getProposalDetailView(input: {
       id: proposal.id,
       title: proposal.title,
       publicToken: proposal.publicToken,
+      depositPolicy: proposal.depositPolicy,
       rawStatus: proposal.status,
       canonicalStatus: translatedStatus.canonicalStatus,
       statusLabel: translatedStatus.statusLabel,
@@ -153,6 +156,7 @@ export async function createProposal(input: {
   leadId?: string | null;
   title?: string | null;
   status?: string | null;
+  depositPolicy?: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
   version?: number;
   publicToken?: string | null;
 }) {
@@ -181,6 +185,7 @@ export async function updateProposal(input: {
   leadId?: string | null;
   title?: string | null;
   status?: string | null;
+  depositPolicy?: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
   version?: number;
   publicToken?: string | null;
 }) {

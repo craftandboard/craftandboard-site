@@ -20,6 +20,9 @@ const proposalCreateSchema = z.object({
   leadId: z.string().trim().min(1).nullable().optional(),
   title: z.string().trim().max(160).nullable().optional(),
   status: z.string().trim().min(1).max(64).nullable().optional(),
+  depositPolicy: z
+    .enum(["NO_DEPOSIT_REQUIRED", "DEPOSIT_REQUIRED_BEFORE_CONVERSION"])
+    .optional(),
   version: z.number().int().min(1).optional(),
   publicToken: z.string().trim().max(120).nullable().optional()
 });

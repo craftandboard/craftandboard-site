@@ -2749,3 +2749,814 @@ export async function getManagedContainers() {
 export async function getActiveContainerSessions() {
   return readJson<{ ok: true; sessions: ActiveContainerSessionRecord[] }>("/containers/active-container-sessions");
 }
+
+export interface LeadListItem {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  rawStatus: string | null;
+  rawStage: string | null;
+  stageKey: string;
+  stageLabel: string;
+  isClosed: boolean;
+  project: {
+    id: string;
+    key: string | null;
+    name: string;
+    status: string | null;
+    stage: string | null;
+  } | null;
+  proposalCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface LeadDetail extends LeadListItem {
+  notes: string | null;
+  proposals: Array<{
+    id: string;
+    title: string | null;
+    status: string | null;
+    version: number;
+    publicToken: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+}
+
+export interface ProposalLineItem {
+  id: string;
+  name: string;
+  description: string | null;
+  qty: number;
+  unit: string | null;
+  priceCents: number;
+  sortOrder: number;
+}
+
+export interface ProposalSectionItem {
+  id: string;
+  title: string;
+  sortOrder: number;
+  lines: ProposalLineItem[];
+}
+
+export interface LinkedProposalLead {
+  id: string;
+  name: string;
+  status: string | null;
+  stage: string | null;
+}
+
+export interface LinkedProposalProject {
+  id: string;
+  key: string | null;
+  name: string;
+  status: string | null;
+  stage: string | null;
+}
+
+export interface ProposalListItem {
+  id: string;
+  title: string | null;
+  publicToken: string | null;
+  depositPolicy: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
+  rawStatus: string | null;
+  canonicalStatus: string;
+  statusLabel: string;
+  isFinal: boolean;
+  version: number;
+  project: LinkedProposalProject | null;
+  lead: LinkedProposalLead | null;
+  sectionCount: number;
+  lineCount: number;
+  totalAmountCents: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalDetail {
+  id: string;
+  title: string | null;
+  publicToken: string | null;
+  depositPolicy: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
+  rawStatus: string | null;
+  canonicalStatus: string;
+  statusLabel: string;
+  isFinal: boolean;
+  version: number;
+  project: LinkedProposalProject | null;
+  lead: LinkedProposalLead | null;
+  sections: ProposalSectionItem[];
+  unsectionedLines: ProposalLineItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DepositRequestItem {
+  id: string;
+  orgId: string;
+  proposalId: string;
+  kind: string;
+  status: string;
+  amountCents: number;
+  currency: string;
+  description: string | null;
+  requestedAt: string | null;
+  dueAt: string | null;
+  paidAt: string | null;
+  voidedAt: string | null;
+  externalReference: string | null;
+  metadata: unknown;
+  createdByMembershipId: string | null;
+  updatedByMembershipId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  paidAmountCents: number;
+  outstandingAmountCents: number;
+}
+
+export interface PaymentItem {
+  id: string;
+  orgId: string;
+  proposalId: string;
+  depositRequestId: string | null;
+  status: string;
+  method: string;
+  amountCents: number;
+  currency: string;
+  direction: string;
+  receivedAt: string | null;
+  externalReference: string | null;
+  provider: string | null;
+  note: string | null;
+  metadata: unknown;
+  createdByMembershipId: string | null;
+  updatedByMembershipId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalPaymentSummary {
+  requestedAmountCents: number;
+  paidAmountCents: number;
+  outstandingAmountCents: number;
+  depositRequestedAmountCents: number;
+  depositPaidAmountCents: number;
+  hasOpenDepositRequest: boolean;
+}
+
+export interface ProposalAcceptanceIntakeItem {
+  id: string;
+  orgId: string;
+  proposalId: string;
+  status: string;
+  source: string;
+  tokenExpiresAt: string | null;
+  openedAt: string | null;
+  submittedAt: string | null;
+  verifiedAt: string | null;
+  handedOffAt: string | null;
+  expiredAt: string | null;
+  revokedAt: string | null;
+  failedAt: string | null;
+  externalIdentityName: string | null;
+  externalIdentityEmail: string | null;
+  externalIp: string | null;
+  externalUserAgent: string | null;
+  provider: string | null;
+  providerReference: string | null;
+  note: string | null;
+  payload: unknown;
+  verificationSnapshot: unknown;
+  metadata: unknown;
+  createdByMembershipId: string | null;
+  updatedByMembershipId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalAcceptanceItem {
+  id: string;
+  orgId: string;
+  proposalId: string;
+  status: string;
+  acceptedAt: string | null;
+  rejectedAt: string | null;
+  canceledAt: string | null;
+  acceptedByMembershipId: string | null;
+  rejectedByMembershipId: string | null;
+  canceledByMembershipId: string | null;
+  decisionSource: string;
+  note: string | null;
+  metadata: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalConversionItem {
+  id: string;
+  orgId: string;
+  proposalId: string;
+  leadId: string | null;
+  acceptanceId: string | null;
+  status: string;
+  eligibilitySnapshot: unknown;
+  blockedReasonCode: string | null;
+  blockedReasonMessage: string | null;
+  convertedAt: string | null;
+  projectId: string | null;
+  initiatedByMembershipId: string | null;
+  completedByMembershipId: string | null;
+  metadata: unknown;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProposalEligibility {
+  eligible: boolean;
+  reasons: string[];
+  requiredActions: string[];
+  snapshot: Record<string, unknown>;
+}
+
+export interface ProjectListItem {
+  id: string;
+  key: string | null;
+  name: string;
+  address: string | null;
+  status: string | null;
+  stage: string | null;
+  scopeSummary: string | null;
+  createdAt: string;
+  updatedAt: string;
+  phaseCount: number;
+  taskCount: number;
+  openTaskCount: number;
+}
+
+export interface ProjectDetail {
+  id: string;
+  key: string | null;
+  name: string;
+  address: string | null;
+  status: string | null;
+  stage: string | null;
+  scopeSummary: string | null;
+  createdAt: string;
+  updatedAt: string;
+  phases: Array<{
+    id: string;
+    name: string;
+    status: string;
+    summary: string | null;
+    sortOrder: number;
+    taskCount: number;
+    openTaskCount: number;
+    tasks: Array<{
+      id: string;
+      title: string;
+      status: string;
+      dueDate: string | null;
+      isRequired: boolean;
+      sortOrder: number;
+      assignedToUser: {
+        id: string;
+        email: string;
+        name: string | null;
+      } | null;
+    }>;
+  }>;
+  backlogTasks: Array<{
+    id: string;
+    title: string;
+    status: string;
+    dueDate: string | null;
+    isRequired: boolean;
+    sortOrder: number;
+    assignedToUser: {
+      id: string;
+      email: string;
+      name: string | null;
+    } | null;
+  }>;
+}
+
+export interface PublicProposalSnapshot {
+  organizationName: string | null;
+  title: string | null;
+  summary: string;
+  createdAt: string;
+  updatedAt: string;
+  sections: Array<{
+    title: string;
+    lines: Array<{
+      name: string;
+      description: string | null;
+      qty: number;
+      unit: string | null;
+      priceCents: number;
+      lineTotalCents: number;
+    }>;
+  }>;
+  totals: {
+    lineItemCount: number;
+    subtotalCents: number;
+    totalCents: number;
+  };
+  depositSummary: {
+    policy: string;
+    requestedAmountCents: number;
+    paidAmountCents: number;
+    outstandingAmountCents: number;
+    depositRequestedAmountCents: number;
+    depositPaidAmountCents: number;
+    hasOpenDepositRequest: boolean;
+  };
+}
+
+export async function getLeads(query?: string) {
+  const search = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
+  return readJson<{ ok: true; leads: LeadListItem[] }>(`/leads${search}`);
+}
+
+export async function getLead(leadLookup: string) {
+  return readJson<{ ok: true; lead: LeadDetail }>(`/leads/${encodeURIComponent(leadLookup)}`);
+}
+
+export async function createLead(input: {
+  projectId?: string | null;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  status?: string | null;
+  stage?: string | null;
+  notes?: string | null;
+}) {
+  return sendJson<{ ok: true; lead: LeadDetail }>("/leads", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateLead(
+  leadId: string,
+  input: {
+    projectId?: string | null;
+    name?: string;
+    email?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    status?: string | null;
+    stage?: string | null;
+    notes?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; lead: LeadDetail }>(`/leads/${encodeURIComponent(leadId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getProposals(query?: string) {
+  const search = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
+  return readJson<{ ok: true; proposals: ProposalListItem[] }>(`/proposals${search}`);
+}
+
+export async function getProposal(proposalLookup: string) {
+  return readJson<{ ok: true; proposal: ProposalDetail }>(
+    `/proposals/${encodeURIComponent(proposalLookup)}`
+  );
+}
+
+export async function createProposal(input: {
+  projectId?: string | null;
+  leadId?: string | null;
+  title?: string | null;
+  status?: string | null;
+  depositPolicy?: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
+  version?: number;
+  publicToken?: string | null;
+}) {
+  return sendJson<{ ok: true; proposal: ProposalDetail }>("/proposals", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateProposal(
+  proposalId: string,
+  input: {
+    projectId?: string | null;
+    leadId?: string | null;
+    title?: string | null;
+    status?: string | null;
+    depositPolicy?: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
+    version?: number;
+    publicToken?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; proposal: ProposalDetail }>(
+    `/proposals/${encodeURIComponent(proposalId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function createProposalSection(
+  proposalId: string,
+  input: { title: string; sortOrder?: number }
+) {
+  return sendJson<{
+    ok: true;
+    section: { id: string; title: string; sortOrder: number };
+  }>(`/proposals/${encodeURIComponent(proposalId)}/sections`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateProposalSection(
+  proposalId: string,
+  sectionId: string,
+  input: { title?: string; sortOrder?: number }
+) {
+  return sendJson<{
+    ok: true;
+    section: { id: string; title: string; sortOrder: number };
+  }>(`/proposals/${encodeURIComponent(proposalId)}/sections/${encodeURIComponent(sectionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createProposalLine(
+  proposalId: string,
+  input: {
+    sectionId?: string | null;
+    name: string;
+    description?: string | null;
+    qty?: number;
+    unit?: string | null;
+    priceCents?: number;
+    sortOrder?: number;
+  }
+) {
+  return sendJson<{ ok: true; line: ProposalLineItem }>(
+    `/proposals/${encodeURIComponent(proposalId)}/lines`,
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function updateProposalLine(
+  proposalId: string,
+  lineId: string,
+  input: {
+    sectionId?: string | null;
+    name?: string;
+    description?: string | null;
+    qty?: number;
+    unit?: string | null;
+    priceCents?: number;
+    sortOrder?: number;
+  }
+) {
+  return sendJson<{ ok: true; line: ProposalLineItem }>(
+    `/proposals/${encodeURIComponent(proposalId)}/lines/${encodeURIComponent(lineId)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function createDepositRequest(
+  proposalId: string,
+  input: {
+    kind?: string;
+    status?: string;
+    amountCents: number;
+    currency?: string;
+    description?: string | null;
+    requestedAt?: string | null;
+    dueAt?: string | null;
+    externalReference?: string | null;
+    metadata?: unknown;
+  }
+) {
+  return sendJson<{ ok: true; depositRequest: DepositRequestItem }>(
+    `/proposals/${encodeURIComponent(proposalId)}/deposit-requests`,
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function listDepositRequests(proposalId: string) {
+  return readJson<{ ok: true; depositRequests: DepositRequestItem[] }>(
+    `/proposals/${encodeURIComponent(proposalId)}/deposit-requests`
+  );
+}
+
+export async function recordPayment(
+  proposalId: string,
+  input: {
+    depositRequestId?: string | null;
+    status?: string;
+    method?: string;
+    amountCents: number;
+    currency?: string;
+    direction?: string;
+    receivedAt?: string | null;
+    externalReference?: string | null;
+    provider?: string | null;
+    note?: string | null;
+    metadata?: unknown;
+  }
+) {
+  return sendJson<{ ok: true; payment: PaymentItem }>(
+    `/proposals/${encodeURIComponent(proposalId)}/payments`,
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function listPayments(proposalId: string) {
+  return readJson<{ ok: true; payments: PaymentItem[] }>(
+    `/proposals/${encodeURIComponent(proposalId)}/payments`
+  );
+}
+
+export async function getProposalPaymentSummary(proposalId: string) {
+  return readJson<{ ok: true; summary: ProposalPaymentSummary }>(
+    `/proposals/${encodeURIComponent(proposalId)}/payment-summary`
+  );
+}
+
+export async function createAcceptanceIntake(
+  proposalId: string,
+  input: {
+    source?: "PUBLIC_TOKEN" | "PROVIDER_CALLBACK" | "EXTERNAL_MANUAL_ENTRY";
+    tokenTtlHours?: number;
+    provider?: string;
+    providerReference?: string;
+    note?: string | null;
+    metadata?: unknown;
+    confirmed?: boolean;
+    signerName?: string;
+    signerEmail?: string | null;
+  }
+) {
+  return sendJson<{
+    ok: true;
+    intake: ProposalAcceptanceIntakeItem;
+    publicToken?: string;
+    publicTokenExpiresAt?: string | null;
+  }>(`/proposals/${encodeURIComponent(proposalId)}/acceptance-intakes`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function listAcceptanceIntakes(proposalId: string) {
+  return readJson<{ ok: true; intakes: ProposalAcceptanceIntakeItem[] }>(
+    `/proposals/${encodeURIComponent(proposalId)}/acceptance-intakes`
+  );
+}
+
+export async function getProposalAcceptance(proposalId: string) {
+  return readJson<{ ok: true; acceptance: ProposalAcceptanceItem }>(
+    `/proposals/${encodeURIComponent(proposalId)}/acceptance`
+  );
+}
+
+export async function createProposalAcceptance(
+  proposalId: string,
+  input: {
+    decisionSource?: string;
+    note?: string | null;
+    depositPolicy?: "NO_DEPOSIT_REQUIRED" | "DEPOSIT_REQUIRED_BEFORE_CONVERSION";
+    metadata?: unknown;
+  }
+) {
+  return sendJson<{ ok: true; acceptance: ProposalAcceptanceItem }>(
+    `/proposals/${encodeURIComponent(proposalId)}/acceptance`,
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function updateProposalAcceptance(
+  proposalId: string,
+  input: {
+    action: "accept" | "reject" | "cancel";
+    decisionSource?: string;
+    note?: string | null;
+    metadata?: unknown;
+  }
+) {
+  return sendJson<{ ok: true; acceptance: ProposalAcceptanceItem }>(
+    `/proposals/${encodeURIComponent(proposalId)}/acceptance`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function evaluateConversion(proposalId: string) {
+  return sendJson<{
+    ok: true;
+    eligibility: ProposalEligibility;
+    conversion: ProposalConversionItem;
+  }>(`/proposals/${encodeURIComponent(proposalId)}/conversion-evaluation`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
+export async function getConversion(proposalId: string) {
+  return readJson<{ ok: true; conversion: ProposalConversionItem }>(
+    `/proposals/${encodeURIComponent(proposalId)}/conversion`
+  );
+}
+
+export async function convertProposal(proposalId: string) {
+  return sendJson<{
+    ok: true;
+    eligibility: ProposalEligibility;
+    conversion: ProposalConversionItem;
+    project: {
+      id: string;
+      name: string;
+    };
+  }>(`/proposals/${encodeURIComponent(proposalId)}/convert`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
+export async function getProjects(query?: string) {
+  const search = query?.trim() ? `?q=${encodeURIComponent(query.trim())}` : "";
+  return readJson<{ ok: true; projects: ProjectListItem[] }>(`/projects${search}`);
+}
+
+export async function getProject(projectLookup: string) {
+  return readJson<{ ok: true; project: ProjectDetail }>(
+    `/projects/${encodeURIComponent(projectLookup)}`
+  );
+}
+
+export async function getPublicProposalReview(token: string) {
+  return sendJson<{
+    ok: true;
+    review: {
+      reviewAllowed: boolean;
+      intakeStatus: string;
+      blockedReasons: string[];
+      nextActions: string[];
+      proposal: PublicProposalSnapshot | null;
+    };
+  }>("/public/proposal-acceptance/review", {
+    method: "POST",
+    body: JSON.stringify({ token })
+  });
+}
+
+export async function getPublicProposalReviewContext(token: string) {
+  return sendJson<{
+    ok: true;
+    review: {
+      reviewAllowed: boolean;
+      intakeStatus: string;
+      blockedReasons: string[];
+      nextActions: string[];
+      proposal: PublicProposalSnapshot | null;
+    };
+  }>("/public/proposal-acceptance/review-context", {
+    method: "POST",
+    body: JSON.stringify({ token })
+  });
+}
+
+export async function submitPublicProposalAcceptance(input: {
+  token: string;
+  confirmed: boolean;
+  signerName: string;
+  signerEmail?: string | null;
+  note?: string | null;
+  metadata?: unknown;
+}) {
+  return sendJson<{
+    ok: true;
+    intake: ProposalAcceptanceIntakeItem;
+    verification: {
+      verified: boolean;
+      reasons: string[];
+      normalizedDecisionSource: string;
+      evidenceSummary: Array<{ kind: string; value?: string | null }>;
+      handoffAllowed: boolean;
+    };
+    handoff: {
+      status: string;
+      skipped: boolean;
+      acceptance?: ProposalAcceptanceItem;
+    };
+  }>("/public/proposal-acceptance/submit", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getPublicAcceptancePresentationState(token: string) {
+  return sendJson<{
+    ok: true;
+    presentation: {
+      state: string;
+      reviewAllowed: boolean;
+      blockedReasons: string[];
+      nextActions: string[];
+      reviewCompleted: boolean;
+      submissionCompleted: boolean;
+      confirmationCompleted: boolean;
+    };
+  }>("/public/proposal-acceptance/presentation-state", {
+    method: "POST",
+    body: JSON.stringify({ token })
+  });
+}
+
+export async function getPublicAcceptanceInstructions(token: string) {
+  return sendJson<{
+    ok: true;
+    instructions: {
+      state: string;
+      reviewAllowed: boolean;
+      blockedReasons: string[];
+      nextActions: string[];
+      instructions: Array<{ key: string; label: string; detail: string }>;
+    };
+  }>("/public/proposal-acceptance/instructions", {
+    method: "POST",
+    body: JSON.stringify({ token })
+  });
+}
+
+export async function getPublicAcceptanceReadyState(token: string) {
+  return sendJson<{
+    ok: true;
+    ready: {
+      state: string;
+      reviewAllowed: boolean;
+      blockedReasons: string[];
+      nextActions: string[];
+      reviewCompleted: boolean;
+      submissionCompleted: boolean;
+      confirmationCompleted: boolean;
+    };
+  }>("/public/proposal-acceptance/ready-state", {
+    method: "POST",
+    body: JSON.stringify({ token })
+  });
+}
+
+export async function getPublicAcceptanceConfirmation(token: string) {
+  return sendJson<{
+    ok: true;
+    confirmation: {
+      state: string;
+      submissionCompleted: boolean;
+      confirmationSummary: {
+        headline: string;
+        detail: string;
+        submittedAt: string | null;
+        confirmedAt: string | null;
+      } | null;
+      nextActions: string[];
+      blockedReasons: string[];
+    };
+  }>("/public/proposal-acceptance/confirmation", {
+    method: "POST",
+    body: JSON.stringify({ token })
+  });
+}
+
+export async function trackPublicAcceptancePresentationViewed(token: string) {
+  return sendJson<{ ok: true }>("/public/proposal-acceptance/presentation-viewed", {
+    method: "POST",
+    body: JSON.stringify({ token })
+  });
+}

@@ -69,8 +69,8 @@ export function MarketingHome({
         <article className="rounded-[1.5rem] border border-[var(--panel-border)] bg-[var(--panel)] p-6">
           <h2 className="text-xl font-semibold text-white">Incremental rollout</h2>
           <p className="mt-3 text-sm leading-6 text-[var(--muted)]">
-            Craft &amp; Board can coexist briefly during cutover, but the SaaS
-            brand and canonical domains now belong to FieldMetriq.
+            Legacy SaaS domains can coexist briefly during cutover, but the
+            canonical product identity and domains now belong to FieldMetriq.
           </p>
         </article>
       </section>

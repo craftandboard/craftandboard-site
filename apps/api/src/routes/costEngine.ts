@@ -16,10 +16,12 @@ import {
   createEdgeBandCostRule,
   createLaunchGuardrailProfile,
   createLaunchTemplate,
+  buildListingPrepPackage,
   createMaterialCostRule,
   createPackagingCostRule,
   createShippingCostRule,
   createShippingZoneRule,
+  evaluateMarketplaceFieldValidation,
   getAmazonFeePreset,
   getComparisonSet,
   getComparisonSetExportSummary,
@@ -28,6 +30,7 @@ import {
   getComparisonSetRecommendation,
   getLaunchGuardrailProfile,
   getLaunchTemplate,
+  getListingPrepPackage,
   getShelfCostCalculation,
   getShippingZoneRule,
   listAmazonFeePresets,
@@ -35,8 +38,10 @@ import {
   listCostProfiles,
   listLaunchGuardrailProfiles,
   listLaunchTemplates,
+  listListingPrepPackages,
   listShelfCostCalculations,
   listShippingZoneRules,
+  requestPriceFloorOverride,
   saveComparisonSet,
   saveShelfCostCalculation,
   rankComparisonSet,
@@ -59,6 +64,7 @@ import {
   compareShelfCostScenariosSchema,
   comparisonSetIdParamsSchema,
   costProfileIdParamsSchema,
+  buildListingPrepPackageSchema,
   createAmazonFeePresetSchema,
   createCostProfileSchema,
   createEdgeBandCostRuleSchema,
@@ -74,8 +80,11 @@ import {
   listShippingZoneRulesQuerySchema,
   materialRuleIdParamsSchema,
   edgeBandRuleIdParamsSchema,
+  listingPrepPackageIdParamsSchema,
+  listListingPrepPackagesQuerySchema,
   packagingRuleIdParamsSchema,
   presetIdParamsSchema,
+  priceFloorOverrideSchema,
   saveComparisonSetSchema,
   saveShelfCostCalculationSchema,
   shippingRuleIdParamsSchema,
@@ -88,6 +97,7 @@ import {
   updatePackagingCostRuleSchema,
   updateShippingCostRuleSchema,
   updateShippingZoneRuleSchema,
+  validateMarketplaceFieldsSchema,
   zoneRuleIdParamsSchema,
   templateIdParamsSchema,
   guardrailProfileIdParamsSchema,
@@ -119,7 +129,8 @@ function handleCostEngineRouteError(error: unknown, res: any, next: any) {
       "Shipping zone rule not found.",
       "Cost comparison set not found.",
       "Launch template not found.",
-      "Launch guardrail profile not found."
+      "Launch guardrail profile not found.",
+      "Listing prep package not found."
     ]);
     res.status(notFoundErrors.has(error.message) ? 404 : 400).json({ ok: false, error: error.message });
     return;
@@ -782,6 +793,91 @@ router.get("/cost-comparison-sets/:comparisonSetId/export-summary", async (req, 
       await getComparisonSetExportSummary({
         organizationId: context.currentOrganization.id,
         comparisonSetId: params.comparisonSetId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-comparison-sets/:comparisonSetId/listing-prep-package", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    const body = buildListingPrepPackageSchema.parse(req.body);
+    res.status(201).json(
+      await buildListingPrepPackage({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const query = listListingPrepPackagesQuerySchema.parse(req.query);
+    res.json(
+      await listListingPrepPackages({
+        organizationId: context.currentOrganization.id,
+        ...query
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getListingPrepPackage({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post(
+  "/listing-prep-packages/:listingPrepPackageId/validate-marketplace-fields",
+  async (req, res, next) => {
+    try {
+      const context = getCostCalculationWriteContext(req);
+      const params = listingPrepPackageIdParamsSchema.parse(req.params);
+      const body = validateMarketplaceFieldsSchema.parse(req.body);
+      res.json(
+        await evaluateMarketplaceFieldValidation({
+          organizationId: context.currentOrganization.id,
+          listingPrepPackageId: params.listingPrepPackageId,
+          ...body
+        })
+      );
+    } catch (error) {
+      handleCostEngineRouteError(error, res, next);
+    }
+  }
+);
+
+router.post("/listing-prep-packages/:listingPrepPackageId/price-floor-override", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    const body = priceFloorOverrideSchema.parse(req.body);
+    res.json(
+      await requestPriceFloorOverride({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId,
+        approvedByMembershipId: (context as any).currentMembership?.id ?? null,
+        ...body
       })
     );
   } catch (error) {

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import {
+  buildCostListingPrepPackage,
   calculateShelfCost,
   compareShelfCostScenarios,
   createAmazonFeePreset,
@@ -14,12 +15,14 @@ import {
   createShippingCostRule,
   createShippingZoneRule,
   evaluateCostComparisonListingReadiness,
+  getListingPrepPackage,
   getCostComparisonSet,
   getCostComparisonSets,
   getCostProfile,
   getCostProfiles,
   getLaunchGuardrailProfiles,
   getShelfCostCalculations,
+  requestCostPriceFloorOverride,
   selectCostLaunchScenario,
   saveCostComparisonSet,
   saveShelfCostCalculation,
@@ -30,6 +33,7 @@ import {
   updatePackagingCostRule,
   updateShippingCostRule,
   updateShippingZoneRule,
+  validateCostListingMarketplaceFields,
   type LaunchGuardrailProfileItem,
   type LaunchTemplateItem,
   type ComparisonSetListItem,
@@ -40,6 +44,7 @@ import {
   type CostProfileDetail,
   type CostProfileSummaryItem,
   type CostScenarioInput,
+  type ListingPrepPackageRecord,
   type ShelfCostCalculationRecord
 } from "../lib/api";
 import { CostAssumptionsPanel } from "./cost-assumptions-panel";
@@ -53,8 +58,11 @@ import { LaunchReadinessCard } from "./launch-readiness-card";
 import { LaunchRecommendationCard } from "./launch-recommendation-card";
 import { LaunchRiskSummaryCard } from "./launch-risk-summary-card";
 import { LaunchTemplateEditor } from "./launch-template-editor";
+import { ListingPrepPackageCard } from "./listing-prep-package-card";
 import { ListingPrepFieldCard } from "./listing-prep-field-card";
+import { MarketplaceMappingValidationCard } from "./marketplace-mapping-validation-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
+import { PriceFloorOverrideReviewCard } from "./price-floor-override-review-card";
 import { CostProfileEditor } from "./cost-profile-editor";
 import { CostScenarioBuilder } from "./cost-scenario-builder";
 import { CostScenarioComparisonCard } from "./cost-scenario-comparison-card";
@@ -99,6 +107,7 @@ export function CostCalculatorForm() {
   const [preview, setPreview] = useState<CostCalculationPreview | null>(null);
   const [result, setResult] = useState<CostCalculationResult | null>(null);
   const [comparison, setComparison] = useState<CostComparisonResult | null>(null);
+  const [listingPrepPackage, setListingPrepPackage] = useState<ListingPrepPackageRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -477,7 +486,14 @@ export function CostCalculatorForm() {
             throw new Error("Comparison set not found.");
           }
           const comparisonSet = payload.comparisonSet;
+          const selectedListingPrepPackageId = comparisonSet.selectedListingPrepPackageId;
+          let selectedListingPrepPackage: ListingPrepPackageRecord | null = null;
+          if (selectedListingPrepPackageId) {
+            const listingPrepPayload = await getListingPrepPackage(selectedListingPrepPackageId);
+            selectedListingPrepPackage = listingPrepPayload?.listingPrepPackage ?? null;
+          }
           setActiveComparisonSetId(comparisonSet.id);
+          setListingPrepPackage(selectedListingPrepPackage ?? null);
           const baseSpec = comparisonSet.baseShelfSpecSnapshot as unknown as CostCalculationInput;
           setForm((current) => ({
             ...current,
@@ -554,6 +570,9 @@ export function CostCalculatorForm() {
             selectedLaunchReadinessStatus: comparisonSet.selectedLaunchReadinessStatus ?? null,
             selectedLaunchWarningSnapshot: comparisonSet.selectedLaunchWarningSnapshot ?? null,
             selectedLaunchExportSnapshot: comparisonSet.selectedLaunchExportSnapshot ?? null,
+            selectedListingPrepPackageId: comparisonSet.selectedListingPrepPackageId ?? null,
+            selectedListingPrepPackageName: comparisonSet.selectedListingPrepPackageName ?? null,
+            listingPrepSummarySnapshot: comparisonSet.listingPrepSummarySnapshot ?? null,
             scenarios: comparisonSet.scenarios.map((entry, index) => ({
               id: entry.scenario.id,
               name: entry.scenario.name,
@@ -594,6 +613,10 @@ export function CostCalculatorForm() {
               exportSnapshot: entry.scenario.exportSnapshot,
               isRecommendedLaunchScenario: entry.scenario.isRecommendedLaunchScenario,
               isLaunchApprovedCandidate: entry.scenario.isLaunchApprovedCandidate,
+              listingPrepPackageId: entry.scenario.listingPrepPackageId,
+              priceFloorOverrideRequested: entry.scenario.priceFloorOverrideRequested,
+              priceFloorOverrideApproved: entry.scenario.priceFloorOverrideApproved,
+              priceFloorOverrideSnapshot: entry.scenario.priceFloorOverrideSnapshot,
               riskSummary:
                 typeof (entry.scenario.guardrailSnapshot as Record<string, unknown> | null)?.["summary"] === "string"
                   ? String((entry.scenario.guardrailSnapshot as Record<string, unknown>)["summary"])
@@ -1055,6 +1078,73 @@ export function CostCalculatorForm() {
     });
   }
 
+  function handleBuildListingPrepPackage() {
+    const comparisonSetId = activeComparisonSetId;
+    if (!comparisonSetId) {
+      setError("Save a comparison set before building a listing-prep package.");
+      return;
+    }
+
+    startTransition(() => {
+      void buildCostListingPrepPackage(comparisonSetId, {
+        selectedScenarioId: comparison?.selectedLaunchScenarioId ?? null
+      })
+        .then((payload) => {
+          setListingPrepPackage(payload.listingPrepPackage);
+          return loadComparisonSet(comparisonSetId);
+        })
+        .then(() => setSuccess("Listing-prep package created."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to build listing-prep package.")
+        );
+    });
+  }
+
+  function handleValidateMarketplaceFields() {
+    if (!listingPrepPackage) {
+      setError("Build a listing-prep package before validating marketplace fields.");
+      return;
+    }
+
+    startTransition(() => {
+      void validateCostListingMarketplaceFields(listingPrepPackage.id)
+        .then((payload) => {
+          setListingPrepPackage(payload.listingPrepPackage);
+          if (activeComparisonSetId) {
+            return loadComparisonSet(activeComparisonSetId);
+          }
+        })
+        .then(() => setSuccess("Marketplace field validation refreshed."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to validate marketplace fields.")
+        );
+    });
+  }
+
+  function handlePriceFloorOverride(formData: FormData) {
+    if (!listingPrepPackage) {
+      setError("Build a listing-prep package before reviewing a price-floor override.");
+      return;
+    }
+
+    const reason = String(formData.get("reason") ?? "").trim();
+    const approve = String(formData.get("approve") ?? "") === "true";
+
+    startTransition(() => {
+      void requestCostPriceFloorOverride(listingPrepPackage.id, { reason, approve })
+        .then((payload) => {
+          setListingPrepPackage(payload.listingPrepPackage);
+          if (activeComparisonSetId) {
+            return loadComparisonSet(activeComparisonSetId);
+          }
+        })
+        .then(() => setSuccess("Price-floor override review saved."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to save price-floor override review.")
+        );
+    });
+  }
+
   if (loading) {
     return <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-8 text-slate-300">Loading Hugo cost engine…</div>;
   }
@@ -1121,6 +1211,8 @@ export function CostCalculatorForm() {
           <button type="button" onClick={handleCompare} disabled={isPending} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Compare scenarios</button>
           <button type="button" onClick={handleSaveComparisonSet} disabled={isPending} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Save comparison set</button>
           <button type="button" onClick={handleEvaluateListingReadiness} disabled={isPending} className="rounded-full border border-sky-300/30 bg-sky-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Evaluate listing readiness</button>
+          <button type="button" onClick={handleBuildListingPrepPackage} disabled={isPending} className="rounded-full border border-violet-300/30 bg-violet-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Build listing-prep package</button>
+          <button type="button" onClick={handleValidateMarketplaceFields} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Validate marketplace fields</button>
         </div>
       </section>
 
@@ -1131,8 +1223,15 @@ export function CostCalculatorForm() {
           <LaunchRecommendationCard comparison={comparison} />
           <LaunchRiskSummaryCard comparison={comparison} />
           <LaunchReadinessCard comparison={comparison} />
+          <ListingPrepPackageCard comparison={comparison} listingPrepPackage={listingPrepPackage} />
+          <MarketplaceMappingValidationCard listingPrepPackage={listingPrepPackage} />
           <LaunchCandidateHandoffCard comparison={comparison} />
           <ListingPrepFieldCard comparison={comparison} />
+          <PriceFloorOverrideReviewCard
+            listingPrepPackage={listingPrepPackage}
+            onSubmit={handlePriceFloorOverride}
+            busy={isPending}
+          />
           <LaunchExportSummaryCard comparison={comparison} />
           <CostScenarioBuilder
             scenarios={scenarios}

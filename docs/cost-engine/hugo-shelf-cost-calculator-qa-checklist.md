@@ -53,6 +53,12 @@
 42. Reload the saved comparison set and confirm ranking, risk summary, selected launch candidate, readiness status, warning snapshot, and export summary persist
 43. Change one assumption or input and recalculate
 44. Confirm the result changes and remains explainable
+45. Build a listing-prep package from the selected launch scenario
+46. Verify the listing-prep package card shows package status, readiness status, scenario name, and validation summary
+47. Run marketplace field validation and confirm missing, weak, and ready fields render clearly
+48. If blocking floor warnings exist, enter an override reason and submit override review
+49. Verify the UI clearly distinguishes `READY`, `READY_FOR_REVIEW`, `READY_WITH_OVERRIDE`, and `BLOCKED`
+50. Reload the saved comparison set and confirm listing-prep package, validation snapshot, override summary, and export snapshot persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -64,3 +70,5 @@
 - A user can explain why the selected launch scenario is safe enough or still fragile before handing it into a future listing phase
 - A user can explain why a launch candidate is recommended but not yet listing-ready
 - A user can identify which marketplace-prep fields or price-floor warnings still need review before listing handoff
+- A user can identify whether a listing-prep package is blocked by missing fields or by unapproved floor-price override review
+- A user can point to the exact stable package snapshot that the next listing phase should consume

@@ -9,6 +9,7 @@ const repositoryMocks = vi.hoisted(() => ({
   createEdgeBandCostRuleRecord: vi.fn(),
   createLaunchGuardrailProfileRecord: vi.fn(),
   createLaunchTemplateRecord: vi.fn(),
+  createListingPrepPackageRecord: vi.fn(),
   createMaterialCostRuleRecord: vi.fn(),
   createPackagingCostRuleRecord: vi.fn(),
   createShelfCostCalculationRecord: vi.fn(),
@@ -19,6 +20,7 @@ const repositoryMocks = vi.hoisted(() => ({
   getCostProfileRecord: vi.fn(),
   getLaunchGuardrailProfileRecord: vi.fn(),
   getLaunchTemplateRecord: vi.fn(),
+  getListingPrepPackageRecord: vi.fn(),
   getShelfCostCalculationRecord: vi.fn(),
   getShippingZoneRuleRecord: vi.fn(),
   listAmazonFeePresetsForOrganization: vi.fn(),
@@ -26,6 +28,7 @@ const repositoryMocks = vi.hoisted(() => ({
   listCostProfilesForOrganization: vi.fn(),
   listLaunchGuardrailProfilesForOrganization: vi.fn(),
   listLaunchTemplatesForOrganization: vi.fn(),
+  listListingPrepPackagesForOrganization: vi.fn(),
   listShelfCostCalculationsForOrganization: vi.fn(),
   listShippingZoneRulesForOrganization: vi.fn(),
   updateAmazonFeePresetRecord: vi.fn(),
@@ -35,6 +38,7 @@ const repositoryMocks = vi.hoisted(() => ({
   updateCalculationScenarioRecord: vi.fn(),
   updateLaunchGuardrailProfileRecord: vi.fn(),
   updateLaunchTemplateRecord: vi.fn(),
+  updateListingPrepPackageRecord: vi.fn(),
   updateMaterialCostRuleRecord: vi.fn(),
   updatePackagingCostRuleRecord: vi.fn(),
   updateShippingCostRuleRecord: vi.fn(),
@@ -48,11 +52,16 @@ import {
   compareShelfCostScenarios,
   createLaunchGuardrailProfile,
   createLaunchTemplate,
+  buildListingPrepPackage,
+  evaluateMarketplaceFieldValidation,
   evaluateComparisonSetListingReadiness,
   getComparisonSetExportSummary,
+  getListingPrepPackage,
   getShelfCostCalculation,
   listLaunchGuardrailProfiles,
+  listListingPrepPackages,
   rankComparisonSet,
+  requestPriceFloorOverride,
   listCostProfiles,
   listLaunchTemplates,
   saveComparisonSet,
@@ -223,6 +232,7 @@ describe("cost engine service", () => {
     repositoryMocks.listCostProfilesForOrganization.mockResolvedValue([makeProfile()]);
     repositoryMocks.updateCalculationScenarioRecord.mockResolvedValue({ count: 1 });
     repositoryMocks.updateCalculationComparisonSetRecord.mockResolvedValue({ count: 1 });
+    repositoryMocks.updateListingPrepPackageRecord.mockResolvedValue({ count: 1 });
     repositoryMocks.getLaunchGuardrailProfileRecord.mockResolvedValue(null);
   });
 
@@ -893,5 +903,265 @@ describe("cost engine service", () => {
     });
 
     expect(payload.calculation.id).toBe("calc_1");
+  });
+
+  it("builds a listing-prep package for the selected launch scenario", async () => {
+    repositoryMocks.getCalculationComparisonSetRecord.mockResolvedValueOnce({
+      id: "compare_1",
+      organizationId: "org_local_craft_board",
+      name: "Launch compare",
+      notes: null,
+      selectedLaunchScenarioId: "scenario_1",
+      recommendedScenarioId: "scenario_1",
+      scenarios: [
+        {
+          calculationScenario: {
+            id: "scenario_1",
+            organizationId: "org_local_craft_board",
+            costProfileId: "profile_1",
+            name: "Balanced",
+            resultSnapshot: {
+              breakdown: {
+                subtotalCostCents: 5200,
+                breakEvenPriceCents: 6000,
+                recommendedMinSellPriceCents: 6400,
+                recommendedTargetSellPriceCents: 7600,
+                marketplaceFeeCostCents: 900,
+                returnReserveCostCents: 120,
+                damageReserveCostCents: 60
+              },
+              shipping: {
+                baseCostCents: 1100,
+                weightCostCents: 0,
+                volumeCostCents: 0,
+                dimensionalCostCents: 0,
+                shippingBufferCostCents: 90
+              },
+              amazonFees: {
+                closingFeeCostCents: 99,
+                fulfillmentFeeCostCents: 450,
+                storageAllowanceCostCents: 25,
+                advertisingAllowanceCostCents: 100,
+                miscMarketplaceCostCents: 20
+              }
+            },
+            warningSnapshot: [{ code: "FLOOR_TIGHT", severity: "BLOCKING", message: "Too close to floor" }],
+            handoffSnapshot: null,
+            launchStrategy: "BALANCED",
+            amazonFeePreset: { name: "Amazon Standard" },
+            shippingZoneRule: { name: "Zone 2" },
+            packagingRule: { packagingName: "Standard" },
+            shippingRule: { shippingName: "Ground" },
+            assumptionsSnapshot: {},
+            riskScore: { toNumber: () => 65 },
+            riskLevel: "HIGH",
+            listingReadinessStatus: "NEEDS_REVIEW",
+            createdAt: new Date("2026-03-10T00:00:00.000Z"),
+            updatedAt: new Date("2026-03-10T00:00:00.000Z")
+          }
+        }
+      ]
+    });
+    repositoryMocks.createListingPrepPackageRecord.mockResolvedValueOnce({ id: "package_1" });
+    repositoryMocks.getListingPrepPackageRecord.mockResolvedValueOnce({
+      id: "package_1",
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "compare_1",
+      calculationScenarioId: "scenario_1",
+      name: "Balanced listing prep",
+      status: "BLOCKED",
+      listingReadinessStatus: "NEEDS_REVIEW",
+      exportSnapshot: {},
+      marketplaceFieldSnapshot: {},
+      validationSnapshot: { validationStatus: "INVALID" },
+      warningSnapshot: [{ code: "FLOOR_TIGHT", severity: "BLOCKING", message: "Too close to floor" }],
+      overrideSnapshot: { overrideRequested: false, overrideApproved: false, summary: "Override required" },
+      notes: null,
+      approvedAt: null,
+      approvedByMembershipId: null,
+      calculationScenario: { name: "Balanced" },
+      comparisonSet: { name: "Launch compare" },
+      createdAt: new Date("2026-03-10T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-10T00:00:00.000Z")
+    });
+
+    const payload = await buildListingPrepPackage({
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "compare_1"
+    });
+
+    expect(repositoryMocks.createListingPrepPackageRecord).toHaveBeenCalled();
+    expect(repositoryMocks.updateCalculationScenarioRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organizationId: "org_local_craft_board",
+        scenarioId: "scenario_1",
+        data: expect.objectContaining({
+          listingPrepPackageId: "package_1"
+        })
+      })
+    );
+    expect(payload.listingPrepPackage.id).toBe("package_1");
+  });
+
+  it("revalidates marketplace fields for a listing-prep package", async () => {
+    repositoryMocks.getListingPrepPackageRecord
+      .mockResolvedValueOnce({
+        id: "package_1",
+        organizationId: "org_local_craft_board",
+        comparisonSetId: "compare_1",
+        calculationScenarioId: "scenario_1",
+        name: "Balanced listing prep",
+        status: "READY_FOR_REVIEW",
+        listingReadinessStatus: "NEEDS_REVIEW",
+        marketplaceFieldSnapshot: { productLabel: "Shelf", dimensionSummary: "30 x 12", materialSummary: "White melamine" },
+        validationSnapshot: {},
+        warningSnapshot: [],
+        overrideSnapshot: { overrideRequested: false, overrideApproved: false },
+        notes: null,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      })
+      .mockResolvedValueOnce({
+        id: "package_1",
+        organizationId: "org_local_craft_board",
+        comparisonSetId: "compare_1",
+        calculationScenarioId: "scenario_1",
+        name: "Balanced listing prep",
+        status: "READY_FOR_REVIEW",
+        listingReadinessStatus: "NEEDS_REVIEW",
+        exportSnapshot: {},
+        marketplaceFieldSnapshot: {},
+        validationSnapshot: { validationStatus: "REVIEW_NEEDED", weakFields: ["sku"] },
+        warningSnapshot: [],
+        overrideSnapshot: { overrideRequested: false, overrideApproved: false },
+        notes: "Revalidated",
+        approvedAt: null,
+        approvedByMembershipId: null,
+        calculationScenario: { name: "Balanced" },
+        comparisonSet: { name: "Launch compare" },
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      });
+
+    const payload = await evaluateMarketplaceFieldValidation({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1",
+      notes: "Revalidated"
+    });
+
+    expect(repositoryMocks.updateListingPrepPackageRecord).toHaveBeenCalled();
+    expect(payload.listingPrepPackage.id).toBe("package_1");
+  });
+
+  it("records a price-floor override request and approval on a listing-prep package", async () => {
+    repositoryMocks.getListingPrepPackageRecord
+      .mockResolvedValueOnce({
+        id: "package_1",
+        organizationId: "org_local_craft_board",
+        comparisonSetId: "compare_1",
+        calculationScenarioId: "scenario_1",
+        name: "Balanced listing prep",
+        status: "BLOCKED",
+        listingReadinessStatus: "NEEDS_REVIEW",
+        marketplaceFieldSnapshot: { productLabel: "Shelf" },
+        validationSnapshot: {},
+        warningSnapshot: [{ code: "FLOOR_TIGHT", severity: "BLOCKING", message: "Too close to floor" }],
+        overrideSnapshot: { overrideRequested: false, overrideApproved: false },
+        notes: null,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      })
+      .mockResolvedValueOnce({
+        id: "package_1",
+        organizationId: "org_local_craft_board",
+        comparisonSetId: "compare_1",
+        calculationScenarioId: "scenario_1",
+        name: "Balanced listing prep",
+        status: "BLOCKED",
+        listingReadinessStatus: "NEEDS_REVIEW",
+        exportSnapshot: {},
+        marketplaceFieldSnapshot: {},
+        validationSnapshot: { validationStatus: "INVALID" },
+        warningSnapshot: [{ code: "FLOOR_TIGHT", severity: "BLOCKING", message: "Too close to floor" }],
+        overrideSnapshot: { overrideRequested: true, overrideApproved: true, overrideReason: "Intentional" },
+        notes: null,
+        approvedAt: new Date("2026-03-10T00:00:00.000Z"),
+        approvedByMembershipId: "membership_1",
+        calculationScenario: { name: "Balanced" },
+        comparisonSet: { name: "Launch compare" },
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      });
+
+    const payload = await requestPriceFloorOverride({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1",
+      reason: "Intentional margin tradeoff",
+      approve: true,
+      approvedByMembershipId: "membership_1"
+    });
+
+    expect(repositoryMocks.updateListingPrepPackageRecord).toHaveBeenCalled();
+    expect(repositoryMocks.updateCalculationScenarioRecord).toHaveBeenCalled();
+    expect(payload.listingPrepPackage.id).toBe("package_1");
+  });
+
+  it("lists listing-prep packages in org scope", async () => {
+    repositoryMocks.listListingPrepPackagesForOrganization.mockResolvedValueOnce([
+      {
+        id: "package_1",
+        organizationId: "org_local_craft_board",
+        comparisonSetId: "compare_1",
+        calculationScenarioId: "scenario_1",
+        name: "Balanced listing prep",
+        status: "READY",
+        listingReadinessStatus: "READY",
+        exportSnapshot: {},
+        marketplaceFieldSnapshot: {},
+        validationSnapshot: { validationStatus: "VALID" },
+        warningSnapshot: [],
+        overrideSnapshot: { overrideRequested: false, overrideApproved: false },
+        notes: null,
+        approvedAt: null,
+        approvedByMembershipId: null,
+        calculationScenario: { name: "Balanced" },
+        comparisonSet: { name: "Launch compare" },
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      }
+    ]);
+
+    const payload = await listListingPrepPackages({ organizationId: "org_local_craft_board" });
+    expect(payload.listingPrepPackages).toHaveLength(1);
+  });
+
+  it("returns a saved listing-prep package in org scope", async () => {
+    repositoryMocks.getListingPrepPackageRecord.mockResolvedValueOnce({
+      id: "package_1",
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "compare_1",
+      calculationScenarioId: "scenario_1",
+      name: "Balanced listing prep",
+      status: "READY",
+      listingReadinessStatus: "READY",
+      exportSnapshot: {},
+      marketplaceFieldSnapshot: {},
+      validationSnapshot: { validationStatus: "VALID" },
+      warningSnapshot: [],
+      overrideSnapshot: { overrideRequested: false, overrideApproved: false },
+      notes: null,
+      approvedAt: null,
+      approvedByMembershipId: null,
+      calculationScenario: { name: "Balanced" },
+      comparisonSet: { name: "Launch compare" },
+      createdAt: new Date("2026-03-10T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-10T00:00:00.000Z")
+    });
+
+    const payload = await getListingPrepPackage({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1"
+    });
+    expect(payload.listingPrepPackage.id).toBe("package_1");
   });
 });

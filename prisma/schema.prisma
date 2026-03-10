@@ -43,6 +43,14 @@ enum ListingReadinessStatus {
   BLOCKED
 }
 
+enum ListingPrepPackageStatus {
+  DRAFT
+  READY_FOR_REVIEW
+  READY
+  BLOCKED
+  ARCHIVED
+}
+
 enum ShelfCostEdgeBandPattern {
   NONE
   LONG_EDGES
@@ -809,6 +817,7 @@ model Organization {
   comparisonSetScenarios ComparisonSetScenario[]
   launchTemplates LaunchTemplate[]
   launchGuardrailProfiles LaunchGuardrailProfile[]
+  listingPrepPackages ListingPrepPackage[]
   shelfCostEstimates ShelfCostEstimate[]
   orderCostEstimates OrderCostEstimate[]
   shelfProducts ShelfProduct[]
@@ -2582,12 +2591,19 @@ model CalculationScenario {
   comparisonSetScenarios ComparisonSetScenario[]
   recommendedByComparisonSets CalculationComparisonSet[] @relation("ComparisonSetRecommendation")
   selectedByComparisonSets CalculationComparisonSet[] @relation("ComparisonSetSelectedLaunch")
+  listingPrepPackages    ListingPrepPackage[] @relation("ScenarioListingPrepPackages")
+  linkedListingPrepPackage ListingPrepPackage? @relation("ScenarioPrimaryListingPrepPackage", fields: [listingPrepPackageId], references: [id])
+  listingPrepPackageId   String?
+  priceFloorOverrideRequested Boolean          @default(false)
+  priceFloorOverrideApproved Boolean           @default(false)
+  priceFloorOverrideSnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
   @@index([organizationId, rankingScore])
   @@index([organizationId, riskLevel])
   @@index([organizationId, listingReadinessStatus])
+  @@unique([listingPrepPackageId])
 }
 
 model CalculationComparisonSet {
@@ -2605,17 +2621,52 @@ model CalculationComparisonSet {
   selectedLaunchExportSnapshot Json?
   selectedLaunchReadinessStatus ListingReadinessStatus?
   selectedLaunchWarningSnapshot Json?
+  selectedListingPrepPackageId String?
+  listingPrepSummarySnapshot Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
   scenarios            ComparisonSetScenario[]
   recommendedScenario  CalculationScenario?   @relation("ComparisonSetRecommendation", fields: [recommendedScenarioId], references: [id])
   selectedLaunchScenario CalculationScenario? @relation("ComparisonSetSelectedLaunch", fields: [selectedLaunchScenarioId], references: [id])
+  listingPrepPackages  ListingPrepPackage[]
+  selectedListingPrepPackage ListingPrepPackage? @relation("ComparisonSetSelectedListingPrepPackage", fields: [selectedListingPrepPackageId], references: [id])
 
   @@index([organizationId, createdAt])
   @@index([organizationId, recommendedScenarioId])
   @@index([organizationId, selectedLaunchScenarioId])
   @@index([organizationId, selectedLaunchReadinessStatus])
+  @@index([organizationId, selectedListingPrepPackageId])
+}
+
+model ListingPrepPackage {
+  id                     String                   @id @default(cuid())
+  organizationId         String
+  comparisonSetId        String?
+  calculationScenarioId  String
+  name                   String
+  status                 ListingPrepPackageStatus @default(DRAFT)
+  listingReadinessStatus ListingReadinessStatus
+  exportSnapshot         Json
+  marketplaceFieldSnapshot Json
+  validationSnapshot     Json
+  warningSnapshot        Json?
+  overrideSnapshot       Json?
+  notes                  String?
+  approvedAt             DateTime?
+  approvedByMembershipId String?
+  createdAt              DateTime                 @default(now())
+  updatedAt              DateTime                 @updatedAt
+  organization           Organization             @relation(fields: [organizationId], references: [id])
+  comparisonSet          CalculationComparisonSet? @relation(fields: [comparisonSetId], references: [id])
+  primaryForScenario     CalculationScenario?     @relation("ScenarioPrimaryListingPrepPackage")
+  calculationScenario    CalculationScenario      @relation("ScenarioListingPrepPackages", fields: [calculationScenarioId], references: [id])
+  selectedByComparisonSets CalculationComparisonSet[] @relation("ComparisonSetSelectedListingPrepPackage")
+
+  @@index([organizationId, status])
+  @@index([organizationId, listingReadinessStatus])
+  @@index([organizationId, calculationScenarioId])
+  @@index([organizationId, comparisonSetId])
 }
 
 model ComparisonSetScenario {

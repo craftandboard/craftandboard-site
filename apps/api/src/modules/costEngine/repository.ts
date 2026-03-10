@@ -657,6 +657,10 @@ export async function createCalculationScenarioRecord(input: {
   exportSnapshot?: unknown;
   isRecommendedLaunchScenario?: boolean;
   isLaunchApprovedCandidate?: boolean;
+  listingPrepPackageId?: string | null;
+  priceFloorOverrideRequested?: boolean;
+  priceFloorOverrideApproved?: boolean;
+  priceFloorOverrideSnapshot?: unknown;
   assumptionsSnapshot: unknown;
   resultSnapshot: unknown;
 }) {
@@ -686,6 +690,10 @@ export async function createCalculationScenarioRecord(input: {
       exportSnapshot: normalizeMetadata(input.exportSnapshot),
       isRecommendedLaunchScenario: input.isRecommendedLaunchScenario ?? false,
       isLaunchApprovedCandidate: input.isLaunchApprovedCandidate ?? false,
+      listingPrepPackageId: input.listingPrepPackageId ?? undefined,
+      priceFloorOverrideRequested: input.priceFloorOverrideRequested ?? false,
+      priceFloorOverrideApproved: input.priceFloorOverrideApproved ?? false,
+      priceFloorOverrideSnapshot: normalizeMetadata(input.priceFloorOverrideSnapshot),
       assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
       resultSnapshot: normalizeMetadata(input.resultSnapshot)
     }
@@ -706,6 +714,8 @@ export async function createCalculationComparisonSetRecord(input: {
   selectedLaunchExportSnapshot?: unknown;
   selectedLaunchReadinessStatus?: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
   selectedLaunchWarningSnapshot?: unknown;
+  selectedListingPrepPackageId?: string | null;
+  listingPrepSummarySnapshot?: unknown;
 }) {
   return prismaClient.calculationComparisonSet.create({
     data: {
@@ -721,7 +731,9 @@ export async function createCalculationComparisonSetRecord(input: {
       riskSummary: normalizeMetadata(input.riskSummary),
       selectedLaunchExportSnapshot: normalizeMetadata(input.selectedLaunchExportSnapshot),
       selectedLaunchReadinessStatus: input.selectedLaunchReadinessStatus ?? undefined,
-      selectedLaunchWarningSnapshot: normalizeMetadata(input.selectedLaunchWarningSnapshot)
+      selectedLaunchWarningSnapshot: normalizeMetadata(input.selectedLaunchWarningSnapshot),
+      selectedListingPrepPackageId: input.selectedListingPrepPackageId ?? undefined,
+      listingPrepSummarySnapshot: normalizeMetadata(input.listingPrepSummarySnapshot)
     }
   });
 }
@@ -782,14 +794,16 @@ export async function listCalculationComparisonSetsForOrganization(organizationI
               shippingZoneRule: true,
               guardrailProfile: true,
               packagingRule: true,
-              shippingRule: true
+              shippingRule: true,
+              linkedListingPrepPackage: true
             }
           }
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
       },
       recommendedScenario: true,
-      selectedLaunchScenario: true
+      selectedLaunchScenario: true,
+      selectedListingPrepPackage: true
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }]
   });
@@ -813,14 +827,107 @@ export async function getCalculationComparisonSetRecord(input: {
               shippingZoneRule: true,
               guardrailProfile: true,
               packagingRule: true,
-              shippingRule: true
+              shippingRule: true,
+              linkedListingPrepPackage: true
             }
           }
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
       },
       recommendedScenario: true,
-      selectedLaunchScenario: true
+      selectedLaunchScenario: true,
+      selectedListingPrepPackage: true
+    }
+  });
+}
+
+export async function createListingPrepPackageRecord(input: {
+  organizationId: string;
+  comparisonSetId?: string | null;
+  calculationScenarioId: string;
+  name: string;
+  status?: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "BLOCKED" | "ARCHIVED";
+  listingReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED";
+  exportSnapshot: unknown;
+  marketplaceFieldSnapshot: unknown;
+  validationSnapshot: unknown;
+  warningSnapshot?: unknown;
+  overrideSnapshot?: unknown;
+  notes?: string | null;
+  approvedAt?: Date | null;
+  approvedByMembershipId?: string | null;
+}) {
+  return prismaClient.listingPrepPackage.create({
+    data: {
+      organizationId: input.organizationId,
+      comparisonSetId: input.comparisonSetId ?? undefined,
+      calculationScenarioId: input.calculationScenarioId,
+      name: input.name,
+      status: input.status ?? "DRAFT",
+      listingReadinessStatus: input.listingReadinessStatus,
+      exportSnapshot: normalizeMetadata(input.exportSnapshot),
+      marketplaceFieldSnapshot: normalizeMetadata(input.marketplaceFieldSnapshot),
+      validationSnapshot: normalizeMetadata(input.validationSnapshot),
+      warningSnapshot: normalizeMetadata(input.warningSnapshot),
+      overrideSnapshot: normalizeMetadata(input.overrideSnapshot),
+      notes: input.notes ?? null,
+      approvedAt: input.approvedAt ?? null,
+      approvedByMembershipId: input.approvedByMembershipId ?? null
+    }
+  });
+}
+
+export async function updateListingPrepPackageRecord(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+  data: Record<string, unknown>;
+}) {
+  return prismaClient.listingPrepPackage.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      id: input.listingPrepPackageId
+    },
+    data: input.data
+  });
+}
+
+export async function listListingPrepPackagesForOrganization(input: {
+  organizationId: string;
+  status?: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "BLOCKED" | "ARCHIVED";
+}) {
+  return prismaClient.listingPrepPackage.findMany({
+    where: {
+      organizationId: input.organizationId,
+      ...(input.status ? { status: input.status } : {})
+    },
+    include: {
+      calculationScenario: true,
+      comparisonSet: true
+    },
+    orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
+  });
+}
+
+export async function getListingPrepPackageRecord(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  return prismaClient.listingPrepPackage.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      id: input.listingPrepPackageId
+    },
+    include: {
+      calculationScenario: {
+        include: {
+          amazonFeePreset: true,
+          shippingZoneRule: true,
+          packagingRule: true,
+          shippingRule: true,
+          guardrailProfile: true
+        }
+      },
+      comparisonSet: true
     }
   });
 }

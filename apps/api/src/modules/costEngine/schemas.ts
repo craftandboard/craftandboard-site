@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
   COST_PROFILE_STATUSES,
   LISTING_READINESS_STATUSES,
+  LISTING_PREP_PACKAGE_STATUSES,
   LAUNCH_RISK_LEVELS,
   LAUNCH_STRATEGIES,
   SHELF_COST_EDGE_BAND_PATTERNS
@@ -17,6 +18,7 @@ export const shelfCostEdgeBandPatternSchema = z.enum(SHELF_COST_EDGE_BAND_PATTER
 export const launchStrategySchema = z.enum(LAUNCH_STRATEGIES);
 export const launchRiskLevelSchema = z.enum(LAUNCH_RISK_LEVELS);
 export const listingReadinessStatusSchema = z.enum(LISTING_READINESS_STATUSES);
+export const listingPrepPackageStatusSchema = z.enum(LISTING_PREP_PACKAGE_STATUSES);
 
 export const costProfileIdParamsSchema = z.object({
   costProfileId: z.string().trim().min(1)
@@ -60,6 +62,10 @@ export const templateIdParamsSchema = z.object({
 
 export const guardrailProfileIdParamsSchema = z.object({
   guardrailProfileId: z.string().trim().min(1)
+});
+
+export const listingPrepPackageIdParamsSchema = z.object({
+  listingPrepPackageId: z.string().trim().min(1)
 });
 
 export const createCostProfileSchema = z.object({
@@ -332,6 +338,25 @@ export const selectLaunchScenarioSchema = z.object({
 
 export const evaluateListingReadinessSchema = z.object({
   selectedScenarioId: z.string().trim().min(1).nullable().optional()
+});
+
+export const buildListingPrepPackageSchema = z.object({
+  selectedScenarioId: z.string().trim().min(1).nullable().optional(),
+  notes: z.string().trim().max(4000).nullable().optional()
+});
+
+export const listListingPrepPackagesQuerySchema = z.object({
+  status: listingPrepPackageStatusSchema.optional()
+});
+
+export const validateMarketplaceFieldsSchema = z.object({
+  notes: z.string().trim().max(4000).nullable().optional()
+});
+
+export const priceFloorOverrideSchema = z.object({
+  reason: z.string().trim().min(3).max(4000),
+  approve: z.boolean().default(false),
+  approvedByMembershipId: z.string().trim().min(1).nullable().optional()
 });
 
 export const listShelfCostCalculationsQuerySchema = z.object({

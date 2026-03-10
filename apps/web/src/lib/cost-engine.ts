@@ -223,3 +223,61 @@ export function getListingReadinessTone(status: string | null | undefined) {
       return "border-white/10 bg-white/5 text-slate-200";
   }
 }
+
+export function getListingPrepPackageStatusLabel(status: string | null | undefined) {
+  switch (status) {
+    case "DRAFT":
+      return "Draft";
+    case "READY_FOR_REVIEW":
+      return "Ready for review";
+    case "READY":
+      return "Ready";
+    case "BLOCKED":
+      return "Blocked";
+    case "ARCHIVED":
+      return "Archived";
+    default:
+      return "Unknown";
+  }
+}
+
+export function getListingPrepPackageStatusTone(status: string | null | undefined) {
+  switch (status) {
+    case "READY":
+      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+    case "READY_FOR_REVIEW":
+      return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+    case "BLOCKED":
+      return "border-rose-400/30 bg-rose-400/10 text-rose-100";
+    case "ARCHIVED":
+      return "border-slate-400/30 bg-slate-400/10 text-slate-200";
+    default:
+      return "border-white/10 bg-white/5 text-slate-200";
+  }
+}
+
+export function getFieldValidationLabel(status: string | null | undefined) {
+  switch (status) {
+    case "VALID":
+      return "Valid";
+    case "REVIEW_NEEDED":
+      return "Needs review";
+    case "INVALID":
+      return "Invalid";
+    default:
+      return "Not checked";
+  }
+}
+
+export function getFieldValidationTone(status: string | null | undefined) {
+  switch (status) {
+    case "VALID":
+      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+    case "REVIEW_NEEDED":
+      return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+    case "INVALID":
+      return "border-rose-400/30 bg-rose-400/10 text-rose-100";
+    default:
+      return "border-white/10 bg-white/5 text-slate-200";
+  }
+}

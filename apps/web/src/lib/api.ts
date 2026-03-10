@@ -3251,6 +3251,10 @@ export interface CostScenarioResult {
   exportSnapshot?: Record<string, unknown> | null;
   isRecommendedLaunchScenario: boolean;
   isLaunchApprovedCandidate?: boolean;
+  listingPrepPackageId?: string | null;
+  priceFloorOverrideRequested?: boolean;
+  priceFloorOverrideApproved?: boolean;
+  priceFloorOverrideSnapshot?: Record<string, unknown> | null;
   deltas: {
     subtotalCostCents: number;
     breakEvenPriceCents: number;
@@ -3289,6 +3293,9 @@ export interface CostComparisonResult {
   selectedLaunchReadinessStatus?: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
   selectedLaunchWarningSnapshot?: Array<Record<string, unknown>> | null;
   selectedLaunchExportSnapshot?: Record<string, unknown> | null;
+  selectedListingPrepPackageId?: string | null;
+  selectedListingPrepPackageName?: string | null;
+  listingPrepSummarySnapshot?: Record<string, unknown> | null;
   scenarios: CostScenarioResult[];
 }
 
@@ -3323,6 +3330,10 @@ export interface CalculationScenarioRecord {
   exportSnapshot: Record<string, unknown> | null;
   isRecommendedLaunchScenario: boolean;
   isLaunchApprovedCandidate: boolean;
+  listingPrepPackageId: string | null;
+  priceFloorOverrideRequested: boolean;
+  priceFloorOverrideApproved: boolean;
+  priceFloorOverrideSnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3346,6 +3357,9 @@ export interface ComparisonSetRecord {
   selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
   selectedLaunchWarningSnapshot: Array<Record<string, unknown>> | null;
   selectedLaunchExportSnapshot: Record<string, unknown> | null;
+  selectedListingPrepPackageId: string | null;
+  selectedListingPrepPackageName: string | null;
+  listingPrepSummarySnapshot: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3369,6 +3383,28 @@ export interface ComparisonSetListItem {
   comparisonSummary: Record<string, unknown> | null;
   riskSummary: Record<string, unknown> | null;
   selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ListingPrepPackageRecord {
+  id: string;
+  orgId: string;
+  comparisonSetId: string | null;
+  calculationScenarioId: string;
+  name: string;
+  status: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "BLOCKED" | "ARCHIVED";
+  listingReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED";
+  exportSnapshot: Record<string, unknown>;
+  marketplaceFieldSnapshot: Record<string, unknown>;
+  validationSnapshot: Record<string, unknown>;
+  warningSnapshot: Array<Record<string, unknown>> | null;
+  overrideSnapshot: Record<string, unknown> | null;
+  notes: string | null;
+  approvedAt: string | null;
+  approvedByMembershipId: string | null;
+  scenarioName: string | null;
+  comparisonSetName: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -3869,6 +3905,53 @@ export async function getCostComparisonExportSummary(comparisonSetId: string) {
     selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
     selectedLaunchWarningSnapshot: Array<Record<string, unknown>> | null;
   }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/export-summary`);
+}
+
+export async function buildCostListingPrepPackage(
+  comparisonSetId: string,
+  input?: { selectedScenarioId?: string | null; notes?: string | null }
+) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/listing-prep-package`,
+    { method: "POST", body: JSON.stringify(input ?? {}) }
+  );
+}
+
+export async function getListingPrepPackages(input?: {
+  status?: "DRAFT" | "READY_FOR_REVIEW" | "READY" | "BLOCKED" | "ARCHIVED";
+}) {
+  const params = new URLSearchParams();
+  if (input?.status) params.set("status", input.status);
+  const query = params.toString();
+  return readJson<{ ok: true; listingPrepPackages: ListingPrepPackageRecord[] }>(
+    `/listing-prep-packages${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getListingPrepPackage(listingPrepPackageId: string) {
+  return readJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}`
+  );
+}
+
+export async function validateCostListingMarketplaceFields(
+  listingPrepPackageId: string,
+  input?: { notes?: string | null }
+) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/validate-marketplace-fields`,
+    { method: "POST", body: JSON.stringify(input ?? {}) }
+  );
+}
+
+export async function requestCostPriceFloorOverride(
+  listingPrepPackageId: string,
+  input: { reason: string; approve?: boolean }
+) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/price-floor-override`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
 }
 
 export interface LeadListItem {

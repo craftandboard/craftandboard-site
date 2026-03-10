@@ -1,6 +1,7 @@
 "use client";
 
 import type { CostComparisonResult } from "../lib/api";
+import { formatMoney } from "../lib/cost-engine";
 
 export function ListingPrepFieldCard({
   comparison
@@ -65,10 +66,10 @@ export function ListingPrepFieldCard({
       <div className="mt-4 rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
         <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Pricing summary</p>
         <div className="mt-2 grid gap-2 md:grid-cols-2">
-          <p>Break-even: <span className="font-semibold text-white">{String(pricingSummary.breakEvenPriceCents ?? 0)} cents</span></p>
-          <p>Minimum: <span className="font-semibold text-white">{String(pricingSummary.minimumSellPriceCents ?? 0)} cents</span></p>
-          <p>Safer margin: <span className="font-semibold text-white">{String(pricingSummary.saferMarginPriceCents ?? 0)} cents</span></p>
-          <p>Launch: <span className="font-semibold text-white">{String(pricingSummary.recommendedLaunchPriceCents ?? 0)} cents</span></p>
+          <p>Break-even: <span className="font-semibold text-white">{formatMoney(Number(pricingSummary.breakEvenPriceCents ?? 0))}</span></p>
+          <p>Minimum: <span className="font-semibold text-white">{formatMoney(Number(pricingSummary.minimumSellPriceCents ?? 0))}</span></p>
+          <p>Safer margin: <span className="font-semibold text-white">{formatMoney(Number(pricingSummary.saferMarginPriceCents ?? 0))}</span></p>
+          <p>Launch: <span className="font-semibold text-white">{formatMoney(Number(pricingSummary.recommendedLaunchPriceCents ?? 0))}</span></p>
         </div>
       </div>
     </section>

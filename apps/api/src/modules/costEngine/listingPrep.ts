@@ -755,6 +755,223 @@ export function buildManualListingWorksheet(input: {
   };
 }
 
+function buildChecklistItems(fields: string[], readiness: Record<string, unknown>) {
+  const perField = (readiness.perFieldReadiness ?? {}) as Record<string, boolean>;
+  return fields.map((field) => ({
+    field,
+    ready: Boolean(perField[field])
+  }));
+}
+
+export function buildOperatorFieldChecklist(input: {
+  validationSnapshot?: Record<string, unknown> | null;
+  readyForListingPrepSummary?: Record<string, unknown> | null;
+  preset?: {
+    requiredFieldChecklistSnapshot?: Record<string, unknown> | null;
+    optionalFieldChecklistSnapshot?: Record<string, unknown> | null;
+    worksheetPromptSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const validation = input.validationSnapshot ?? {};
+  const requiredFields = Array.isArray(input.preset?.requiredFieldChecklistSnapshot?.fields)
+    ? (input.preset?.requiredFieldChecklistSnapshot?.fields as string[])
+    : [
+        "productLabel",
+        "dimensionSummary",
+        "materialSummary",
+        "edgeBandSummary",
+        "packagingSummary",
+        "pricingSummary"
+      ];
+  const optionalFields = Array.isArray(input.preset?.optionalFieldChecklistSnapshot?.fields)
+    ? (input.preset?.optionalFieldChecklistSnapshot?.fields as string[])
+    : ["sku", "shippingSummary", "feePresetLabel", "shippingZoneLabel", "launchStrategyLabel"];
+  const requiredChecklist = buildChecklistItems(requiredFields, validation);
+  const optionalChecklist = buildChecklistItems(optionalFields, validation);
+  const requiredMissing = requiredChecklist.filter((item) => !item.ready).map((item) => item.field);
+  const optionalIncomplete = optionalChecklist.filter((item) => !item.ready).map((item) => item.field);
+  const manualReviewPrompts = Array.isArray(input.preset?.worksheetPromptSnapshot?.prompts)
+    ? (input.preset?.worksheetPromptSnapshot?.prompts as string[])
+    : [
+        "Confirm the product label matches the shelf variant you want to list.",
+        "Confirm packaging and shipping notes before manual Amazon entry.",
+        "Review warnings and override notes before treating this package as final."
+      ];
+
+  return {
+    requiredChecklist,
+    optionalChecklist,
+    requiredCompleteFields: requiredChecklist.filter((item) => item.ready).map((item) => item.field),
+    requiredMissingFields: requiredMissing,
+    optionalIncompleteFields: optionalIncomplete,
+    manualReviewPrompts,
+    readinessSummary:
+      requiredMissing.length === 0
+        ? "Required listing-prep fields are complete."
+        : `Required fields still missing: ${requiredMissing.join(", ")}.`,
+    blockingReasons: Array.isArray(input.readyForListingPrepSummary?.blockingReasons)
+      ? (input.readyForListingPrepSummary?.blockingReasons as string[])
+      : [],
+    reviewReasons: Array.isArray(input.readyForListingPrepSummary?.reviewReasons)
+      ? (input.readyForListingPrepSummary?.reviewReasons as string[])
+      : []
+  };
+}
+
+export function buildChannelHandoffSummary(input: {
+  preset?: {
+    id: string;
+    name: string;
+    channelCode: string;
+    worksheetFieldOrderingSnapshot?: Record<string, unknown> | null;
+    worksheetPromptSnapshot?: Record<string, unknown> | null;
+    requiredFieldChecklistSnapshot?: Record<string, unknown> | null;
+    optionalFieldChecklistSnapshot?: Record<string, unknown> | null;
+    notes?: string | null;
+  } | null;
+  selectionSummary?: Record<string, unknown> | null;
+}) {
+  return {
+    channelCode: input.preset?.channelCode ?? "AMAZON_MANUAL",
+    presetLabel: input.preset?.name ?? null,
+    autoApplied: Boolean(input.selectionSummary?.autoApplied),
+    selectionReason:
+      typeof input.selectionSummary?.selectionReason === "string"
+        ? String(input.selectionSummary.selectionReason)
+        : null,
+    groupingOrder:
+      input.preset?.worksheetFieldOrderingSnapshot ??
+      ({
+        groups: ["header", "specs", "pricing", "fulfillment", "warnings", "checklist", "prompts"]
+      } as Record<string, unknown>),
+    operatorPrompts:
+      input.preset?.worksheetPromptSnapshot ??
+      ({
+        prompts: [
+          "Use this worksheet as the manual Amazon listing prep source.",
+          "Resolve warnings before copying final values into Amazon."
+        ]
+      } as Record<string, unknown>),
+    requiredFieldChecklist:
+      input.preset?.requiredFieldChecklistSnapshot ??
+      ({ fields: ["productLabel", "dimensionSummary", "materialSummary", "pricingSummary"] } as Record<string, unknown>),
+    optionalFieldChecklist:
+      input.preset?.optionalFieldChecklistSnapshot ??
+      ({ fields: ["sku", "shippingSummary", "feePresetLabel", "shippingZoneLabel"] } as Record<string, unknown>),
+    notes: input.preset?.notes ?? null,
+    summary: input.preset
+      ? `Channel handoff uses preset "${input.preset.name}" for ${input.preset.channelCode}.`
+      : "No channel-specific handoff preset is applied."
+  };
+}
+
+export function buildCurrentApprovedArtifactSummary(input: {
+  packageId: string;
+  name?: string | null;
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  exportVersion?: string | null;
+  exportContractVersion?: string | null;
+  worksheetVersion?: string | null;
+  operatorWorksheetVersion?: string | null;
+  approvedAt?: string | Date | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+}) {
+  return {
+    packageId: input.packageId,
+    packageName: input.name ?? null,
+    currentApprovedArtifact: input.currentApprovedArtifact,
+    approvalState: input.approvalState,
+    hasOverride: Boolean(input.overrideSnapshot?.overrideApproved),
+    exportVersion: input.exportVersion ?? null,
+    exportContractVersion: input.exportContractVersion ?? null,
+    worksheetVersion: input.worksheetVersion ?? null,
+    operatorWorksheetVersion: input.operatorWorksheetVersion ?? null,
+    approvedAt:
+      input.approvedAt instanceof Date
+        ? input.approvedAt.toISOString()
+        : (input.approvedAt as string | null | undefined) ?? null,
+    summary: input.currentApprovedArtifact
+      ? "This is the current approved artifact to use for manual listing prep."
+      : "This package is a historical or in-progress artifact, not the current approved one."
+  };
+}
+
+export function buildOperatorWorksheetPackage(input: {
+  operatorWorksheetVersion?: string | null;
+  packageId: string;
+  packageName?: string | null;
+  packageApprovalState: string;
+  currentApprovedArtifact: boolean;
+  selectedScenarioId: string;
+  selectedScenarioName?: string | null;
+  exportShapeSnapshot?: Record<string, unknown> | null;
+  manualListingWorksheetSnapshot?: Record<string, unknown> | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  channelHandoffSummary?: Record<string, unknown> | null;
+  currentApprovedArtifactSummary?: Record<string, unknown> | null;
+  approvedAt?: string | Date | null;
+}) {
+  const snapshot = input.manualListingWorksheetSnapshot ?? {};
+  return {
+    operatorWorksheetVersion: input.operatorWorksheetVersion ?? "operator-listing-v1",
+    headerSummary: {
+      packageName: input.packageName ?? null,
+      scenarioName: input.selectedScenarioName ?? null,
+      approvalState: input.packageApprovalState,
+      currentApprovedArtifact: input.currentApprovedArtifact
+    },
+    packageIdentitySummary: {
+      packageId: input.packageId,
+      selectedScenarioId: input.selectedScenarioId,
+      selectedScenarioName: input.selectedScenarioName ?? null
+    },
+    approvalExportStatusSummary: {
+      approvalState: input.packageApprovalState,
+      worksheetVersion: snapshot.worksheetVersion ?? null,
+      exportVersion: input.exportShapeSnapshot?.exportMetadata
+        ? (input.exportShapeSnapshot.exportMetadata as Record<string, unknown>).exportVersion ?? null
+        : null,
+      approvedAt:
+        input.approvedAt instanceof Date
+          ? input.approvedAt.toISOString()
+          : (input.approvedAt as string | null | undefined) ?? null
+    },
+    pricingBlock: {
+      recommendedLaunchPrice: snapshot.recommendedLaunchPrice ?? null,
+      minimumPrice: snapshot.minimumPrice ?? null,
+      saferMarginPrice: snapshot.saferMarginPrice ?? null
+    },
+    specBlock: {
+      productLabel: snapshot.productLabel ?? null,
+      internalSku: snapshot.internalSku ?? null,
+      dimensionsSummary: snapshot.dimensionsSummary ?? null,
+      thicknessSummary: snapshot.thicknessSummary ?? null,
+      materialSummary: snapshot.materialSummary ?? null,
+      edgeBandSummary: snapshot.edgeBandSummary ?? null
+    },
+    fulfillmentBlock: {
+      packagingSummary: snapshot.packagingSummary ?? null,
+      shippingSummary: snapshot.shippingSummary ?? null,
+      feePresetLabel: snapshot.feePresetLabel ?? null,
+      shippingZoneLabel: snapshot.shippingZoneLabel ?? null
+    },
+    warningOverrideBlock: {
+      warnings: snapshot.warningSummary ?? [],
+      overrideSummary: snapshot.overrideSummary ?? null,
+      readinessSummary: snapshot.readinessSummary ?? null
+    },
+    fieldChecklist: input.checklistSnapshot ?? null,
+    manualEntryPrompts:
+      (input.checklistSnapshot?.manualReviewPrompts as unknown[]) ??
+      (input.channelHandoffSummary?.operatorPrompts as Record<string, unknown> | undefined)?.prompts ??
+      [],
+    channelHandoffNotes: input.channelHandoffSummary ?? null,
+    currentApprovedArtifactSummary: input.currentApprovedArtifactSummary ?? null,
+    generatedAt: new Date().toISOString()
+  };
+}
+
 export function buildWorksheetSummarySnapshot(input: {
   worksheet?: Record<string, unknown> | null;
   presetSelectionSummary?: Record<string, unknown> | null;

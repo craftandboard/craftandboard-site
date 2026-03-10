@@ -55,10 +55,14 @@ import {
   type ShelfCostCalculationRecord
 } from "../lib/api";
 import { CostAssumptionsPanel } from "./cost-assumptions-panel";
+import { ApprovalHistoryCard } from "./approval-history-card";
 import { AmazonFeePresetEditor } from "./amazon-fee-preset-editor";
 import { ChannelMappingPresetEditor } from "./channel-mapping-preset-editor";
+import { ChannelHandoffSummaryCard } from "./channel-handoff-summary-card";
+import { ChannelPresetSelectionSummaryCard } from "./channel-preset-selection-summary-card";
 import { CostBreakdownCard } from "./cost-breakdown-card";
 import { CostHistoryList } from "./cost-history-list";
+import { CurrentApprovedArtifactCard } from "./current-approved-artifact-card";
 import { LaunchCandidateHandoffCard } from "./launch-candidate-handoff-card";
 import { LaunchExportSummaryCard } from "./launch-export-summary-card";
 import { LaunchGuardrailProfileEditor } from "./launch-guardrail-profile-editor";
@@ -73,6 +77,8 @@ import { ManualAmazonExportCard } from "./manual-amazon-export-card";
 import { ManualListingWorksheetCard } from "./manual-listing-worksheet-card";
 import { MarketplaceMappingTemplateEditor } from "./marketplace-mapping-template-editor";
 import { MarketplaceMappingValidationCard } from "./marketplace-mapping-validation-card";
+import { OperatorFieldChecklistCard } from "./operator-field-checklist-card";
+import { OperatorWorksheetPackageCard } from "./operator-worksheet-package-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { OverrideHistoryCard } from "./override-history-card";
 import { PriceFloorOverrideReviewCard } from "./price-floor-override-review-card";
@@ -100,6 +106,17 @@ function parseLaunchStrategies(value: FormDataEntryValue | null) {
     .split(",")
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+function parseSnapshotLines(value: FormDataEntryValue | null, key: string) {
+  if (typeof value !== "string" || value.trim() === "") {
+    return null;
+  }
+  const items = value
+    .split(/\n|,/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return { [key]: items };
 }
 
 function createDefaultScenario(index: number): CostScenarioInput {
@@ -1122,6 +1139,10 @@ export function CostCalculatorForm() {
         defaultLaunchStrategies: parseLaunchStrategies(formData.get("defaultLaunchStrategies")),
         priority: toOptionalNumber(formData.get("priority")) ?? null,
         autoApplyEnabled: String(formData.get("autoApplyEnabled") ?? "") === "true",
+        worksheetFieldOrderingSnapshot: parseSnapshotLines(formData.get("worksheetFieldOrdering"), "groups"),
+        worksheetPromptSnapshot: parseSnapshotLines(formData.get("worksheetPrompts"), "prompts"),
+        requiredFieldChecklistSnapshot: parseSnapshotLines(formData.get("requiredChecklist"), "fields"),
+        optionalFieldChecklistSnapshot: parseSnapshotLines(formData.get("optionalChecklist"), "fields"),
         notes: String(formData.get("notes") ?? "") || null
       })
         .then(() => refreshAll(selectedProfileId))
@@ -1153,6 +1174,10 @@ export function CostCalculatorForm() {
         defaultLaunchStrategies: parseLaunchStrategies(formData.get("defaultLaunchStrategies")),
         priority: toOptionalNumber(formData.get("priority")) ?? null,
         autoApplyEnabled: String(formData.get("autoApplyEnabled") ?? "") === "true",
+        worksheetFieldOrderingSnapshot: parseSnapshotLines(formData.get("worksheetFieldOrdering"), "groups"),
+        worksheetPromptSnapshot: parseSnapshotLines(formData.get("worksheetPrompts"), "prompts"),
+        requiredFieldChecklistSnapshot: parseSnapshotLines(formData.get("requiredChecklist"), "fields"),
+        optionalFieldChecklistSnapshot: parseSnapshotLines(formData.get("optionalChecklist"), "fields"),
         notes: String(formData.get("notes") ?? "") || null
       })
         .then(() => refreshAll(selectedProfileId))
@@ -1472,8 +1497,10 @@ export function CostCalculatorForm() {
           <LaunchRiskSummaryCard comparison={comparison} />
           <LaunchReadinessCard comparison={comparison} />
           <ReadyForListingPrepCard listingPrepPackage={listingPrepPackage} />
+          <CurrentApprovedArtifactCard listingPrepPackage={listingPrepPackage} />
           <ListingPrepPackageCard comparison={comparison} listingPrepPackage={listingPrepPackage} />
           <ChannelPresetSelectionSummaryCard listingPrepPackage={listingPrepPackage} />
+          <ChannelHandoffSummaryCard listingPrepPackage={listingPrepPackage} />
           <ListingPrepApprovalCard
             listingPrepPackage={listingPrepPackage}
             onApprove={handleApproveListingPrepPackage}
@@ -1482,6 +1509,7 @@ export function CostCalculatorForm() {
           <ApprovalHistoryCard listingPrepPackage={listingPrepPackage} />
           <MarketplaceMappingValidationCard listingPrepPackage={listingPrepPackage} />
           <OverrideHistoryCard listingPrepPackage={listingPrepPackage} />
+          <OperatorFieldChecklistCard listingPrepPackage={listingPrepPackage} />
           <LaunchCandidateHandoffCard comparison={comparison} />
           <ListingPrepFieldCard comparison={comparison} />
           <PriceFloorOverrideReviewCard
@@ -1492,6 +1520,7 @@ export function CostCalculatorForm() {
           <LaunchExportSummaryCard comparison={comparison} />
           <ManualAmazonExportCard listingPrepPackage={listingPrepPackage} />
           <ManualListingWorksheetCard listingPrepPackage={listingPrepPackage} />
+          <OperatorWorksheetPackageCard listingPrepPackage={listingPrepPackage} />
           <CostScenarioBuilder
             scenarios={scenarios}
             feePresets={options.feePresets}
@@ -1598,5 +1627,3 @@ export function CostCalculatorForm() {
     </div>
   );
 }
-import { ApprovalHistoryCard } from "./approval-history-card";
-import { ChannelPresetSelectionSummaryCard } from "./channel-preset-selection-summary-card";

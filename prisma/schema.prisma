@@ -2610,6 +2610,7 @@ model CalculationScenario {
   latestOverrideSummarySnapshot Json?
   latestApprovalSummarySnapshot Json?
   latestPresetSelectionSummarySnapshot Json?
+  latestWorksheetSummarySnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
@@ -2642,6 +2643,8 @@ model CalculationComparisonSet {
   selectedListingPrepExportContractVersion String?
   selectedWorksheetVersion String?
   selectedWorksheetSummarySnapshot Json?
+  selectedOperatorWorksheetVersion String?
+  selectedOperatorWorksheetSummarySnapshot Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2688,6 +2691,11 @@ model ListingPrepPackage {
   manualListingWorksheetSnapshot Json?
   worksheetVersion      String?
   worksheetSummarySnapshot Json?
+  operatorWorksheetSnapshot Json?
+  operatorWorksheetVersion String?
+  operatorChecklistSnapshot Json?
+  channelHandoffSummarySnapshot Json?
+  currentApprovedArtifactSummary Json?
   currentApprovedArtifact Boolean                 @default(false)
   notes                  String?
   approvedAt             DateTime?
@@ -2713,6 +2721,7 @@ model ListingPrepPackage {
   @@index([organizationId, autoAppliedChannelPreset])
   @@index([organizationId, currentApprovedArtifact])
   @@index([organizationId, worksheetVersion])
+  @@index([organizationId, operatorWorksheetVersion])
 }
 
 model MarketplaceMappingTemplate {
@@ -2762,6 +2771,10 @@ model ChannelMappingPreset {
   launchContextSnapshot Json?
   priority             Int?
   autoApplyEnabled     Boolean                  @default(false)
+  worksheetFieldOrderingSnapshot Json?
+  worksheetPromptSnapshot Json?
+  requiredFieldChecklistSnapshot Json?
+  optionalFieldChecklistSnapshot Json?
   notes                String?
   presetSnapshot       Json?
   createdAt            DateTime                 @default(now())

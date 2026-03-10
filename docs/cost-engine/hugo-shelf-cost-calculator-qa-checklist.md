@@ -79,6 +79,12 @@
 68. Approve a package and verify the approval history card shows the latest approval state plus prior condensed events
 69. Verify the manual listing worksheet card renders worksheet version, cleaned fields, prompts, and preset/approval summaries
 70. Reload the package and confirm worksheet summary, preset-selection summary, and approval-history snapshots persist
+71. Load the operator worksheet for an approved package
+72. Verify grouped operator sections render clearly for header, pricing, specs, fulfillment, warnings, and prompts
+73. Verify the operator checklist card shows required complete, required missing, and optional incomplete fields
+74. Verify the current approved artifact card is obvious and shows export/worksheet version plus override involvement
+75. Verify the channel handoff summary card shows preset context, channel notes, and operator prompts clearly
+76. Reload the package and confirm operator worksheet, checklist, handoff summary, and current artifact summaries persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -100,3 +106,4 @@
 - A user can point to the exact stable package snapshot that the next listing phase should consume
 - A user can see whether the channel preset was auto-applied from launch context or chosen manually
 - A user can use the manual listing worksheet as the primary internal worksheet for first-pass Amazon entry
+- A user can use the operator worksheet package as the faster, grouped artifact for daily manual listing work without losing the underlying approved package trail

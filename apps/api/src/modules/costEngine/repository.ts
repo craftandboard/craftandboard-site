@@ -910,6 +910,11 @@ export async function createListingPrepPackageRecord(input: {
   manualListingWorksheetSnapshot?: unknown;
   worksheetVersion?: string | null;
   worksheetSummarySnapshot?: unknown;
+  operatorWorksheetSnapshot?: unknown;
+  operatorWorksheetVersion?: string | null;
+  operatorChecklistSnapshot?: unknown;
+  channelHandoffSummarySnapshot?: unknown;
+  currentApprovedArtifactSummary?: unknown;
   currentApprovedArtifact?: boolean;
   notes?: string | null;
   approvedAt?: Date | null;
@@ -945,6 +950,11 @@ export async function createListingPrepPackageRecord(input: {
       manualListingWorksheetSnapshot: normalizeMetadata(input.manualListingWorksheetSnapshot),
       worksheetVersion: input.worksheetVersion ?? undefined,
       worksheetSummarySnapshot: normalizeMetadata(input.worksheetSummarySnapshot),
+      operatorWorksheetSnapshot: normalizeMetadata(input.operatorWorksheetSnapshot),
+      operatorWorksheetVersion: input.operatorWorksheetVersion ?? undefined,
+      operatorChecklistSnapshot: normalizeMetadata(input.operatorChecklistSnapshot),
+      channelHandoffSummarySnapshot: normalizeMetadata(input.channelHandoffSummarySnapshot),
+      currentApprovedArtifactSummary: normalizeMetadata(input.currentApprovedArtifactSummary),
       currentApprovedArtifact: input.currentApprovedArtifact ?? false,
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
@@ -1097,6 +1107,10 @@ export async function createChannelMappingPresetRecord(input: {
   launchContextSnapshot?: unknown;
   priority?: number | null;
   autoApplyEnabled?: boolean;
+  worksheetFieldOrderingSnapshot?: unknown;
+  worksheetPromptSnapshot?: unknown;
+  requiredFieldChecklistSnapshot?: unknown;
+  optionalFieldChecklistSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -1121,6 +1135,10 @@ export async function createChannelMappingPresetRecord(input: {
       launchContextSnapshot: normalizeMetadata(input.launchContextSnapshot),
       priority: input.priority ?? undefined,
       autoApplyEnabled: input.autoApplyEnabled ?? false,
+      worksheetFieldOrderingSnapshot: normalizeMetadata(input.worksheetFieldOrderingSnapshot),
+      worksheetPromptSnapshot: normalizeMetadata(input.worksheetPromptSnapshot),
+      requiredFieldChecklistSnapshot: normalizeMetadata(input.requiredFieldChecklistSnapshot),
+      optionalFieldChecklistSnapshot: normalizeMetadata(input.optionalFieldChecklistSnapshot),
       notes: input.notes ?? null,
       presetSnapshot: normalizeMetadata(input.presetSnapshot)
     }

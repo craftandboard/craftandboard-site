@@ -11,9 +11,13 @@ import {
   applyChannelMappingPreset,
   buildApprovalHistorySnapshot,
   buildApprovalSummarySnapshot,
+  buildChannelHandoffSummary,
+  buildCurrentApprovedArtifactSummary,
   buildLaunchContextSnapshot,
   buildManualAmazonExportSnapshot,
   buildManualListingWorksheet,
+  buildOperatorFieldChecklist,
+  buildOperatorWorksheetPackage,
   buildPresetSelectionSummary,
   applyMarketplaceMappingTemplate,
   buildMarketplaceFieldValidationResult,
@@ -244,6 +248,10 @@ function mapChannelMappingPreset(record: any) {
     launchContextSnapshot: record.launchContextSnapshot ?? null,
     priority: record.priority ?? null,
     autoApplyEnabled: Boolean(record.autoApplyEnabled),
+    worksheetFieldOrderingSnapshot: record.worksheetFieldOrderingSnapshot ?? null,
+    worksheetPromptSnapshot: record.worksheetPromptSnapshot ?? null,
+    requiredFieldChecklistSnapshot: record.requiredFieldChecklistSnapshot ?? null,
+    optionalFieldChecklistSnapshot: record.optionalFieldChecklistSnapshot ?? null,
     notes: record.notes ?? null,
     presetSnapshot: record.presetSnapshot ?? null
   };
@@ -559,8 +567,67 @@ function buildListingArtifactsForScenario(input: {
     overrideSummary: overrideSnapshot,
     presetSelectionSummary: input.presetSelectionSummary ?? null
   });
+  const operatorChecklistSnapshot = buildOperatorFieldChecklist({
+    validationSnapshot,
+    readyForListingPrepSummary,
+    preset: input.channelPreset
+      ? {
+          requiredFieldChecklistSnapshot:
+            input.channelPreset.requiredFieldChecklistSnapshot ?? null,
+          optionalFieldChecklistSnapshot:
+            input.channelPreset.optionalFieldChecklistSnapshot ?? null,
+          worksheetPromptSnapshot: input.channelPreset.worksheetPromptSnapshot ?? null
+        }
+      : null
+  });
+  const channelHandoffSummarySnapshot = buildChannelHandoffSummary({
+    preset: input.channelPreset
+      ? {
+          id: input.channelPreset.id,
+          name: input.channelPreset.name,
+          channelCode: input.channelPreset.channelCode,
+          worksheetFieldOrderingSnapshot:
+            input.channelPreset.worksheetFieldOrderingSnapshot ?? null,
+          worksheetPromptSnapshot: input.channelPreset.worksheetPromptSnapshot ?? null,
+          requiredFieldChecklistSnapshot:
+            input.channelPreset.requiredFieldChecklistSnapshot ?? null,
+          optionalFieldChecklistSnapshot:
+            input.channelPreset.optionalFieldChecklistSnapshot ?? null,
+          notes: input.channelPreset.notes ?? null
+        }
+      : null,
+    selectionSummary: input.presetSelectionSummary ?? null
+  });
+  const operatorWorksheetVersion = "operator-listing-v1";
+  const currentApprovedArtifactSummary = buildCurrentApprovedArtifactSummary({
+    packageId: input.packageId ?? "pending-package",
+    name: `${input.scenarioRecord.name} listing prep`,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    exportVersion,
+    exportContractVersion,
+    worksheetVersion: input.worksheetVersion ?? "manual-listing-v1",
+    operatorWorksheetVersion,
+    overrideSnapshot,
+    approvedAt: null
+  });
+  const operatorWorksheetSnapshot = buildOperatorWorksheetPackage({
+    operatorWorksheetVersion,
+    packageId: input.packageId ?? "pending-package",
+    packageName: `${input.scenarioRecord.name} listing prep`,
+    packageApprovalState: approval.approvalState,
+    currentApprovedArtifact: Boolean(input.currentApprovedArtifact),
+    selectedScenarioId: input.scenarioRecord.id,
+    selectedScenarioName: input.scenarioRecord.name,
+    exportShapeSnapshot,
+    manualListingWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    channelHandoffSummary: channelHandoffSummarySnapshot,
+    currentApprovedArtifactSummary,
+    approvedAt: null
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
-    worksheet: manualListingWorksheetSnapshot,
+    worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: input.presetSelectionSummary ?? null
   });
 
@@ -598,6 +665,11 @@ function buildListingArtifactsForScenario(input: {
     manualListingWorksheetSnapshot,
     worksheetVersion: input.worksheetVersion ?? "manual-listing-v1",
     worksheetSummarySnapshot,
+    operatorWorksheetSnapshot,
+    operatorWorksheetVersion,
+    operatorChecklistSnapshot,
+    channelHandoffSummarySnapshot,
+    currentApprovedArtifactSummary,
     channelPresetSelectionSummary: input.presetSelectionSummary ?? null
   };
 }
@@ -704,6 +776,7 @@ function mapScenario(record: any) {
     latestOverrideSummarySnapshot: record.latestOverrideSummarySnapshot ?? null,
     latestApprovalSummarySnapshot: record.latestApprovalSummarySnapshot ?? null,
     latestPresetSelectionSummarySnapshot: record.latestPresetSelectionSummarySnapshot ?? null,
+    latestWorksheetSummarySnapshot: record.latestWorksheetSummarySnapshot ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -739,6 +812,9 @@ function mapComparisonSet(record: any) {
       record.selectedListingPrepExportContractVersion ?? null,
     selectedWorksheetVersion: record.selectedWorksheetVersion ?? null,
     selectedWorksheetSummarySnapshot: record.selectedWorksheetSummarySnapshot ?? null,
+    selectedOperatorWorksheetVersion: record.selectedOperatorWorksheetVersion ?? null,
+    selectedOperatorWorksheetSummarySnapshot:
+      record.selectedOperatorWorksheetSummarySnapshot ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -783,6 +859,11 @@ function mapListingPrepPackage(record: any) {
     manualListingWorksheetSnapshot: record.manualListingWorksheetSnapshot ?? null,
     worksheetVersion: record.worksheetVersion ?? null,
     worksheetSummarySnapshot: record.worksheetSummarySnapshot ?? null,
+    operatorWorksheetSnapshot: record.operatorWorksheetSnapshot ?? null,
+    operatorWorksheetVersion: record.operatorWorksheetVersion ?? null,
+    operatorChecklistSnapshot: record.operatorChecklistSnapshot ?? null,
+    channelHandoffSummarySnapshot: record.channelHandoffSummarySnapshot ?? null,
+    currentApprovedArtifactSummary: record.currentApprovedArtifactSummary ?? null,
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
     notes: record.notes ?? null,
     approvedAt: record.approvedAt?.toISOString() ?? null,
@@ -1326,6 +1407,10 @@ export async function createChannelMappingPreset(input: {
   launchContextSnapshot?: unknown;
   priority?: number | null;
   autoApplyEnabled?: boolean;
+  worksheetFieldOrderingSnapshot?: unknown;
+  worksheetPromptSnapshot?: unknown;
+  requiredFieldChecklistSnapshot?: unknown;
+  optionalFieldChecklistSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -2319,7 +2404,10 @@ export async function getComparisonSetHandoffSummary(input: {
     selectedListingPrepExportContractVersion:
       set.selectedListingPrepExportContractVersion ?? null,
     selectedWorksheetVersion: set.selectedWorksheetVersion ?? null,
-    selectedWorksheetSummarySnapshot: set.selectedWorksheetSummarySnapshot ?? null
+    selectedWorksheetSummarySnapshot: set.selectedWorksheetSummarySnapshot ?? null,
+    selectedOperatorWorksheetVersion: set.selectedOperatorWorksheetVersion ?? null,
+    selectedOperatorWorksheetSummarySnapshot:
+      set.selectedOperatorWorksheetSummarySnapshot ?? null
   };
 }
 
@@ -2405,7 +2493,10 @@ export async function getComparisonSetExportSummary(input: {
     selectedListingPrepExportContractVersion:
       set.selectedListingPrepExportContractVersion ?? null,
     selectedWorksheetVersion: set.selectedWorksheetVersion ?? null,
-    selectedWorksheetSummarySnapshot: set.selectedWorksheetSummarySnapshot ?? null
+    selectedWorksheetSummarySnapshot: set.selectedWorksheetSummarySnapshot ?? null,
+    selectedOperatorWorksheetVersion: set.selectedOperatorWorksheetVersion ?? null,
+    selectedOperatorWorksheetSummarySnapshot:
+      set.selectedOperatorWorksheetSummarySnapshot ?? null
   };
 }
 
@@ -2506,6 +2597,11 @@ export async function buildListingPrepPackage(input: {
     manualListingWorksheetSnapshot: artifacts.manualListingWorksheetSnapshot,
     worksheetVersion: artifacts.worksheetVersion,
     worksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+    operatorWorksheetSnapshot: artifacts.operatorWorksheetSnapshot,
+    operatorWorksheetVersion: artifacts.operatorWorksheetVersion,
+    operatorChecklistSnapshot: artifacts.operatorChecklistSnapshot,
+    channelHandoffSummarySnapshot: artifacts.channelHandoffSummarySnapshot,
+    currentApprovedArtifactSummary: artifacts.currentApprovedArtifactSummary,
     currentApprovedArtifact: false,
     notes: input.notes ?? null,
     approvedAt: null
@@ -2521,7 +2617,8 @@ export async function buildListingPrepPackage(input: {
       priceFloorOverrideSnapshot: artifacts.overrideSnapshot,
       latestOverrideSummarySnapshot: artifacts.overrideHistorySnapshot?.latestOverride ?? null,
       latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot,
-      latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary
+      latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
+      latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot
     })
   });
 
@@ -2543,14 +2640,17 @@ export async function buildListingPrepPackage(input: {
         approvalState: artifacts.approvalState,
         approvalSummary: artifacts.approvalSummarySnapshot,
         presetSelectionSummary: artifacts.channelPresetSelectionSummary,
-        worksheetSummary: artifacts.worksheetSummarySnapshot
+        worksheetSummary: artifacts.worksheetSummarySnapshot,
+        operatorWorksheetSummary: artifacts.operatorWorksheetSnapshot
       },
       selectedListingPrepReadySnapshot: artifacts.readyForListingPrepSummary,
       selectedListingPrepExportVersion: artifacts.exportVersion,
       selectedListingPrepApprovalSnapshot: artifacts.approvalSummarySnapshot,
       selectedListingPrepExportContractVersion: artifacts.exportContractVersion,
       selectedWorksheetVersion: artifacts.worksheetVersion,
-      selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot
+      selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+      selectedOperatorWorksheetVersion: artifacts.operatorWorksheetVersion,
+      selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot
     })
   });
 
@@ -2668,6 +2768,11 @@ export async function refreshListingPrepPackage(input: {
       manualListingWorksheetSnapshot: artifacts.manualListingWorksheetSnapshot,
       worksheetVersion: artifacts.worksheetVersion,
       worksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+      operatorWorksheetSnapshot: artifacts.operatorWorksheetSnapshot,
+      operatorWorksheetVersion: artifacts.operatorWorksheetVersion,
+      operatorChecklistSnapshot: artifacts.operatorChecklistSnapshot,
+      channelHandoffSummarySnapshot: artifacts.channelHandoffSummarySnapshot,
+      currentApprovedArtifactSummary: artifacts.currentApprovedArtifactSummary,
       channelMappingPresetId: presetResolution.preset?.id ?? null,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
@@ -2682,6 +2787,7 @@ export async function refreshListingPrepPackage(input: {
       latestOverrideSummarySnapshot: artifacts.overrideHistorySnapshot?.latestOverride ?? null,
       latestApprovalSummarySnapshot: artifacts.approvalSummarySnapshot,
       latestPresetSelectionSummarySnapshot: artifacts.channelPresetSelectionSummary,
+      latestWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
       listingPrepPackageId: record.id
     })
   });
@@ -2705,14 +2811,17 @@ export async function refreshListingPrepPackage(input: {
           approvalState: artifacts.approvalState,
           approvalSummary: artifacts.approvalSummarySnapshot,
           presetSelectionSummary: artifacts.channelPresetSelectionSummary,
-          worksheetSummary: artifacts.worksheetSummarySnapshot
+          worksheetSummary: artifacts.worksheetSummarySnapshot,
+          operatorWorksheetSummary: artifacts.operatorWorksheetSnapshot
         },
         selectedListingPrepReadySnapshot: artifacts.readyForListingPrepSummary,
         selectedListingPrepExportVersion: artifacts.exportVersion,
         selectedListingPrepApprovalSnapshot: artifacts.approvalSummarySnapshot,
         selectedListingPrepExportContractVersion: artifacts.exportContractVersion,
         selectedWorksheetVersion: artifacts.worksheetVersion,
-        selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot
+        selectedWorksheetSummarySnapshot: artifacts.worksheetSummarySnapshot,
+        selectedOperatorWorksheetVersion: artifacts.operatorWorksheetVersion,
+        selectedOperatorWorksheetSummarySnapshot: artifacts.operatorWorksheetSnapshot
       })
     });
   }
@@ -2797,8 +2906,64 @@ export async function evaluateMarketplaceFieldValidation(input: {
     overrideSummary: overrideSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
+  const operatorChecklistSnapshot = buildOperatorFieldChecklist({
+    validationSnapshot,
+    readyForListingPrepSummary,
+    preset: record.channelMappingPreset
+      ? {
+          requiredFieldChecklistSnapshot:
+            record.channelMappingPreset.requiredFieldChecklistSnapshot ?? null,
+          optionalFieldChecklistSnapshot:
+            record.channelMappingPreset.optionalFieldChecklistSnapshot ?? null,
+          worksheetPromptSnapshot: record.channelMappingPreset.worksheetPromptSnapshot ?? null
+        }
+      : null
+  });
+  const channelHandoffSummarySnapshot = buildChannelHandoffSummary({
+    preset: record.channelMappingPreset
+      ? {
+          id: record.channelMappingPreset.id,
+          name: record.channelMappingPreset.name,
+          channelCode: record.channelMappingPreset.channelCode,
+          worksheetFieldOrderingSnapshot:
+            record.channelMappingPreset.worksheetFieldOrderingSnapshot ?? null,
+          worksheetPromptSnapshot: record.channelMappingPreset.worksheetPromptSnapshot ?? null,
+          requiredFieldChecklistSnapshot:
+            record.channelMappingPreset.requiredFieldChecklistSnapshot ?? null,
+          optionalFieldChecklistSnapshot:
+            record.channelMappingPreset.optionalFieldChecklistSnapshot ?? null,
+          notes: record.channelMappingPreset.notes ?? null
+        }
+      : null,
+    selectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
+  const currentApprovedArtifactSummary = buildCurrentApprovedArtifactSummary({
+    packageId: record.id,
+    name: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    exportVersion: record.exportVersion ?? "listing-prep-v1",
+    exportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    operatorWorksheetVersion: "operator-listing-v1",
+    overrideSnapshot
+  });
+  const operatorWorksheetSnapshot = buildOperatorWorksheetPackage({
+    operatorWorksheetVersion: "operator-listing-v1",
+    packageId: record.id,
+    packageName: record.name,
+    packageApprovalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    selectedScenarioId: record.calculationScenarioId,
+    selectedScenarioName: record.calculationScenario?.name ?? null,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    manualListingWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    channelHandoffSummary: channelHandoffSummarySnapshot,
+    currentApprovedArtifactSummary
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
-    worksheet: manualListingWorksheetSnapshot,
+    worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
 
@@ -2815,6 +2980,11 @@ export async function evaluateMarketplaceFieldValidation(input: {
       readyForListingPrepSummary,
       manualListingWorksheetSnapshot,
       worksheetSummarySnapshot,
+      operatorWorksheetSnapshot,
+      operatorWorksheetVersion: "operator-listing-v1",
+      operatorChecklistSnapshot,
+      channelHandoffSummarySnapshot,
+      currentApprovedArtifactSummary,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
       approvedAt: null
@@ -2838,14 +3008,17 @@ export async function evaluateMarketplaceFieldValidation(input: {
           channelPresetLabel: record.channelMappingPreset?.name ?? null,
           approvalState: approval.approvalState,
           approvalSummary: approvalSummarySnapshot,
-          worksheetSummary: worksheetSummarySnapshot
+          worksheetSummary: worksheetSummarySnapshot,
+          operatorWorksheetSummary: operatorWorksheetSnapshot
         },
         selectedListingPrepReadySnapshot: readyForListingPrepSummary,
         selectedListingPrepExportVersion: record.exportVersion ?? "listing-prep-v1",
         selectedListingPrepApprovalSnapshot: approvalSummarySnapshot,
         selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
         selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
-        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot
+        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
+        selectedOperatorWorksheetVersion: "operator-listing-v1",
+        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot
       })
     });
   }
@@ -2942,8 +3115,64 @@ export async function requestPriceFloorOverride(input: {
     overrideSummary: overrideSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
+  const operatorChecklistSnapshot = buildOperatorFieldChecklist({
+    validationSnapshot,
+    readyForListingPrepSummary,
+    preset: record.channelMappingPreset
+      ? {
+          requiredFieldChecklistSnapshot:
+            record.channelMappingPreset.requiredFieldChecklistSnapshot ?? null,
+          optionalFieldChecklistSnapshot:
+            record.channelMappingPreset.optionalFieldChecklistSnapshot ?? null,
+          worksheetPromptSnapshot: record.channelMappingPreset.worksheetPromptSnapshot ?? null
+        }
+      : null
+  });
+  const channelHandoffSummarySnapshot = buildChannelHandoffSummary({
+    preset: record.channelMappingPreset
+      ? {
+          id: record.channelMappingPreset.id,
+          name: record.channelMappingPreset.name,
+          channelCode: record.channelMappingPreset.channelCode,
+          worksheetFieldOrderingSnapshot:
+            record.channelMappingPreset.worksheetFieldOrderingSnapshot ?? null,
+          worksheetPromptSnapshot: record.channelMappingPreset.worksheetPromptSnapshot ?? null,
+          requiredFieldChecklistSnapshot:
+            record.channelMappingPreset.requiredFieldChecklistSnapshot ?? null,
+          optionalFieldChecklistSnapshot:
+            record.channelMappingPreset.optionalFieldChecklistSnapshot ?? null,
+          notes: record.channelMappingPreset.notes ?? null
+        }
+      : null,
+    selectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
+  const currentApprovedArtifactSummary = buildCurrentApprovedArtifactSummary({
+    packageId: record.id,
+    name: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    exportVersion: record.exportVersion ?? "listing-prep-v1",
+    exportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    operatorWorksheetVersion: "operator-listing-v1",
+    overrideSnapshot
+  });
+  const operatorWorksheetSnapshot = buildOperatorWorksheetPackage({
+    operatorWorksheetVersion: "operator-listing-v1",
+    packageId: record.id,
+    packageName: record.name,
+    packageApprovalState: approval.approvalState,
+    currentApprovedArtifact: false,
+    selectedScenarioId: record.calculationScenarioId,
+    selectedScenarioName: record.calculationScenario?.name ?? null,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    manualListingWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    channelHandoffSummary: channelHandoffSummarySnapshot,
+    currentApprovedArtifactSummary
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
-    worksheet: manualListingWorksheetSnapshot,
+    worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
 
@@ -2962,6 +3191,11 @@ export async function requestPriceFloorOverride(input: {
       readyForListingPrepSummary,
       manualListingWorksheetSnapshot,
       worksheetSummarySnapshot,
+      operatorWorksheetSnapshot,
+      operatorWorksheetVersion: "operator-listing-v1",
+      operatorChecklistSnapshot,
+      channelHandoffSummarySnapshot,
+      currentApprovedArtifactSummary,
       currentApprovedArtifact: false,
       approvedAt: null,
       approvedByMembershipId: input.approvedByMembershipId ?? null
@@ -2977,7 +3211,8 @@ export async function requestPriceFloorOverride(input: {
       priceFloorOverrideSnapshot: overrideSnapshot,
       listingPrepPackageId: record.id,
       latestOverrideSummarySnapshot: overrideHistorySnapshot.latestOverride ?? null,
-      latestApprovalSummarySnapshot: approvalSummarySnapshot
+      latestApprovalSummarySnapshot: approvalSummarySnapshot,
+      latestWorksheetSummarySnapshot: worksheetSummarySnapshot
     })
   });
 
@@ -2999,14 +3234,17 @@ export async function requestPriceFloorOverride(input: {
           channelPresetLabel: record.channelMappingPreset?.name ?? null,
           approvalState: approval.approvalState,
           approvalSummary: approvalSummarySnapshot,
-          worksheetSummary: worksheetSummarySnapshot
+          worksheetSummary: worksheetSummarySnapshot,
+          operatorWorksheetSummary: operatorWorksheetSnapshot
         },
         selectedListingPrepReadySnapshot: readyForListingPrepSummary,
         selectedListingPrepExportVersion: record.exportVersion ?? "listing-prep-v1",
         selectedListingPrepApprovalSnapshot: approvalSummarySnapshot,
         selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
         selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
-        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot
+        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
+        selectedOperatorWorksheetVersion: "operator-listing-v1",
+        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot
       })
     });
   }
@@ -3170,8 +3408,66 @@ export async function approveListingPrepPackage(input: {
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null,
     approvedAt
   });
+  const operatorChecklistSnapshot = buildOperatorFieldChecklist({
+    validationSnapshot: (record.validationSnapshot ?? null) as Record<string, unknown> | null,
+    readyForListingPrepSummary: (record.readyForListingPrepSummary ?? null) as Record<string, unknown> | null,
+    preset: record.channelMappingPreset
+      ? {
+          requiredFieldChecklistSnapshot:
+            record.channelMappingPreset.requiredFieldChecklistSnapshot ?? null,
+          optionalFieldChecklistSnapshot:
+            record.channelMappingPreset.optionalFieldChecklistSnapshot ?? null,
+          worksheetPromptSnapshot: record.channelMappingPreset.worksheetPromptSnapshot ?? null
+        }
+      : null
+  });
+  const channelHandoffSummarySnapshot = buildChannelHandoffSummary({
+    preset: record.channelMappingPreset
+      ? {
+          id: record.channelMappingPreset.id,
+          name: record.channelMappingPreset.name,
+          channelCode: record.channelMappingPreset.channelCode,
+          worksheetFieldOrderingSnapshot:
+            record.channelMappingPreset.worksheetFieldOrderingSnapshot ?? null,
+          worksheetPromptSnapshot: record.channelMappingPreset.worksheetPromptSnapshot ?? null,
+          requiredFieldChecklistSnapshot:
+            record.channelMappingPreset.requiredFieldChecklistSnapshot ?? null,
+          optionalFieldChecklistSnapshot:
+            record.channelMappingPreset.optionalFieldChecklistSnapshot ?? null,
+          notes: record.channelMappingPreset.notes ?? null
+        }
+      : null,
+    selectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
+  });
+  const currentApprovedArtifactSummary = buildCurrentApprovedArtifactSummary({
+    packageId: record.id,
+    name: record.name,
+    approvalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    exportVersion: record.exportVersion ?? "listing-prep-v1",
+    exportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
+    worksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
+    operatorWorksheetVersion: "operator-listing-v1",
+    approvedAt,
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null
+  });
+  const operatorWorksheetSnapshot = buildOperatorWorksheetPackage({
+    operatorWorksheetVersion: "operator-listing-v1",
+    packageId: record.id,
+    packageName: record.name,
+    packageApprovalState: approval.approvalState,
+    currentApprovedArtifact: true,
+    selectedScenarioId: record.calculationScenarioId,
+    selectedScenarioName: record.calculationScenario?.name ?? null,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? null) as Record<string, unknown> | null,
+    manualListingWorksheetSnapshot,
+    checklistSnapshot: operatorChecklistSnapshot,
+    channelHandoffSummary: channelHandoffSummarySnapshot,
+    currentApprovedArtifactSummary,
+    approvedAt
+  });
   const worksheetSummarySnapshot = buildWorksheetSummarySnapshot({
-    worksheet: manualListingWorksheetSnapshot,
+    worksheet: operatorWorksheetSnapshot,
     presetSelectionSummary: (record.channelPresetSelectionSummary ?? null) as Record<string, unknown> | null
   });
 
@@ -3191,6 +3487,11 @@ export async function approveListingPrepPackage(input: {
       manualAmazonExportSnapshot,
       approvalHistorySnapshot,
       manualListingWorksheetSnapshot,
+      operatorWorksheetSnapshot,
+      operatorWorksheetVersion: "operator-listing-v1",
+      operatorChecklistSnapshot,
+      channelHandoffSummarySnapshot,
+      currentApprovedArtifactSummary,
       worksheetSummarySnapshot,
       approvedAt,
       approvedByMembershipId: input.approvedByMembershipId ?? null,
@@ -3202,7 +3503,8 @@ export async function approveListingPrepPackage(input: {
     organizationId: input.organizationId,
     scenarioId: record.calculationScenarioId,
     data: normalizeUpdateData({
-      latestApprovalSummarySnapshot: approvalSummarySnapshot
+      latestApprovalSummarySnapshot: approvalSummarySnapshot,
+      latestWorksheetSummarySnapshot: worksheetSummarySnapshot
     })
   });
 
@@ -3215,7 +3517,9 @@ export async function approveListingPrepPackage(input: {
         selectedListingPrepApprovalSnapshot: approvalSummarySnapshot,
         selectedListingPrepExportContractVersion: record.exportContractVersion ?? "manual-amazon-v1",
         selectedWorksheetVersion: record.worksheetVersion ?? "manual-listing-v1",
-        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot
+        selectedWorksheetSummarySnapshot: worksheetSummarySnapshot,
+        selectedOperatorWorksheetVersion: "operator-listing-v1",
+        selectedOperatorWorksheetSummarySnapshot: operatorWorksheetSnapshot
       })
     });
   }
@@ -3239,6 +3543,26 @@ export async function getManualListingWorksheet(input: {
     ok: true,
     manualListingWorksheet: record.manualListingWorksheetSnapshot ?? null,
     worksheetVersion: record.worksheetVersion ?? null,
+    approvalState: record.approvalState ?? "DRAFT",
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function getOperatorWorksheet(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    operatorWorksheet: record.operatorWorksheetSnapshot ?? null,
+    operatorChecklist: record.operatorChecklistSnapshot ?? null,
+    channelHandoffSummary: record.channelHandoffSummarySnapshot ?? null,
+    currentApprovedArtifactSummary: record.currentApprovedArtifactSummary ?? null,
+    operatorWorksheetVersion: record.operatorWorksheetVersion ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
   };

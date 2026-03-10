@@ -2889,6 +2889,10 @@ export interface ChannelMappingPresetItem {
   launchContextSnapshot: Record<string, unknown> | null;
   priority: number | null;
   autoApplyEnabled: boolean;
+  worksheetFieldOrderingSnapshot: Record<string, unknown> | null;
+  worksheetPromptSnapshot: Record<string, unknown> | null;
+  requiredFieldChecklistSnapshot: Record<string, unknown> | null;
+  optionalFieldChecklistSnapshot: Record<string, unknown> | null;
   notes: string | null;
   presetSnapshot: Record<string, unknown> | null;
   createdAt: string;
@@ -3348,6 +3352,8 @@ export interface CostComparisonResult {
   listingPrepSummarySnapshot?: Record<string, unknown> | null;
   selectedListingPrepReadySnapshot?: Record<string, unknown> | null;
   selectedListingPrepExportVersion?: string | null;
+  selectedOperatorWorksheetVersion?: string | null;
+  selectedOperatorWorksheetSummarySnapshot?: Record<string, unknown> | null;
   scenarios: CostScenarioResult[];
 }
 
@@ -3389,6 +3395,7 @@ export interface CalculationScenarioRecord {
   latestOverrideSummarySnapshot: Record<string, unknown> | null;
   latestApprovalSummarySnapshot: Record<string, unknown> | null;
   latestPresetSelectionSummarySnapshot: Record<string, unknown> | null;
+  latestWorksheetSummarySnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3421,6 +3428,8 @@ export interface ComparisonSetRecord {
   selectedListingPrepExportContractVersion: string | null;
   selectedWorksheetVersion: string | null;
   selectedWorksheetSummarySnapshot: Record<string, unknown> | null;
+  selectedOperatorWorksheetVersion: string | null;
+  selectedOperatorWorksheetSummarySnapshot: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3480,6 +3489,11 @@ export interface ListingPrepPackageRecord {
   manualListingWorksheetSnapshot: Record<string, unknown> | null;
   worksheetVersion: string | null;
   worksheetSummarySnapshot: Record<string, unknown> | null;
+  operatorWorksheetSnapshot: Record<string, unknown> | null;
+  operatorWorksheetVersion: string | null;
+  operatorChecklistSnapshot: Record<string, unknown> | null;
+  channelHandoffSummarySnapshot: Record<string, unknown> | null;
+  currentApprovedArtifactSummary: Record<string, unknown> | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4055,6 +4069,8 @@ export async function getCostComparisonHandoffSummary(comparisonSetId: string) {
     selectedListingPrepExportContractVersion: string | null;
     selectedWorksheetVersion: string | null;
     selectedWorksheetSummarySnapshot: Record<string, unknown> | null;
+    selectedOperatorWorksheetVersion: string | null;
+    selectedOperatorWorksheetSummarySnapshot: Record<string, unknown> | null;
   }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/handoff-summary`);
 }
 
@@ -4083,6 +4099,8 @@ export async function getCostComparisonExportSummary(comparisonSetId: string) {
     selectedListingPrepExportContractVersion: string | null;
     selectedWorksheetVersion: string | null;
     selectedWorksheetSummarySnapshot: Record<string, unknown> | null;
+    selectedOperatorWorksheetVersion: string | null;
+    selectedOperatorWorksheetSummarySnapshot: Record<string, unknown> | null;
   }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/export-summary`);
 }
 
@@ -4191,6 +4209,19 @@ export async function getListingPrepManualWorksheet(listingPrepPackageId: string
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/manual-listing-worksheet`);
+}
+
+export async function getListingPrepOperatorWorksheet(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    operatorWorksheet: Record<string, unknown> | null;
+    operatorChecklist: Record<string, unknown> | null;
+    channelHandoffSummary: Record<string, unknown> | null;
+    currentApprovedArtifactSummary: Record<string, unknown> | null;
+    operatorWorksheetVersion: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/operator-worksheet`);
 }
 
 export interface LeadListItem {

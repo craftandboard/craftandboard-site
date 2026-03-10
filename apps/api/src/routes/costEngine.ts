@@ -35,6 +35,7 @@ import {
   getChannelMappingPreset,
   getListingPrepPackage,
   getManualListingWorksheet,
+  getOperatorWorksheet,
   getListingPrepManualAmazonExport,
   getMarketplaceMappingTemplate,
   getShelfCostCalculation,
@@ -1094,6 +1095,21 @@ router.get("/listing-prep-packages/:listingPrepPackageId/manual-listing-workshee
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getManualListingWorksheet({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/operator-worksheet", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getOperatorWorksheet({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

@@ -278,7 +278,9 @@ export async function requestContextMiddleware(req: Request, res: Response, next
       req.path.startsWith("/auth/logout") ||
       req.path.startsWith("/auth/activate") ||
       req.path.startsWith("/auth/forgot-password") ||
-      req.path.startsWith("/auth/reset-password");
+      req.path.startsWith("/auth/reset-password") ||
+      req.path.startsWith("/public/proposal-acceptance/") ||
+      req.path.startsWith("/payments/providers/") && req.path.endsWith("/acceptance-signals");
 
     req.requestContext = await resolveRequestContext({
       userEmail: req.header("x-user-email"),
@@ -294,7 +296,9 @@ export async function requestContextMiddleware(req: Request, res: Response, next
         req.path.startsWith("/auth/logout") ||
         req.path.startsWith("/auth/activate") ||
         req.path.startsWith("/auth/forgot-password") ||
-        req.path.startsWith("/auth/reset-password");
+        req.path.startsWith("/auth/reset-password") ||
+        req.path.startsWith("/public/proposal-acceptance/") ||
+        req.path.startsWith("/payments/providers/") && req.path.endsWith("/acceptance-signals");
 
       if (isPublicRoute) {
         next();

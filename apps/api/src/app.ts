@@ -25,6 +25,7 @@ import orderIntakeRouter from "./routes/orderIntake.js";
 import ordersRouter from "./routes/orders.js";
 import paymentsRouter from "./routes/payments.js";
 import paymentExecutionRouter from "./routes/paymentExecution.js";
+import proposalAcceptanceIntakeRouter from "./routes/proposalAcceptanceIntake.js";
 import partsRouter from "./routes/parts.js";
 import batchesRouter from "./routes/batches.js";
 import productionRouter from "./routes/production.js";
@@ -78,6 +79,7 @@ export function createApp() {
   app.use("/orders", ordersRouter);
   app.use("/", paymentsRouter);
   app.use("/", paymentExecutionRouter);
+  app.use("/", proposalAcceptanceIntakeRouter);
   app.use("/parts", partsRouter);
   app.use("/batches", batchesRouter);
   app.use("/pricing", pricingRouter);

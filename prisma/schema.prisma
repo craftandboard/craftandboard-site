@@ -519,6 +519,55 @@ enum ProposalOrchestrationOutcome {
   FAILED
 }
 
+enum ProposalAcceptanceIntakeStatus {
+  OPEN
+  SUBMITTED
+  VERIFIED
+  HANDOFF_ACCEPTED
+  HANDOFF_REJECTED
+  EXPIRED
+  REVOKED
+  FAILED
+}
+
+enum ProposalAcceptanceIntakeSource {
+  PUBLIC_TOKEN
+  PROVIDER_CALLBACK
+  EXTERNAL_MANUAL_ENTRY
+}
+
+enum ProposalAcceptanceEvidenceKind {
+  CHECKBOX_CONFIRMATION
+  TYPED_NAME
+  EMAIL_MATCH
+  PROVIDER_ASSERTION
+  IP_CAPTURE
+  USER_AGENT_CAPTURE
+  NOTE
+}
+
+enum ProposalAcceptanceIntakeAction {
+  INTAKE_CREATED
+  TOKEN_ISSUED
+  TOKEN_VALIDATED
+  TOKEN_REJECTED
+  SUBMISSION_RECEIVED
+  SUBMISSION_VERIFIED
+  SUBMISSION_FAILED
+  HANDOFF_REQUESTED
+  HANDOFF_ACCEPTED
+  HANDOFF_REJECTED
+  INTAKE_EXPIRED
+  INTAKE_REVOKED
+  REQUEST_IGNORED_DUPLICATE
+}
+
+enum ProposalAcceptanceIntakeOutcome {
+  APPLIED
+  SKIPPED
+  FAILED
+}
+
 enum ShelfJobStatus {
   READY
   HOLD
@@ -631,6 +680,9 @@ model Organization {
   proposalAcceptances ProposalAcceptance[]
   proposalConversions ProposalConversion[]
   proposalOrchestrationLogs ProposalOrchestrationLog[]
+  proposalAcceptanceIntakes ProposalAcceptanceIntake[]
+  proposalAcceptanceEvidence ProposalAcceptanceEvidence[]
+  proposalAcceptanceIntakeLogs ProposalAcceptanceIntakeLog[]
   parts     Part[]
   batches   Batch[]
   bundles   ProductionBundle[]
@@ -873,6 +925,9 @@ model Proposal {
   acceptance     ProposalAcceptance?
   conversion     ProposalConversion?
   orchestrationLogs ProposalOrchestrationLog[]
+  acceptanceIntakes ProposalAcceptanceIntake[]
+  acceptanceEvidence ProposalAcceptanceEvidence[]
+  acceptanceIntakeLogs ProposalAcceptanceIntakeLog[]
 
   @@index([organizationId, projectId])
   @@index([organizationId, leadId])
@@ -1143,6 +1198,79 @@ model ProposalOrchestrationLog {
   @@index([organizationId, proposalId])
   @@index([organizationId, acceptanceId])
   @@index([organizationId, conversionId])
+}
+
+model ProposalAcceptanceIntake {
+  id                    String                        @id @default(cuid())
+  organizationId        String
+  proposalId            String
+  status                ProposalAcceptanceIntakeStatus @default(OPEN)
+  source                ProposalAcceptanceIntakeSource
+  tokenHash             String?                       @unique
+  tokenExpiresAt        DateTime?
+  openedAt              DateTime?
+  submittedAt           DateTime?
+  verifiedAt            DateTime?
+  handedOffAt           DateTime?
+  expiredAt             DateTime?
+  revokedAt             DateTime?
+  failedAt              DateTime?
+  externalIdentityName  String?
+  externalIdentityEmail String?
+  externalIp            String?
+  externalUserAgent     String?
+  provider              PaymentProvider?
+  providerReference     String?
+  note                  String?
+  payload               Json?
+  verificationSnapshot  Json?
+  metadata              Json?
+  createdByMembershipId String?
+  updatedByMembershipId String?
+  createdAt             DateTime                      @default(now())
+  updatedAt             DateTime                      @updatedAt
+  organization          Organization                  @relation(fields: [organizationId], references: [id])
+  proposal              Proposal                      @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  evidence              ProposalAcceptanceEvidence[]
+  logs                  ProposalAcceptanceIntakeLog[]
+
+  @@index([organizationId, proposalId])
+  @@index([organizationId, proposalId, status])
+  @@index([organizationId, provider, providerReference])
+}
+
+model ProposalAcceptanceEvidence {
+  id             String                        @id @default(cuid())
+  organizationId String
+  proposalId     String
+  intakeId       String
+  kind           ProposalAcceptanceEvidenceKind
+  value          String?
+  details        Json?
+  createdAt      DateTime                      @default(now())
+  organization   Organization                  @relation(fields: [organizationId], references: [id])
+  proposal       Proposal                      @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  intake         ProposalAcceptanceIntake      @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, intakeId])
+}
+
+model ProposalAcceptanceIntakeLog {
+  id             String                           @id @default(cuid())
+  organizationId String
+  proposalId     String
+  intakeId       String?
+  action         ProposalAcceptanceIntakeAction
+  outcome        ProposalAcceptanceIntakeOutcome
+  message        String?
+  details        Json?
+  createdAt      DateTime                         @default(now())
+  organization   Organization                     @relation(fields: [organizationId], references: [id])
+  proposal       Proposal                         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  intake         ProposalAcceptanceIntake?        @relation(fields: [intakeId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, intakeId])
+  @@index([organizationId, proposalId])
 }
 
 model ActivationToken {

@@ -19,6 +19,8 @@ export type ApiCapability =
   | "payment_event_write"
   | "proposal_acceptance_read"
   | "proposal_acceptance_write"
+  | "proposal_acceptance_intake_read"
+  | "proposal_acceptance_intake_write"
   | "proposal_conversion_read"
   | "proposal_conversion_write"
   | "work_module_read"
@@ -71,6 +73,8 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
   payment_event_write: ["OWNER", "ADMIN"],
   proposal_acceptance_read: ["OWNER", "ADMIN"],
   proposal_acceptance_write: ["OWNER", "ADMIN"],
+  proposal_acceptance_intake_read: ["OWNER", "ADMIN"],
+  proposal_acceptance_intake_write: ["OWNER", "ADMIN"],
   proposal_conversion_read: ["OWNER", "ADMIN"],
   proposal_conversion_write: ["OWNER", "ADMIN"],
   work_module_read: ["OWNER", "ADMIN"],
@@ -124,6 +128,8 @@ const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   payment_event_write: "payment provider event management",
   proposal_acceptance_read: "proposal acceptance access",
   proposal_acceptance_write: "proposal acceptance management",
+  proposal_acceptance_intake_read: "proposal acceptance intake access",
+  proposal_acceptance_intake_write: "proposal acceptance intake management",
   proposal_conversion_read: "proposal conversion access",
   proposal_conversion_write: "proposal conversion management",
   work_module_read: "work module access",

@@ -247,7 +247,7 @@ export async function getAcceptanceByProposal(input: {
 export async function acceptProposal(input: {
   organizationId: string;
   proposalId: string;
-  membershipId: string;
+  membershipId?: string | null;
   decisionSource?: string | null;
   note?: string | null;
   metadata?: unknown;
@@ -288,7 +288,7 @@ export async function acceptProposal(input: {
     proposalId: input.proposalId,
     status: "ACCEPTED",
     acceptedAt: new Date(),
-    acceptedByMembershipId: input.membershipId,
+    acceptedByMembershipId: input.membershipId ?? null,
     decisionSource: resolveDecisionSource(input.decisionSource),
     note: input.note,
     metadata: input.metadata
@@ -330,7 +330,7 @@ export async function acceptProposal(input: {
 export async function rejectProposal(input: {
   organizationId: string;
   proposalId: string;
-  membershipId: string;
+  membershipId?: string | null;
   decisionSource?: string | null;
   note?: string | null;
   metadata?: unknown;
@@ -371,7 +371,7 @@ export async function rejectProposal(input: {
     proposalId: input.proposalId,
     status: "REJECTED",
     rejectedAt: new Date(),
-    rejectedByMembershipId: input.membershipId,
+    rejectedByMembershipId: input.membershipId ?? null,
     decisionSource: resolveDecisionSource(input.decisionSource),
     note: input.note,
     metadata: input.metadata
@@ -413,7 +413,7 @@ export async function rejectProposal(input: {
 export async function cancelAcceptance(input: {
   organizationId: string;
   proposalId: string;
-  membershipId: string;
+  membershipId?: string | null;
   note?: string | null;
   metadata?: unknown;
 }) {
@@ -432,7 +432,7 @@ export async function cancelAcceptance(input: {
     proposalId: input.proposalId,
     status: "CANCELED",
     canceledAt: new Date(),
-    canceledByMembershipId: input.membershipId,
+    canceledByMembershipId: input.membershipId ?? null,
     note: input.note,
     metadata: input.metadata
   })) as AcceptanceRecord | null;

@@ -23,6 +23,7 @@ import orgRouter from "./routes/org.js";
 import optimizationRouter from "./routes/optimization.js";
 import orderIntakeRouter from "./routes/orderIntake.js";
 import ordersRouter from "./routes/orders.js";
+import paymentsRouter from "./routes/payments.js";
 import partsRouter from "./routes/parts.js";
 import batchesRouter from "./routes/batches.js";
 import productionRouter from "./routes/production.js";
@@ -73,6 +74,7 @@ export function createApp() {
   app.use("/optimization", optimizationRouter);
   app.use("/order-intake", orderIntakeRouter);
   app.use("/orders", ordersRouter);
+  app.use("/", paymentsRouter);
   app.use("/parts", partsRouter);
   app.use("/batches", batchesRouter);
   app.use("/pricing", pricingRouter);

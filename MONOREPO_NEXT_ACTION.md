@@ -7,5 +7,5 @@ Do not do yet:
 - do not couple proposals directly to deposit/payment workflows
 - do not merge sales models into pricing/costing structures
 
-Exact next Phase 8 action:
-- define the deposit and payment abstraction boundary before importing any money movement, project-payment, or Stripe runtime code
+Exact next Phase 9 action:
+- add a provider-agnostic payment execution and reconciliation boundary before wiring any live Stripe checkout, webhook ingestion, or automatic proposal acceptance flow

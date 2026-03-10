@@ -401,6 +401,35 @@ enum SalesOrderItemPricingStatus {
   ERROR
 }
 
+enum DepositRequestKind {
+  DEPOSIT
+}
+
+enum DepositRequestStatus {
+  DRAFT
+  REQUESTED
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+  CANCELED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  MANUAL
+  EXTERNAL_PROVIDER
+}
+
+enum PaymentDirection {
+  INBOUND
+}
+
 enum ShelfJobStatus {
   READY
   HOLD
@@ -505,6 +534,8 @@ model Organization {
   proposals Proposal[]
   proposalSections ProposalSection[]
   proposalLines ProposalLine[]
+  depositRequests DepositRequest[]
+  payments Payment[]
   parts     Part[]
   batches   Batch[]
   bundles   ProductionBundle[]
@@ -737,6 +768,8 @@ model Proposal {
   lead           Lead?             @relation(fields: [leadId], references: [id], onDelete: SetNull)
   sections       ProposalSection[]
   lines          ProposalLine[]
+  depositRequests DepositRequest[]
+  payments       Payment[]
 
   @@index([organizationId, projectId])
   @@index([organizationId, leadId])
@@ -760,25 +793,82 @@ model ProposalSection {
 }
 
 model ProposalLine {
-  id             String          @id @default(cuid())
+  id             String           @id @default(cuid())
   organizationId String
   proposalId     String
   sectionId      String?
   name           String
   description    String?
-  qty            Decimal         @default(1) @db.Decimal(10, 2)
+  qty            Decimal          @default(1) @db.Decimal(10, 2)
   unit           String?
-  priceCents     Int             @default(0)
-  sortOrder      Int             @default(0)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  organization   Organization    @relation(fields: [organizationId], references: [id])
-  proposal       Proposal        @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  priceCents     Int              @default(0)
+  sortOrder      Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  organization   Organization     @relation(fields: [organizationId], references: [id])
+  proposal       Proposal         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   section        ProposalSection? @relation(fields: [sectionId], references: [id], onDelete: SetNull)
 
   @@index([organizationId, proposalId])
   @@index([proposalId, sortOrder])
   @@index([sectionId])
+}
+
+model DepositRequest {
+  id                    String               @id @default(cuid())
+  organizationId        String
+  proposalId            String
+  kind                  DepositRequestKind   @default(DEPOSIT)
+  status                DepositRequestStatus @default(DRAFT)
+  amountCents           Int
+  currency              String               @default("USD")
+  description           String?
+  requestedAt           DateTime?
+  dueAt                 DateTime?
+  paidAt                DateTime?
+  voidedAt              DateTime?
+  externalReference     String?
+  metadata              Json?
+  createdByMembershipId String?
+  updatedByMembershipId String?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
+  organization          Organization         @relation(fields: [organizationId], references: [id])
+  proposal              Proposal             @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  payments              Payment[]
+
+  @@index([organizationId, proposalId])
+  @@index([organizationId, status])
+  @@index([organizationId, externalReference])
+}
+
+model Payment {
+  id                    String           @id @default(cuid())
+  organizationId        String
+  proposalId            String
+  depositRequestId      String?
+  status                PaymentStatus    @default(PENDING)
+  method                PaymentMethod    @default(MANUAL)
+  amountCents           Int
+  currency              String           @default("USD")
+  direction             PaymentDirection @default(INBOUND)
+  receivedAt            DateTime?
+  externalReference     String?
+  provider              String?
+  note                  String?
+  metadata              Json?
+  createdByMembershipId String?
+  updatedByMembershipId String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  organization          Organization     @relation(fields: [organizationId], references: [id])
+  proposal              Proposal         @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  depositRequest        DepositRequest?  @relation(fields: [depositRequestId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, proposalId])
+  @@index([organizationId, status])
+  @@index([organizationId, externalReference])
+  @@index([depositRequestId])
 }
 
 model ActivationToken {

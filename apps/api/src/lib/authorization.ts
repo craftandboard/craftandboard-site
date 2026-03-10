@@ -9,6 +9,10 @@ export type ApiCapability =
   | "lead_write"
   | "proposal_read"
   | "proposal_write"
+  | "deposit_read"
+  | "deposit_write"
+  | "payment_read"
+  | "payment_write"
   | "work_module_read"
   | "work_module_write"
   | "project_task_write"
@@ -49,6 +53,10 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
   lead_write: ["OWNER", "ADMIN"],
   proposal_read: ["OWNER", "ADMIN"],
   proposal_write: ["OWNER", "ADMIN"],
+  deposit_read: ["OWNER", "ADMIN"],
+  deposit_write: ["OWNER", "ADMIN"],
+  payment_read: ["OWNER", "ADMIN"],
+  payment_write: ["OWNER", "ADMIN"],
   work_module_read: ["OWNER", "ADMIN"],
   work_module_write: ["OWNER", "ADMIN"],
   project_task_write: ["OWNER", "ADMIN"],
@@ -90,6 +98,10 @@ const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   lead_write: "lead management",
   proposal_read: "proposal access",
   proposal_write: "proposal management",
+  deposit_read: "deposit request access",
+  deposit_write: "deposit request management",
+  payment_read: "payment access",
+  payment_write: "payment management",
   work_module_read: "work module access",
   work_module_write: "work module management",
   project_task_write: "project task management",

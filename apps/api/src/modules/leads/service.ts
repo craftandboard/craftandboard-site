@@ -1,5 +1,15 @@
-import { getLeadForOrganization, listLeadsForOrganization } from "./adapters/leadRepository.js";
-import { translateLeadStatus } from "./adapters/statusAdapter.js";
+import {
+  createLeadForOrganization,
+  getLeadForOrganization,
+  listLeadsForOrganization,
+  updateLeadForOrganization
+} from "./adapters/leadRepository.js";
+import {
+  canTransitionLeadStatus,
+  isKnownLeadStatus,
+  normalizeLeadStatusInput,
+  translateLeadStatus
+} from "./adapters/statusAdapter.js";
 
 function mapProjectLink(project: {
   id: string;
@@ -93,3 +103,101 @@ export async function getLeadDetailView(input: {
   };
 }
 
+function mapLeadRow(lead: Awaited<ReturnType<typeof createLeadForOrganization>>) {
+  const translatedStatus = translateLeadStatus(lead.status);
+
+  return {
+    id: lead.id,
+    name: lead.name,
+    email: lead.email,
+    phone: lead.phone,
+    address: lead.address,
+    notes: lead.notes,
+    rawStatus: lead.status,
+    rawStage: lead.stage,
+    stageKey: translatedStatus.stageKey,
+    stageLabel: translatedStatus.stageLabel,
+    isClosed: translatedStatus.isClosed,
+    project: mapProjectLink(lead.project),
+    proposalCount: lead.proposals.length,
+    createdAt: lead.createdAt.toISOString(),
+    updatedAt: lead.updatedAt.toISOString()
+  };
+}
+
+export async function createLead(input: {
+  organizationId: string;
+  projectId?: string | null;
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  status?: string | null;
+  stage?: string | null;
+  notes?: string | null;
+}) {
+  const normalizedStatus =
+    input.status === undefined || input.status === null ? "lead_new" : normalizeLeadStatusInput(input.status);
+
+  if (!isKnownLeadStatus(normalizedStatus)) {
+    throw new Error("Invalid lead status.");
+  }
+
+  const lead = await createLeadForOrganization({
+    ...input,
+    status: normalizedStatus,
+    stage: input.stage ?? null
+  });
+
+  return {
+    ok: true,
+    lead: mapLeadRow(lead)
+  };
+}
+
+export async function updateLead(input: {
+  organizationId: string;
+  leadId: string;
+  projectId?: string | null;
+  name?: string;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  status?: string | null;
+  stage?: string | null;
+  notes?: string | null;
+}) {
+  let currentLead = null;
+  if (input.status !== undefined) {
+    currentLead = await getLeadForOrganization({
+      organizationId: input.organizationId,
+      leadLookup: input.leadId
+    });
+
+    if (!currentLead) {
+      throw new Error("Lead not found.");
+    }
+
+    const nextStatus = input.status === null ? "" : normalizeLeadStatusInput(input.status);
+    if (!nextStatus || !isKnownLeadStatus(nextStatus)) {
+      throw new Error("Invalid lead status.");
+    }
+    if (!canTransitionLeadStatus(currentLead.status, nextStatus)) {
+      throw new Error("Invalid lead status transition.");
+    }
+  }
+
+  const lead = await updateLeadForOrganization({
+    ...input,
+    status: input.status === undefined || input.status === null ? input.status : normalizeLeadStatusInput(input.status)
+  });
+
+  if (!lead) {
+    throw new Error("Lead not found.");
+  }
+
+  return {
+    ok: true,
+    lead: mapLeadRow(lead)
+  };
+}

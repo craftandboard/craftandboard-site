@@ -9,6 +9,59 @@ const LEAD_STAGE_LABELS: Record<string, string> = {
   archived: "Archived"
 };
 
+const LEAD_STATUS_ORDER = [
+  "lead_new",
+  "jobwalk_scheduled",
+  "jobwalk_complete",
+  "estimate_sent",
+  "proposal_sent",
+  "won",
+  "lost",
+  "archived"
+] as const;
+
+type LeadStatusValue = (typeof LEAD_STATUS_ORDER)[number];
+
+const LEAD_TRANSITIONS: Record<LeadStatusValue, ReadonlyArray<LeadStatusValue>> = {
+  lead_new: ["jobwalk_scheduled", "lost", "archived"],
+  jobwalk_scheduled: ["jobwalk_complete", "lost", "archived"],
+  jobwalk_complete: ["estimate_sent", "lost", "archived"],
+  estimate_sent: ["proposal_sent", "lost", "archived"],
+  proposal_sent: ["won", "lost", "archived"],
+  won: ["archived"],
+  lost: ["archived"],
+  archived: []
+};
+
+export function normalizeLeadStatusInput(rawStatus: string) {
+  return rawStatus.trim().toLowerCase();
+}
+
+export function isKnownLeadStatus(rawStatus: string) {
+  return LEAD_STATUS_ORDER.includes(normalizeLeadStatusInput(rawStatus) as LeadStatusValue);
+}
+
+export function canTransitionLeadStatus(fromStatus: string | null, toStatus: string) {
+  const normalizedTo = normalizeLeadStatusInput(toStatus) as LeadStatusValue;
+
+  if (!isKnownLeadStatus(normalizedTo)) {
+    return false;
+  }
+
+  const normalizedFrom = normalizeLeadStatusInput(fromStatus ?? "");
+  if (!normalizedFrom) {
+    return normalizedTo === "lead_new";
+  }
+  if (normalizedFrom === normalizedTo) {
+    return true;
+  }
+  if (!isKnownLeadStatus(normalizedFrom)) {
+    return false;
+  }
+
+  return LEAD_TRANSITIONS[normalizedFrom as LeadStatusValue].includes(normalizedTo);
+}
+
 export function translateLeadStatus(rawStatus: string | null) {
   const normalized = (rawStatus ?? "").trim().toLowerCase();
 
@@ -64,4 +117,3 @@ export function translateLeadStatus(rawStatus: string | null) {
     isClosed: false
   };
 }
-

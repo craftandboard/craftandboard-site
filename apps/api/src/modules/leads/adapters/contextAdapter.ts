@@ -14,3 +14,14 @@ export function getProposalReadContext(req: Request) {
   return context;
 }
 
+export function getLeadWriteContext(req: Request) {
+  const context = getRequestContext(req);
+  assertCapability(context, "lead_write");
+  return context;
+}
+
+export function getProposalWriteContext(req: Request) {
+  const context = getRequestContext(req);
+  assertCapability(context, "proposal_write");
+  return context;
+}

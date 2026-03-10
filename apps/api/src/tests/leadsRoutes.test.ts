@@ -6,6 +6,11 @@ const contextMocks = vi.hoisted(() => ({
     currentOrganization: {
       id: "org_local_craft_board"
     }
+  })),
+  getLeadWriteContext: vi.fn(() => ({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
   }))
 }));
 
@@ -19,7 +24,9 @@ const authorizationMocks = vi.hoisted(() => ({
 
 const serviceMocks = vi.hoisted(() => ({
   listLeadsView: vi.fn(),
-  getLeadDetailView: vi.fn()
+  getLeadDetailView: vi.fn(),
+  createLead: vi.fn(),
+  updateLead: vi.fn()
 }));
 
 vi.mock("../modules/leads/adapters/contextAdapter.js", () => contextMocks);
@@ -53,11 +60,30 @@ beforeEach(async () => {
       id: "org_local_craft_board"
     }
   });
+  contextMocks.getLeadWriteContext.mockReturnValue({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
+  });
   serviceMocks.listLeadsView.mockResolvedValue({
     ok: true,
     leads: []
   });
   serviceMocks.getLeadDetailView.mockResolvedValue({
+    ok: true,
+    lead: {
+      id: "lead_1",
+      name: "Alice Example"
+    }
+  });
+  serviceMocks.createLead.mockResolvedValue({
+    ok: true,
+    lead: {
+      id: "lead_new",
+      name: "Alice Example"
+    }
+  });
+  serviceMocks.updateLead.mockResolvedValue({
     ok: true,
     lead: {
       id: "lead_1",
@@ -104,5 +130,49 @@ describe("leads routes", () => {
     const response = await fetch(`${baseUrl}/leads`);
     expect(response.status).toBe(403);
   });
-});
 
+  it("creates a lead using target org context", async () => {
+    const response = await fetch(`${baseUrl}/leads`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "Alice Example"
+      })
+    });
+
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createLead).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      name: "Alice Example"
+    });
+  });
+
+  it("updates a lead using target org context", async () => {
+    const response = await fetch(`${baseUrl}/leads/lead_1`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        status: "jobwalk_scheduled"
+      })
+    });
+
+    expect(response.status).toBe(200);
+    expect(serviceMocks.updateLead).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      leadId: "lead_1",
+      status: "jobwalk_scheduled"
+    });
+  });
+
+  it("rejects invalid lead payloads", async () => {
+    const response = await fetch(`${baseUrl}/leads`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: ""
+      })
+    });
+
+    expect(response.status).toBe(400);
+  });
+});

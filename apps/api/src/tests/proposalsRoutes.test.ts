@@ -6,6 +6,11 @@ const contextMocks = vi.hoisted(() => ({
     currentOrganization: {
       id: "org_local_craft_board"
     }
+  })),
+  getProposalWriteContext: vi.fn(() => ({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
   }))
 }));
 
@@ -19,7 +24,13 @@ const authorizationMocks = vi.hoisted(() => ({
 
 const serviceMocks = vi.hoisted(() => ({
   listProposalsView: vi.fn(),
-  getProposalDetailView: vi.fn()
+  getProposalDetailView: vi.fn(),
+  createProposal: vi.fn(),
+  updateProposal: vi.fn(),
+  createProposalSection: vi.fn(),
+  updateProposalSection: vi.fn(),
+  createProposalLine: vi.fn(),
+  updateProposalLine: vi.fn()
 }));
 
 vi.mock("../modules/leads/adapters/contextAdapter.js", () => contextMocks);
@@ -53,6 +64,11 @@ beforeEach(async () => {
       id: "org_local_craft_board"
     }
   });
+  contextMocks.getProposalWriteContext.mockReturnValue({
+    currentOrganization: {
+      id: "org_local_craft_board"
+    }
+  });
   serviceMocks.listProposalsView.mockResolvedValue({
     ok: true,
     proposals: []
@@ -62,6 +78,48 @@ beforeEach(async () => {
     proposal: {
       id: "proposal_1",
       title: "Kitchen Proposal"
+    }
+  });
+  serviceMocks.createProposal.mockResolvedValue({
+    ok: true,
+    proposal: {
+      id: "proposal_new",
+      title: "Kitchen Proposal"
+    }
+  });
+  serviceMocks.updateProposal.mockResolvedValue({
+    ok: true,
+    proposal: {
+      id: "proposal_1",
+      title: "Kitchen Proposal"
+    }
+  });
+  serviceMocks.createProposalSection.mockResolvedValue({
+    ok: true,
+    section: {
+      id: "section_1",
+      title: "Base Scope"
+    }
+  });
+  serviceMocks.updateProposalSection.mockResolvedValue({
+    ok: true,
+    section: {
+      id: "section_1",
+      title: "Updated Scope"
+    }
+  });
+  serviceMocks.createProposalLine.mockResolvedValue({
+    ok: true,
+    line: {
+      id: "line_1",
+      name: "Cabinet install"
+    }
+  });
+  serviceMocks.updateProposalLine.mockResolvedValue({
+    ok: true,
+    line: {
+      id: "line_1",
+      name: "Cabinet install"
     }
   });
 });
@@ -103,5 +161,90 @@ describe("proposals routes", () => {
 
     const response = await fetch(`${baseUrl}/proposals`);
     expect(response.status).toBe(403);
+  });
+
+  it("creates a proposal using target org context", async () => {
+    const response = await fetch(`${baseUrl}/proposals`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "Kitchen Proposal"
+      })
+    });
+
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createProposal).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      title: "Kitchen Proposal"
+    });
+  });
+
+  it("updates a proposal using target org context", async () => {
+    const response = await fetch(`${baseUrl}/proposals/proposal_1`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        status: "sent"
+      })
+    });
+
+    expect(response.status).toBe(200);
+    expect(serviceMocks.updateProposal).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      proposalId: "proposal_1",
+      status: "sent"
+    });
+  });
+
+  it("creates and updates proposal sections", async () => {
+    const createResponse = await fetch(`${baseUrl}/proposals/proposal_1/sections`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "Base Scope"
+      })
+    });
+    const updateResponse = await fetch(`${baseUrl}/proposals/proposal_1/sections/section_1`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: "Updated Scope"
+      })
+    });
+
+    expect(createResponse.status).toBe(201);
+    expect(updateResponse.status).toBe(200);
+  });
+
+  it("creates and updates proposal lines", async () => {
+    const createResponse = await fetch(`${baseUrl}/proposals/proposal_1/lines`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "Cabinet install"
+      })
+    });
+    const updateResponse = await fetch(`${baseUrl}/proposals/proposal_1/lines/line_1`, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        priceCents: 240000
+      })
+    });
+
+    expect(createResponse.status).toBe(201);
+    expect(updateResponse.status).toBe(200);
+  });
+
+  it("rejects invalid proposal payloads", async () => {
+    const response = await fetch(`${baseUrl}/proposals/proposal_1/lines`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: ""
+      })
+    });
+
+    expect(response.status).toBe(400);
   });
 });

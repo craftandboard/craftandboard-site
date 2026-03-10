@@ -817,6 +817,7 @@ model Organization {
   comparisonSetScenarios ComparisonSetScenario[]
   launchTemplates LaunchTemplate[]
   launchGuardrailProfiles LaunchGuardrailProfile[]
+  marketplaceMappingTemplates MarketplaceMappingTemplate[]
   listingPrepPackages ListingPrepPackage[]
   shelfCostEstimates ShelfCostEstimate[]
   orderCostEstimates OrderCostEstimate[]
@@ -2322,6 +2323,7 @@ model CostProfile {
   calculationScenarios             CalculationScenario[]
   launchTemplates                  LaunchTemplate[]
   launchGuardrailProfiles          LaunchGuardrailProfile[]
+  marketplaceMappingTemplates      MarketplaceMappingTemplate[]
 
   @@index([organizationId, isDefault])
   @@index([organizationId, status])
@@ -2597,6 +2599,7 @@ model CalculationScenario {
   priceFloorOverrideRequested Boolean          @default(false)
   priceFloorOverrideApproved Boolean           @default(false)
   priceFloorOverrideSnapshot Json?
+  latestOverrideSummarySnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
@@ -2623,6 +2626,8 @@ model CalculationComparisonSet {
   selectedLaunchWarningSnapshot Json?
   selectedListingPrepPackageId String?
   listingPrepSummarySnapshot Json?
+  selectedListingPrepReadySnapshot Json?
+  selectedListingPrepExportVersion String?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2652,6 +2657,12 @@ model ListingPrepPackage {
   validationSnapshot     Json
   warningSnapshot        Json?
   overrideSnapshot       Json?
+  marketplaceMappingTemplateId String?
+  exportVersion          String?
+  exportShapeSnapshot    Json?
+  overrideHistorySnapshot Json?
+  readyForListingPrep    Boolean                  @default(false)
+  readyForListingPrepSummary Json?
   notes                  String?
   approvedAt             DateTime?
   approvedByMembershipId String?
@@ -2661,12 +2672,41 @@ model ListingPrepPackage {
   comparisonSet          CalculationComparisonSet? @relation(fields: [comparisonSetId], references: [id])
   primaryForScenario     CalculationScenario?     @relation("ScenarioPrimaryListingPrepPackage")
   calculationScenario    CalculationScenario      @relation("ScenarioListingPrepPackages", fields: [calculationScenarioId], references: [id])
+  marketplaceMappingTemplate MarketplaceMappingTemplate? @relation(fields: [marketplaceMappingTemplateId], references: [id])
   selectedByComparisonSets CalculationComparisonSet[] @relation("ComparisonSetSelectedListingPrepPackage")
 
   @@index([organizationId, status])
   @@index([organizationId, listingReadinessStatus])
   @@index([organizationId, calculationScenarioId])
   @@index([organizationId, comparisonSetId])
+  @@index([organizationId, readyForListingPrep])
+  @@index([organizationId, marketplaceMappingTemplateId])
+}
+
+model MarketplaceMappingTemplate {
+  id                   String            @id @default(cuid())
+  organizationId       String
+  costProfileId        String?
+  name                 String
+  status               CostProfileStatus @default(ACTIVE)
+  productLabelFormat   String?
+  skuFormat            String?
+  includeWarningNotes  Boolean           @default(true)
+  includeOverrideNotes Boolean           @default(true)
+  dimensionsFormat     String?
+  materialFormat       String?
+  packagingFormat      String?
+  pricingFormat        String?
+  notes                String?
+  templateSnapshot     Json?
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+  organization         Organization      @relation(fields: [organizationId], references: [id])
+  costProfile          CostProfile?      @relation(fields: [costProfileId], references: [id])
+  listingPrepPackages  ListingPrepPackage[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, costProfileId])
 }
 
 model ComparisonSetScenario {

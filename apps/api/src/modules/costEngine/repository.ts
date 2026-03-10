@@ -118,6 +118,10 @@ export async function getCostProfileRecord(input: {
       launchGuardrailProfiles: {
         where: { status: "ACTIVE" },
         orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
+      },
+      marketplaceMappingTemplates: {
+        where: { status: "ACTIVE" },
+        orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
       }
     }
   });
@@ -661,6 +665,7 @@ export async function createCalculationScenarioRecord(input: {
   priceFloorOverrideRequested?: boolean;
   priceFloorOverrideApproved?: boolean;
   priceFloorOverrideSnapshot?: unknown;
+  latestOverrideSummarySnapshot?: unknown;
   assumptionsSnapshot: unknown;
   resultSnapshot: unknown;
 }) {
@@ -694,6 +699,7 @@ export async function createCalculationScenarioRecord(input: {
       priceFloorOverrideRequested: input.priceFloorOverrideRequested ?? false,
       priceFloorOverrideApproved: input.priceFloorOverrideApproved ?? false,
       priceFloorOverrideSnapshot: normalizeMetadata(input.priceFloorOverrideSnapshot),
+      latestOverrideSummarySnapshot: normalizeMetadata(input.latestOverrideSummarySnapshot),
       assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
       resultSnapshot: normalizeMetadata(input.resultSnapshot)
     }
@@ -716,6 +722,8 @@ export async function createCalculationComparisonSetRecord(input: {
   selectedLaunchWarningSnapshot?: unknown;
   selectedListingPrepPackageId?: string | null;
   listingPrepSummarySnapshot?: unknown;
+  selectedListingPrepReadySnapshot?: unknown;
+  selectedListingPrepExportVersion?: string | null;
 }) {
   return prismaClient.calculationComparisonSet.create({
     data: {
@@ -733,7 +741,9 @@ export async function createCalculationComparisonSetRecord(input: {
       selectedLaunchReadinessStatus: input.selectedLaunchReadinessStatus ?? undefined,
       selectedLaunchWarningSnapshot: normalizeMetadata(input.selectedLaunchWarningSnapshot),
       selectedListingPrepPackageId: input.selectedListingPrepPackageId ?? undefined,
-      listingPrepSummarySnapshot: normalizeMetadata(input.listingPrepSummarySnapshot)
+      listingPrepSummarySnapshot: normalizeMetadata(input.listingPrepSummarySnapshot),
+      selectedListingPrepReadySnapshot: normalizeMetadata(input.selectedListingPrepReadySnapshot),
+      selectedListingPrepExportVersion: input.selectedListingPrepExportVersion ?? undefined
     }
   });
 }
@@ -795,7 +805,11 @@ export async function listCalculationComparisonSetsForOrganization(organizationI
               guardrailProfile: true,
               packagingRule: true,
               shippingRule: true,
-              linkedListingPrepPackage: true
+              linkedListingPrepPackage: {
+                include: {
+                  marketplaceMappingTemplate: true
+                }
+              }
             }
           }
         },
@@ -803,7 +817,11 @@ export async function listCalculationComparisonSetsForOrganization(organizationI
       },
       recommendedScenario: true,
       selectedLaunchScenario: true,
-      selectedListingPrepPackage: true
+      selectedListingPrepPackage: {
+        include: {
+          marketplaceMappingTemplate: true
+        }
+      }
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }]
   });
@@ -828,7 +846,11 @@ export async function getCalculationComparisonSetRecord(input: {
               guardrailProfile: true,
               packagingRule: true,
               shippingRule: true,
-              linkedListingPrepPackage: true
+              linkedListingPrepPackage: {
+                include: {
+                  marketplaceMappingTemplate: true
+                }
+              }
             }
           }
         },
@@ -836,7 +858,11 @@ export async function getCalculationComparisonSetRecord(input: {
       },
       recommendedScenario: true,
       selectedLaunchScenario: true,
-      selectedListingPrepPackage: true
+      selectedListingPrepPackage: {
+        include: {
+          marketplaceMappingTemplate: true
+        }
+      }
     }
   });
 }
@@ -853,6 +879,12 @@ export async function createListingPrepPackageRecord(input: {
   validationSnapshot: unknown;
   warningSnapshot?: unknown;
   overrideSnapshot?: unknown;
+  marketplaceMappingTemplateId?: string | null;
+  exportVersion?: string | null;
+  exportShapeSnapshot?: unknown;
+  overrideHistorySnapshot?: unknown;
+  readyForListingPrep?: boolean;
+  readyForListingPrepSummary?: unknown;
   notes?: string | null;
   approvedAt?: Date | null;
   approvedByMembershipId?: string | null;
@@ -870,6 +902,12 @@ export async function createListingPrepPackageRecord(input: {
       validationSnapshot: normalizeMetadata(input.validationSnapshot),
       warningSnapshot: normalizeMetadata(input.warningSnapshot),
       overrideSnapshot: normalizeMetadata(input.overrideSnapshot),
+      marketplaceMappingTemplateId: input.marketplaceMappingTemplateId ?? undefined,
+      exportVersion: input.exportVersion ?? undefined,
+      exportShapeSnapshot: normalizeMetadata(input.exportShapeSnapshot),
+      overrideHistorySnapshot: normalizeMetadata(input.overrideHistorySnapshot),
+      readyForListingPrep: input.readyForListingPrep ?? false,
+      readyForListingPrepSummary: normalizeMetadata(input.readyForListingPrepSummary),
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
       approvedByMembershipId: input.approvedByMembershipId ?? null
@@ -902,7 +940,8 @@ export async function listListingPrepPackagesForOrganization(input: {
     },
     include: {
       calculationScenario: true,
-      comparisonSet: true
+      comparisonSet: true,
+      marketplaceMappingTemplate: true
     },
     orderBy: [{ updatedAt: "desc" }, { id: "desc" }]
   });
@@ -927,8 +966,84 @@ export async function getListingPrepPackageRecord(input: {
           guardrailProfile: true
         }
       },
-      comparisonSet: true
+      comparisonSet: true,
+      marketplaceMappingTemplate: true
     }
+  });
+}
+
+export async function createMarketplaceMappingTemplateRecord(input: {
+  organizationId: string;
+  costProfileId?: string | null;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  productLabelFormat?: string | null;
+  skuFormat?: string | null;
+  includeWarningNotes?: boolean;
+  includeOverrideNotes?: boolean;
+  dimensionsFormat?: string | null;
+  materialFormat?: string | null;
+  packagingFormat?: string | null;
+  pricingFormat?: string | null;
+  notes?: string | null;
+  templateSnapshot?: unknown;
+}) {
+  return prismaClient.marketplaceMappingTemplate.create({
+    data: {
+      organizationId: input.organizationId,
+      costProfileId: input.costProfileId ?? undefined,
+      name: input.name,
+      status: input.status ?? "ACTIVE",
+      productLabelFormat: input.productLabelFormat ?? null,
+      skuFormat: input.skuFormat ?? null,
+      includeWarningNotes: input.includeWarningNotes ?? true,
+      includeOverrideNotes: input.includeOverrideNotes ?? true,
+      dimensionsFormat: input.dimensionsFormat ?? null,
+      materialFormat: input.materialFormat ?? null,
+      packagingFormat: input.packagingFormat ?? null,
+      pricingFormat: input.pricingFormat ?? null,
+      notes: input.notes ?? null,
+      templateSnapshot: normalizeMetadata(input.templateSnapshot)
+    }
+  });
+}
+
+export async function listMarketplaceMappingTemplatesForOrganization(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  return prismaClient.marketplaceMappingTemplate.findMany({
+    where: {
+      organizationId: input.organizationId,
+      ...(input.costProfileId ? { OR: [{ costProfileId: input.costProfileId }, { costProfileId: null }] } : {})
+    },
+    orderBy: [{ status: "asc" }, { updatedAt: "desc" }, { id: "desc" }]
+  });
+}
+
+export async function getMarketplaceMappingTemplateRecord(input: {
+  organizationId: string;
+  mappingTemplateId: string;
+}) {
+  return prismaClient.marketplaceMappingTemplate.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      id: input.mappingTemplateId
+    }
+  });
+}
+
+export async function updateMarketplaceMappingTemplateRecord(input: {
+  organizationId: string;
+  mappingTemplateId: string;
+  data: Record<string, unknown>;
+}) {
+  return prismaClient.marketplaceMappingTemplate.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      id: input.mappingTemplateId
+    },
+    data: input.data
   });
 }
 

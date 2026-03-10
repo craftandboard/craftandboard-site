@@ -10,6 +10,7 @@ const repositoryMocks = vi.hoisted(() => ({
   createLaunchGuardrailProfileRecord: vi.fn(),
   createLaunchTemplateRecord: vi.fn(),
   createListingPrepPackageRecord: vi.fn(),
+  createMarketplaceMappingTemplateRecord: vi.fn(),
   createMaterialCostRuleRecord: vi.fn(),
   createPackagingCostRuleRecord: vi.fn(),
   createShelfCostCalculationRecord: vi.fn(),
@@ -21,6 +22,7 @@ const repositoryMocks = vi.hoisted(() => ({
   getLaunchGuardrailProfileRecord: vi.fn(),
   getLaunchTemplateRecord: vi.fn(),
   getListingPrepPackageRecord: vi.fn(),
+  getMarketplaceMappingTemplateRecord: vi.fn(),
   getShelfCostCalculationRecord: vi.fn(),
   getShippingZoneRuleRecord: vi.fn(),
   listAmazonFeePresetsForOrganization: vi.fn(),
@@ -29,6 +31,7 @@ const repositoryMocks = vi.hoisted(() => ({
   listLaunchGuardrailProfilesForOrganization: vi.fn(),
   listLaunchTemplatesForOrganization: vi.fn(),
   listListingPrepPackagesForOrganization: vi.fn(),
+  listMarketplaceMappingTemplatesForOrganization: vi.fn(),
   listShelfCostCalculationsForOrganization: vi.fn(),
   listShippingZoneRulesForOrganization: vi.fn(),
   updateAmazonFeePresetRecord: vi.fn(),
@@ -39,6 +42,7 @@ const repositoryMocks = vi.hoisted(() => ({
   updateLaunchGuardrailProfileRecord: vi.fn(),
   updateLaunchTemplateRecord: vi.fn(),
   updateListingPrepPackageRecord: vi.fn(),
+  updateMarketplaceMappingTemplateRecord: vi.fn(),
   updateMaterialCostRuleRecord: vi.fn(),
   updatePackagingCostRuleRecord: vi.fn(),
   updateShippingCostRuleRecord: vi.fn(),
@@ -50,6 +54,7 @@ vi.mock("../modules/costEngine/repository.js", () => repositoryMocks);
 import {
   calculateShelfCostView,
   compareShelfCostScenarios,
+  createMarketplaceMappingTemplate,
   createLaunchGuardrailProfile,
   createLaunchTemplate,
   buildListingPrepPackage,
@@ -57,10 +62,13 @@ import {
   evaluateComparisonSetListingReadiness,
   getComparisonSetExportSummary,
   getListingPrepPackage,
+  getMarketplaceMappingTemplate,
   getShelfCostCalculation,
   listLaunchGuardrailProfiles,
   listListingPrepPackages,
+  listMarketplaceMappingTemplates,
   rankComparisonSet,
+  refreshListingPrepPackage,
   requestPriceFloorOverride,
   listCostProfiles,
   listLaunchTemplates,
@@ -221,7 +229,28 @@ function makeProfile() {
       }
     ],
     launchTemplates: [],
-    launchGuardrailProfiles: []
+    launchGuardrailProfiles: [],
+    marketplaceMappingTemplates: [
+      {
+        id: "mapping_1",
+        organizationId: "org_local_craft_board",
+        costProfileId: "profile_1",
+        name: "Amazon balanced export",
+        status: "ACTIVE",
+        productLabelFormat: "{productLabel}",
+        skuFormat: "HUGO-{sku}",
+        includeWarningNotes: true,
+        includeOverrideNotes: true,
+        dimensionsFormat: "{dimensionSummary}",
+        materialFormat: "{materialSummary}",
+        packagingFormat: "{packagingSummary}",
+        pricingFormat: "{pricingSummary}",
+        notes: null,
+        templateSnapshot: null,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      }
+    ]
   };
 }
 
@@ -234,6 +263,7 @@ describe("cost engine service", () => {
     repositoryMocks.updateCalculationComparisonSetRecord.mockResolvedValue({ count: 1 });
     repositoryMocks.updateListingPrepPackageRecord.mockResolvedValue({ count: 1 });
     repositoryMocks.getLaunchGuardrailProfileRecord.mockResolvedValue(null);
+    repositoryMocks.getMarketplaceMappingTemplateRecord.mockResolvedValue(makeProfile().marketplaceMappingTemplates[0]);
   });
 
   it("lists cost profiles in org scope", async () => {
@@ -430,6 +460,216 @@ describe("cost engine service", () => {
 
     expect(created.launchGuardrailProfile.id).toBe("guard_1");
     expect(listed.launchGuardrailProfiles).toHaveLength(1);
+  });
+
+  it("creates, fetches, and lists marketplace mapping templates", async () => {
+    repositoryMocks.createMarketplaceMappingTemplateRecord.mockResolvedValueOnce({ id: "mapping_1" });
+    repositoryMocks.listMarketplaceMappingTemplatesForOrganization.mockResolvedValueOnce(
+      makeProfile().marketplaceMappingTemplates
+    );
+
+    const created = await createMarketplaceMappingTemplate({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Amazon balanced export",
+      productLabelFormat: "{productLabel}"
+    });
+    const fetched = await getMarketplaceMappingTemplate({
+      organizationId: "org_local_craft_board",
+      mappingTemplateId: "mapping_1"
+    });
+    const listed = await listMarketplaceMappingTemplates({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1"
+    });
+
+    expect(created.marketplaceMappingTemplate.id).toBe("mapping_1");
+    expect(fetched.marketplaceMappingTemplate.name).toBe("Amazon balanced export");
+    expect(listed.marketplaceMappingTemplates).toHaveLength(1);
+  });
+
+  it("refreshes a listing-prep package and preserves stable export metadata", async () => {
+    const listingPrepPackageRecord = {
+      id: "package_1",
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "compare_1",
+      calculationScenarioId: "scenario_1",
+      marketplaceMappingTemplateId: "mapping_1",
+      marketplaceMappingTemplate: makeProfile().marketplaceMappingTemplates[0],
+      name: "Shelf launch package",
+      status: "READY",
+      listingReadinessStatus: "READY",
+      exportVersion: "v1",
+      exportShapeSnapshot: {
+        packageId: "package_1",
+        exportVersion: "v1"
+      },
+      marketplaceFieldSnapshot: {
+        productLabel: "Shelf package"
+      },
+      validationSnapshot: {
+        listingFieldValidationStatus: "VALID",
+        missingFields: [],
+        weakFields: [],
+        readyFields: ["productLabel"],
+        validationSummary: "Ready."
+      },
+      warningSnapshot: [],
+      overrideSnapshot: null,
+      overrideHistorySnapshot: [],
+      readyForListingPrep: true,
+      readyForListingPrepSummary: {
+        readyForListingPrepStatus: "READY",
+        blockingReasons: [],
+        reviewReasons: []
+      },
+      notes: "Initial package",
+      approvedAt: null,
+      approvedByMembershipId: null,
+      createdAt: new Date("2026-03-10T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-10T00:00:00.000Z"),
+      calculationScenario: {
+        id: "scenario_1",
+        organizationId: "org_local_craft_board",
+        name: "Balanced launch",
+        costProfileId: "profile_1",
+        amazonFeePresetId: "preset_1",
+        amazonFeePreset: { name: "Amazon Standard" },
+        shippingZoneRuleId: "zone_1",
+        shippingZoneRule: { name: "Zone 2" },
+        packagingRuleId: "pack_1",
+        packagingRule: { packagingName: "Standard" },
+        shippingRuleId: "ship_1",
+        shippingRule: { shippingName: "Ground" },
+        shelfCostCalculationId: "calc_1",
+        shelfCostCalculation: {
+          id: "calc_1",
+          name: "Shelf calc",
+          sku: "SHELF-30",
+          quantity: 1,
+          lengthIn: { toNumber: () => 30 },
+          depthIn: { toNumber: () => 12 },
+          thicknessIn: { toNumber: () => 0.75 },
+          materialCode: "WHITE_MELAMINE_075",
+          edgeBandPattern: "LONG_EDGES",
+          packagingCode: "STANDARD",
+          packagingRule: { packagingName: "Standard" },
+          shippingCode: "GROUND",
+          shippingRule: { shippingName: "Ground" },
+          materialCostCents: 1000,
+          edgeBandCostCents: 100,
+          laborCostCents: 200,
+          machineCostCents: 150,
+          packagingCostCents: 50,
+          shippingCostCents: 75,
+          overheadCostCents: 25,
+          subtotalCostCents: 1600,
+          breakEvenPriceCents: 2100,
+          recommendedMinSellPriceCents: 2400,
+          recommendedTargetSellPriceCents: 2800,
+          recommendedSellPriceCents: 2600,
+          targetMarginPct: { toNumber: () => 20 },
+          growthMarginPct: { toNumber: () => 10 },
+          assumptionsSnapshot: {},
+          resultSnapshot: {},
+          createdAt: new Date("2026-03-10T00:00:00.000Z"),
+          updatedAt: new Date("2026-03-10T00:00:00.000Z")
+        },
+        assumptionsSnapshot: {},
+        resultSnapshot: {
+          breakdown: {
+            subtotalCostCents: 1600,
+            breakEvenPriceCents: 2100,
+            recommendedMinSellPriceCents: 2400,
+            recommendedTargetSellPriceCents: 2800,
+            marketplaceFeeCostCents: 180,
+            returnReserveCostCents: 40,
+            damageReserveCostCents: 20
+          },
+          shipping: {
+            baseCostCents: 75,
+            weightCostCents: 0,
+            volumeCostCents: 0,
+            dimensionalCostCents: 0,
+            shippingBufferCostCents: 15
+          },
+          amazonFees: {
+            closingFeeCostCents: 99,
+            fulfillmentFeeCostCents: 450,
+            storageAllowanceCostCents: 40,
+            advertisingAllowanceCostCents: 60,
+            miscMarketplaceCostCents: 10
+          }
+        },
+        launchStrategy: "BALANCED",
+        rankingScore: { toNumber: () => 88 },
+        rankingSummary: {},
+        isRecommendedLaunchScenario: true,
+        guardrailProfileId: null,
+        riskScore: { toNumber: () => 18 },
+        riskLevel: "LOW",
+        guardrailSnapshot: {},
+        warningSnapshot: [],
+        handoffSnapshot: {},
+        isLaunchApprovedCandidate: true,
+        listingReadinessStatus: "READY",
+        listingReadinessSnapshot: {
+          listingReadinessStatus: "READY"
+        },
+        marketplaceFieldSnapshot: {
+          productLabel: "Shelf package"
+        },
+        strongerAlertSnapshot: [],
+        exportSnapshot: {},
+        latestOverrideSummarySnapshot: null,
+        listingPrepPackageId: "package_1",
+        priceFloorOverrideRequested: false,
+        priceFloorOverrideApproved: false,
+        priceFloorOverrideSnapshot: null,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      },
+      comparisonSet: {
+        id: "compare_1",
+        organizationId: "org_local_craft_board",
+        name: "Launch compare",
+        notes: null,
+        baseShelfSpecSnapshot: {},
+        recommendedScenarioId: "scenario_1",
+        rankingSnapshot: {},
+        comparisonSummary: {},
+        selectedLaunchScenarioId: "scenario_1",
+        selectedLaunchSummary: {},
+        riskSummary: {},
+        selectedListingPrepPackageId: "package_1",
+        listingPrepSummarySnapshot: {},
+        selectedListingPrepReadySnapshot: {
+          readyForListingPrepStatus: "READY"
+        },
+        selectedListingPrepExportVersion: "v1",
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      }
+    };
+
+    repositoryMocks.getListingPrepPackageRecord
+      .mockResolvedValueOnce(listingPrepPackageRecord)
+      .mockResolvedValueOnce(listingPrepPackageRecord);
+
+    const refreshed = await refreshListingPrepPackage({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1"
+    });
+
+    const updateCall = repositoryMocks.updateListingPrepPackageRecord.mock.calls[0]?.[0];
+    expect(updateCall.organizationId).toBe("org_local_craft_board");
+    expect(updateCall.listingPrepPackageId).toBe("package_1");
+    expect(updateCall.data.exportVersion).toBe("v1");
+    expect(updateCall.data.exportShapeSnapshot.packageId).toBe("package_1");
+    expect(updateCall.data.exportShapeSnapshot.exportMetadata.exportVersion).toBe("v1");
+    expect(refreshed.listingPrepPackage.exportVersion).toBe("v1");
+    expect(typeof refreshed.listingPrepPackage.readyForListingPrep).toBe("boolean");
+    expect(refreshed.listingPrepPackage.readyForListingPrepSummary).toBeTruthy();
   });
 
   it("saves comparison sets with scenario records", async () => {

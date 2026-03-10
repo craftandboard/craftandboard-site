@@ -64,6 +64,10 @@ export const guardrailProfileIdParamsSchema = z.object({
   guardrailProfileId: z.string().trim().min(1)
 });
 
+export const mappingTemplateIdParamsSchema = z.object({
+  mappingTemplateId: z.string().trim().min(1)
+});
+
 export const listingPrepPackageIdParamsSchema = z.object({
   listingPrepPackageId: z.string().trim().min(1)
 });
@@ -322,6 +326,26 @@ export const updateLaunchGuardrailProfileSchema = createLaunchGuardrailProfileSc
   { message: "At least one guardrail field must be provided." }
 );
 
+export const createMarketplaceMappingTemplateSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  status: costProfileStatusSchema.optional(),
+  productLabelFormat: z.string().trim().max(400).nullable().optional(),
+  skuFormat: z.string().trim().max(200).nullable().optional(),
+  includeWarningNotes: z.boolean().optional(),
+  includeOverrideNotes: z.boolean().optional(),
+  dimensionsFormat: z.string().trim().max(400).nullable().optional(),
+  materialFormat: z.string().trim().max(400).nullable().optional(),
+  packagingFormat: z.string().trim().max(400).nullable().optional(),
+  pricingFormat: z.string().trim().max(400).nullable().optional(),
+  notes: z.string().trim().max(4000).nullable().optional(),
+  templateSnapshot: z.unknown().nullable().optional()
+});
+
+export const updateMarketplaceMappingTemplateSchema = createMarketplaceMappingTemplateSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one marketplace mapping template field must be provided." }
+);
+
 export const listLaunchGuardrailProfilesQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()
 });
@@ -342,6 +366,7 @@ export const evaluateListingReadinessSchema = z.object({
 
 export const buildListingPrepPackageSchema = z.object({
   selectedScenarioId: z.string().trim().min(1).nullable().optional(),
+  marketplaceMappingTemplateId: z.string().trim().min(1).nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional()
 });
 
@@ -359,6 +384,10 @@ export const priceFloorOverrideSchema = z.object({
   approvedByMembershipId: z.string().trim().min(1).nullable().optional()
 });
 
+export const refreshListingPrepPackageSchema = z.object({
+  notes: z.string().trim().max(4000).nullable().optional()
+});
+
 export const listShelfCostCalculationsQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()
 });
@@ -368,5 +397,9 @@ export const listAmazonFeePresetsQuerySchema = z.object({
 });
 
 export const listShippingZoneRulesQuerySchema = z.object({
+  costProfileId: z.string().trim().min(1).optional()
+});
+
+export const listMarketplaceMappingTemplatesQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()
 });

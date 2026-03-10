@@ -8,6 +8,8 @@ export function LaunchExportSummaryCard({
   comparison: CostComparisonResult | null;
 }) {
   const exportSnapshot = comparison?.selectedLaunchExportSnapshot ?? null;
+  const exportMetadata = (exportSnapshot?.["exportMetadata"] ?? null) as Record<string, unknown> | null;
+  const readySummary = (comparison?.selectedListingPrepReadySnapshot ?? null) as Record<string, unknown> | null;
 
   if (!exportSnapshot) {
     return (
@@ -25,6 +27,20 @@ export function LaunchExportSummaryCard({
         This is the internal handoff artifact for the next listing-focused phase. It packages the selected scenario,
         marketplace-prep fields, warnings, and the assumptions snapshot in one stable record.
       </p>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Export version</p>
+          <p className="mt-2 font-semibold text-white">{String(exportMetadata?.exportVersion ?? comparison?.selectedListingPrepExportVersion ?? "listing-prep-v1")}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Mapping template</p>
+          <p className="mt-2 font-semibold text-white">{String(exportSnapshot?.["mappingTemplateLabel"] ?? "No template")}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Ready summary</p>
+          <p className="mt-2 font-semibold text-white">{String(readySummary?.readyForListingPrepStatus ?? "Not evaluated")}</p>
+        </div>
+      </div>
       <pre className="mt-4 overflow-x-auto rounded-2xl border border-white/10 bg-black/30 p-4 text-xs text-slate-200">
         {JSON.stringify(exportSnapshot, null, 2)}
       </pre>

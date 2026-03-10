@@ -10,12 +10,14 @@ import {
   createEdgeBandCostRule,
   createLaunchGuardrailProfile,
   createLaunchTemplate,
+  createMarketplaceMappingTemplate,
   createMaterialCostRule,
   createPackagingCostRule,
   createShippingCostRule,
   createShippingZoneRule,
   evaluateCostComparisonListingReadiness,
   getListingPrepPackage,
+  refreshListingPrepPackage,
   getCostComparisonSet,
   getCostComparisonSets,
   getCostProfile,
@@ -30,12 +32,12 @@ import {
   updateCostProfile,
   updateLaunchGuardrailProfile,
   updateLaunchTemplate,
+  updateMarketplaceMappingTemplate,
   updatePackagingCostRule,
   updateShippingCostRule,
   updateShippingZoneRule,
   validateCostListingMarketplaceFields,
   type LaunchGuardrailProfileItem,
-  type LaunchTemplateItem,
   type ComparisonSetListItem,
   type CostCalculationInput,
   type CostCalculationPreview,
@@ -60,9 +62,12 @@ import { LaunchRiskSummaryCard } from "./launch-risk-summary-card";
 import { LaunchTemplateEditor } from "./launch-template-editor";
 import { ListingPrepPackageCard } from "./listing-prep-package-card";
 import { ListingPrepFieldCard } from "./listing-prep-field-card";
+import { MarketplaceMappingTemplateEditor } from "./marketplace-mapping-template-editor";
 import { MarketplaceMappingValidationCard } from "./marketplace-mapping-validation-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
+import { OverrideHistoryCard } from "./override-history-card";
 import { PriceFloorOverrideReviewCard } from "./price-floor-override-review-card";
+import { ReadyForListingPrepCard } from "./ready-for-listing-prep-card";
 import { CostProfileEditor } from "./cost-profile-editor";
 import { CostScenarioBuilder } from "./cost-scenario-builder";
 import { CostScenarioComparisonCard } from "./cost-scenario-comparison-card";
@@ -139,6 +144,7 @@ export function CostCalculatorForm() {
     shippingBufferPct: "",
     shippingBufferCents: "",
     guardrailProfileId: "",
+    marketplaceMappingTemplateId: "",
     comparisonName: "Launch pricing comparison",
     comparisonNotes: ""
   });
@@ -254,7 +260,9 @@ export function CostCalculatorForm() {
           ? String(selectedProfile.defaultShippingBufferCents)
           : ""),
       guardrailProfileId:
-        current.guardrailProfileId || selectedProfile.launchGuardrailProfiles[0]?.id || ""
+        current.guardrailProfileId || selectedProfile.launchGuardrailProfiles[0]?.id || "",
+      marketplaceMappingTemplateId:
+        current.marketplaceMappingTemplateId || selectedProfile.marketplaceMappingTemplates[0]?.id || ""
     }));
   }, [selectedProfile]);
 
@@ -267,7 +275,8 @@ export function CostCalculatorForm() {
       feePresets: selectedProfile?.amazonFeePresets ?? [],
       shippingZones: selectedProfile?.shippingZoneRules ?? [],
       launchTemplates: selectedProfile?.launchTemplates ?? [],
-      launchGuardrailProfiles: selectedProfile?.launchGuardrailProfiles ?? guardrailProfiles
+      launchGuardrailProfiles: selectedProfile?.launchGuardrailProfiles ?? guardrailProfiles,
+      marketplaceMappingTemplates: selectedProfile?.marketplaceMappingTemplates ?? []
     }),
     [guardrailProfiles, selectedProfile]
   );
@@ -524,7 +533,10 @@ export function CostCalculatorForm() {
             damageReservePct: baseSpec.damageReservePct ? String(baseSpec.damageReservePct) : "",
             shippingBufferPct: baseSpec.shippingBufferPct ? String(baseSpec.shippingBufferPct) : "",
             shippingBufferCents: baseSpec.shippingBufferCents ? String(baseSpec.shippingBufferCents) : "",
-            guardrailProfileId: comparisonSet.scenarios[0]?.scenario.guardrailProfileId ?? ""
+            guardrailProfileId: comparisonSet.scenarios[0]?.scenario.guardrailProfileId ?? "",
+            marketplaceMappingTemplateId:
+              selectedListingPrepPackage?.marketplaceMappingTemplateId ??
+              current.marketplaceMappingTemplateId
           }));
           setScenarios(
             comparisonSet.scenarios.map((entry) => {
@@ -573,6 +585,8 @@ export function CostCalculatorForm() {
             selectedListingPrepPackageId: comparisonSet.selectedListingPrepPackageId ?? null,
             selectedListingPrepPackageName: comparisonSet.selectedListingPrepPackageName ?? null,
             listingPrepSummarySnapshot: comparisonSet.listingPrepSummarySnapshot ?? null,
+            selectedListingPrepReadySnapshot: comparisonSet.selectedListingPrepReadySnapshot ?? null,
+            selectedListingPrepExportVersion: comparisonSet.selectedListingPrepExportVersion ?? null,
             scenarios: comparisonSet.scenarios.map((entry, index) => ({
               id: entry.scenario.id,
               name: entry.scenario.name,
@@ -617,6 +631,7 @@ export function CostCalculatorForm() {
               priceFloorOverrideRequested: entry.scenario.priceFloorOverrideRequested,
               priceFloorOverrideApproved: entry.scenario.priceFloorOverrideApproved,
               priceFloorOverrideSnapshot: entry.scenario.priceFloorOverrideSnapshot,
+              latestOverrideSummarySnapshot: entry.scenario.latestOverrideSummarySnapshot,
               riskSummary:
                 typeof (entry.scenario.guardrailSnapshot as Record<string, unknown> | null)?.["summary"] === "string"
                   ? String((entry.scenario.guardrailSnapshot as Record<string, unknown>)["summary"])
@@ -1013,6 +1028,56 @@ export function CostCalculatorForm() {
     });
   }
 
+  function handleCreateMarketplaceMappingTemplate(formData: FormData) {
+    if (!selectedProfileId) return;
+    startTransition(() => {
+      void createMarketplaceMappingTemplate(selectedProfileId, {
+        name: String(formData.get("name") ?? ""),
+        status: String(formData.get("status") ?? "ACTIVE") as "ACTIVE" | "ARCHIVED",
+        productLabelFormat: String(formData.get("productLabelFormat") ?? "") || null,
+        skuFormat: String(formData.get("skuFormat") ?? "") || null,
+        includeWarningNotes: String(formData.get("includeWarningNotes") ?? "") === "true",
+        includeOverrideNotes: String(formData.get("includeOverrideNotes") ?? "") === "true",
+        dimensionsFormat: String(formData.get("dimensionsFormat") ?? "") || null,
+        materialFormat: String(formData.get("materialFormat") ?? "") || null,
+        packagingFormat: String(formData.get("packagingFormat") ?? "") || null,
+        pricingFormat: String(formData.get("pricingFormat") ?? "") || null,
+        notes: String(formData.get("notes") ?? "") || null
+      })
+        .then(() => refreshAll(selectedProfileId))
+        .then(() => setSuccess("Marketplace mapping template added."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to add marketplace mapping template.")
+        );
+    });
+  }
+
+  function handleUpdateMarketplaceMappingTemplate(
+    mappingTemplateId: string,
+    formData: FormData
+  ) {
+    startTransition(() => {
+      void updateMarketplaceMappingTemplate(mappingTemplateId, {
+        name: String(formData.get("name") ?? ""),
+        status: String(formData.get("status") ?? "ACTIVE"),
+        productLabelFormat: String(formData.get("productLabelFormat") ?? "") || null,
+        skuFormat: String(formData.get("skuFormat") ?? "") || null,
+        includeWarningNotes: String(formData.get("includeWarningNotes") ?? "") === "true",
+        includeOverrideNotes: String(formData.get("includeOverrideNotes") ?? "") === "true",
+        dimensionsFormat: String(formData.get("dimensionsFormat") ?? "") || null,
+        materialFormat: String(formData.get("materialFormat") ?? "") || null,
+        packagingFormat: String(formData.get("packagingFormat") ?? "") || null,
+        pricingFormat: String(formData.get("pricingFormat") ?? "") || null,
+        notes: String(formData.get("notes") ?? "") || null
+      })
+        .then(() => refreshAll(selectedProfileId))
+        .then(() => setSuccess("Marketplace mapping template updated."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to update marketplace mapping template.")
+        );
+    });
+  }
+
   function handleApplyLaunchTemplate(index: number, templateId: string) {
     if (!templateId) return;
     const template = options.launchTemplates.find((item) => item.id === templateId);
@@ -1087,7 +1152,8 @@ export function CostCalculatorForm() {
 
     startTransition(() => {
       void buildCostListingPrepPackage(comparisonSetId, {
-        selectedScenarioId: comparison?.selectedLaunchScenarioId ?? null
+        selectedScenarioId: comparison?.selectedLaunchScenarioId ?? null,
+        marketplaceMappingTemplateId: form.marketplaceMappingTemplateId || null
       })
         .then((payload) => {
           setListingPrepPackage(payload.listingPrepPackage);
@@ -1096,6 +1162,27 @@ export function CostCalculatorForm() {
         .then(() => setSuccess("Listing-prep package created."))
         .catch((caught) =>
           setError(caught instanceof Error ? caught.message : "Failed to build listing-prep package.")
+        );
+    });
+  }
+
+  function handleRefreshListingPrepPackage() {
+    if (!listingPrepPackage) {
+      setError("Build a listing-prep package before refreshing it.");
+      return;
+    }
+
+    startTransition(() => {
+      void refreshListingPrepPackage(listingPrepPackage.id)
+        .then((payload) => {
+          setListingPrepPackage(payload.listingPrepPackage);
+          if (activeComparisonSetId) {
+            return loadComparisonSet(activeComparisonSetId);
+          }
+        })
+        .then(() => setSuccess("Listing-prep package refreshed."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to refresh listing-prep package.")
         );
     });
   }
@@ -1177,7 +1264,7 @@ export function CostCalculatorForm() {
           </label>
           <div className="rounded-xl border border-white/10 bg-slate-950/25 px-4 py-3 text-sm text-slate-300">
             {selectedProfile
-              ? `${selectedProfile.materialRules.length} materials · ${selectedProfile.packagingRules.length} packaging rules · ${selectedProfile.amazonFeePresets.length} fee presets · ${selectedProfile.shippingZoneRules.length} zones`
+              ? `${selectedProfile.materialRules.length} materials · ${selectedProfile.packagingRules.length} packaging rules · ${selectedProfile.amazonFeePresets.length} fee presets · ${selectedProfile.shippingZoneRules.length} zones · ${selectedProfile.marketplaceMappingTemplates.length} mapping templates`
               : "Create a profile to start calculating."}
           </div>
         </div>
@@ -1197,6 +1284,7 @@ export function CostCalculatorForm() {
           <label className="text-sm text-slate-300">Amazon fee preset<select value={form.amazonFeePresetId} onChange={(event) => updateField("amazonFeePresetId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">Profile/default marketplace rules</option>{options.feePresets.map((preset) => <option key={preset.id} value={preset.id}>{preset.name}</option>)}</select></label>
           <label className="text-sm text-slate-300">Shipping zone<select value={form.shippingZoneRuleId} onChange={(event) => updateField("shippingZoneRuleId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">Base shipping only</option>{options.shippingZones.map((rule) => <option key={rule.id} value={rule.id}>{rule.name}</option>)}</select></label>
           <label className="text-sm text-slate-300">Guardrail profile<select value={form.guardrailProfileId} onChange={(event) => updateField("guardrailProfileId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">No guardrails</option>{options.launchGuardrailProfiles.map((profile) => <option key={profile.id} value={profile.id}>{profile.name}</option>)}</select></label>
+          <label className="text-sm text-slate-300">Mapping template<select value={form.marketplaceMappingTemplateId} onChange={(event) => updateField("marketplaceMappingTemplateId", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white"><option value="">No template</option>{options.marketplaceMappingTemplates.map((template) => <option key={template.id} value={template.id}>{template.name}</option>)}</select></label>
           <label className="text-sm text-slate-300">Weight (lb)<input value={form.weightLb} onChange={(event) => updateField("weightLb", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
           <label className="text-sm text-slate-300">Labor minutes<input value={form.laborMinutes} onChange={(event) => updateField("laborMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
           <label className="text-sm text-slate-300">Machine minutes<input value={form.machineMinutes} onChange={(event) => updateField("machineMinutes", event.target.value)} className="mt-1 w-full rounded-xl border border-white/10 bg-slate-950/35 px-3 py-2 text-white" /></label>
@@ -1212,6 +1300,7 @@ export function CostCalculatorForm() {
           <button type="button" onClick={handleSaveComparisonSet} disabled={isPending} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Save comparison set</button>
           <button type="button" onClick={handleEvaluateListingReadiness} disabled={isPending} className="rounded-full border border-sky-300/30 bg-sky-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Evaluate listing readiness</button>
           <button type="button" onClick={handleBuildListingPrepPackage} disabled={isPending} className="rounded-full border border-violet-300/30 bg-violet-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Build listing-prep package</button>
+          <button type="button" onClick={handleRefreshListingPrepPackage} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Refresh listing-prep package</button>
           <button type="button" onClick={handleValidateMarketplaceFields} disabled={isPending || !listingPrepPackage} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Validate marketplace fields</button>
         </div>
       </section>
@@ -1223,8 +1312,10 @@ export function CostCalculatorForm() {
           <LaunchRecommendationCard comparison={comparison} />
           <LaunchRiskSummaryCard comparison={comparison} />
           <LaunchReadinessCard comparison={comparison} />
+          <ReadyForListingPrepCard listingPrepPackage={listingPrepPackage} />
           <ListingPrepPackageCard comparison={comparison} listingPrepPackage={listingPrepPackage} />
           <MarketplaceMappingValidationCard listingPrepPackage={listingPrepPackage} />
+          <OverrideHistoryCard listingPrepPackage={listingPrepPackage} />
           <LaunchCandidateHandoffCard comparison={comparison} />
           <ListingPrepFieldCard comparison={comparison} />
           <PriceFloorOverrideReviewCard
@@ -1323,6 +1414,12 @@ export function CostCalculatorForm() {
         profiles={selectedProfile?.launchGuardrailProfiles ?? guardrailProfiles}
         onCreate={handleCreateLaunchGuardrailProfile}
         onUpdate={handleUpdateLaunchGuardrailProfile}
+      />
+
+      <MarketplaceMappingTemplateEditor
+        templates={selectedProfile?.marketplaceMappingTemplates ?? []}
+        onCreate={handleCreateMarketplaceMappingTemplate}
+        onUpdate={handleUpdateMarketplaceMappingTemplate}
       />
     </div>
   );

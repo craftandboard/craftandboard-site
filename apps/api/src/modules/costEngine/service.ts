@@ -8,9 +8,14 @@ import {
   evaluateScenarioGuardrails
 } from "./guardrails.js";
 import {
+  applyMarketplaceMappingTemplate,
   buildMarketplaceFieldValidationResult,
+  buildOverrideHistorySnapshot,
+  buildStableListingPrepExportShape,
+  buildExportMetadataBlock,
   buildPriceFloorOverrideSnapshot,
-  calculateListingPrepPackageStatus
+  calculateListingPrepPackageStatus,
+  calculateReadyForListingPrep
 } from "./listingPrep.js";
 import { decimalToNumber } from "./normalization.js";
 import {
@@ -23,6 +28,7 @@ import {
   createLaunchGuardrailProfileRecord,
   createLaunchTemplateRecord,
   createListingPrepPackageRecord,
+  createMarketplaceMappingTemplateRecord,
   createMaterialCostRuleRecord,
   createPackagingCostRuleRecord,
   createShelfCostCalculationRecord,
@@ -34,6 +40,7 @@ import {
   getLaunchGuardrailProfileRecord,
   getLaunchTemplateRecord,
   getListingPrepPackageRecord,
+  getMarketplaceMappingTemplateRecord,
   getShelfCostCalculationRecord,
   getShippingZoneRuleRecord,
   listAmazonFeePresetsForOrganization,
@@ -42,6 +49,7 @@ import {
   listLaunchGuardrailProfilesForOrganization,
   listLaunchTemplatesForOrganization,
   listListingPrepPackagesForOrganization,
+  listMarketplaceMappingTemplatesForOrganization,
   listShelfCostCalculationsForOrganization,
   listShippingZoneRulesForOrganization,
   updateAmazonFeePresetRecord,
@@ -52,6 +60,7 @@ import {
   updateLaunchGuardrailProfileRecord,
   updateLaunchTemplateRecord,
   updateListingPrepPackageRecord,
+  updateMarketplaceMappingTemplateRecord,
   updateMaterialCostRuleRecord,
   updatePackagingCostRuleRecord,
   updateShippingCostRuleRecord,
@@ -182,6 +191,24 @@ function mapLaunchGuardrailProfile(record: any) {
   };
 }
 
+function mapMarketplaceMappingTemplate(record: any) {
+  return {
+    ...mapRuleDates(record),
+    orgId: record.organizationId,
+    costProfileId: record.costProfileId ?? null,
+    productLabelFormat: record.productLabelFormat ?? null,
+    skuFormat: record.skuFormat ?? null,
+    includeWarningNotes: Boolean(record.includeWarningNotes),
+    includeOverrideNotes: Boolean(record.includeOverrideNotes),
+    dimensionsFormat: record.dimensionsFormat ?? null,
+    materialFormat: record.materialFormat ?? null,
+    packagingFormat: record.packagingFormat ?? null,
+    pricingFormat: record.pricingFormat ?? null,
+    notes: record.notes ?? null,
+    templateSnapshot: record.templateSnapshot ?? null
+  };
+}
+
 function mapCostProfile(profile: any) {
   return {
     id: profile.id,
@@ -257,6 +284,9 @@ function mapCostProfile(profile: any) {
     shippingZoneRules: (profile.shippingZoneRules ?? []).map(mapShippingZoneRule),
     launchTemplates: (profile.launchTemplates ?? []).map(mapLaunchTemplate),
     launchGuardrailProfiles: (profile.launchGuardrailProfiles ?? []).map(mapLaunchGuardrailProfile),
+    marketplaceMappingTemplates: (profile.marketplaceMappingTemplates ?? []).map(
+      mapMarketplaceMappingTemplate
+    ),
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString()
   };
@@ -278,6 +308,11 @@ function buildListingArtifactsForScenario(input: {
   overrideReason?: string | null;
   overrideApproved?: boolean;
   approvedByMembershipId?: string | null;
+  existingOverrideHistory?: Array<Record<string, unknown>> | null;
+  mappingTemplate?: any | null;
+  comparisonSetId?: string | null;
+  packageId?: string | null;
+  exportVersion?: string | null;
 }) {
   const mappedScenario = {
     ...mapScenario(input.scenarioRecord),
@@ -327,6 +362,66 @@ function buildListingArtifactsForScenario(input: {
     validationStatus: validationSnapshot.validationStatus,
     overrideSnapshot
   });
+  const mappedMarketplaceFields = applyMarketplaceMappingTemplate({
+    mappingTemplate: input.mappingTemplate
+      ? {
+          id: input.mappingTemplate.id,
+          name: input.mappingTemplate.name,
+          productLabelFormat: input.mappingTemplate.productLabelFormat ?? null,
+          skuFormat: input.mappingTemplate.skuFormat ?? null,
+          includeWarningNotes: input.mappingTemplate.includeWarningNotes ?? true,
+          includeOverrideNotes: input.mappingTemplate.includeOverrideNotes ?? true,
+          dimensionsFormat: input.mappingTemplate.dimensionsFormat ?? null,
+          materialFormat: input.mappingTemplate.materialFormat ?? null,
+          packagingFormat: input.mappingTemplate.packagingFormat ?? null,
+          pricingFormat: input.mappingTemplate.pricingFormat ?? null,
+          notes: input.mappingTemplate.notes ?? null,
+          templateSnapshot: input.mappingTemplate.templateSnapshot ?? null
+        }
+      : null,
+    marketplaceFields: listingReadiness.marketplaceFields,
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    overrideSnapshot
+  });
+  const overrideHistorySnapshot = buildOverrideHistorySnapshot({
+    existingHistory: input.existingOverrideHistory ?? null,
+    latestOverride: overrideSnapshot,
+    approvedAt: overrideSnapshot.overrideApproved ? new Date() : null,
+    approvedByMembershipId: input.approvedByMembershipId ?? null
+  });
+  const exportVersion = input.exportVersion ?? "listing-prep-v1";
+  const readyForListingPrepSummary = calculateReadyForListingPrep({
+    listingReadinessStatus: listingReadiness.listingReadinessStatus,
+    validationSnapshot,
+    packageStatus,
+    strongerAlerts: listingReadiness.strongerAlerts,
+    overrideSnapshot,
+    exportShapeSnapshot: {
+      productLabel: mappedMarketplaceFields.productLabel,
+      sku: mappedMarketplaceFields.sku
+    },
+    mappingTemplate: input.mappingTemplate
+      ? { id: input.mappingTemplate.id, name: input.mappingTemplate.name }
+      : null
+  });
+  const exportShapeSnapshot = buildStableListingPrepExportShape({
+    packageId: input.packageId ?? null,
+    comparisonSetId: input.comparisonSetId ?? null,
+    scenarioId: input.scenarioRecord.id,
+    scenarioName: input.scenarioRecord.name,
+    listingReadinessStatus: listingReadiness.listingReadinessStatus,
+    packageStatus: packageStatus.packageStatus,
+    mappedMarketplaceFields,
+    exportSnapshot,
+    warningSnapshot: listingReadiness.strongerAlerts.warnings,
+    overrideSnapshot,
+    overrideHistorySnapshot,
+    readyForListingPrepSummary,
+    mappingTemplate: input.mappingTemplate
+      ? { id: input.mappingTemplate.id, name: input.mappingTemplate.name }
+      : null,
+    exportVersion
+  });
 
   return {
     listingReadinessStatus: listingReadiness.listingReadinessStatus,
@@ -335,13 +430,25 @@ function buildListingArtifactsForScenario(input: {
       launchReadyBoolean: listingReadiness.launchReadyBoolean,
       missingFieldFlags: listingReadiness.missingFieldFlags
     },
-    marketplaceFieldSnapshot: listingReadiness.marketplaceFields,
+    marketplaceFieldSnapshot: mappedMarketplaceFields,
     strongerAlertSnapshot: listingReadiness.strongerAlerts,
     exportSnapshot,
     handoffSummary,
     validationSnapshot,
     overrideSnapshot,
-    packageStatus
+    packageStatus,
+    exportVersion,
+    exportMetadata: buildExportMetadataBlock({
+      exportVersion,
+      packageId: input.packageId ?? null,
+      mappingTemplate: input.mappingTemplate
+        ? { id: input.mappingTemplate.id, name: input.mappingTemplate.name }
+        : null
+    }),
+    exportShapeSnapshot,
+    overrideHistorySnapshot,
+    readyForListingPrep: readyForListingPrepSummary.readyForListingPrep,
+    readyForListingPrepSummary
   };
 }
 
@@ -444,6 +551,7 @@ function mapScenario(record: any) {
     priceFloorOverrideRequested: Boolean(record.priceFloorOverrideRequested),
     priceFloorOverrideApproved: Boolean(record.priceFloorOverrideApproved),
     priceFloorOverrideSnapshot: record.priceFloorOverrideSnapshot ?? null,
+    latestOverrideSummarySnapshot: record.latestOverrideSummarySnapshot ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -472,6 +580,8 @@ function mapComparisonSet(record: any) {
     selectedListingPrepPackageId: record.selectedListingPrepPackageId ?? null,
     selectedListingPrepPackageName: record.selectedListingPrepPackage?.name ?? null,
     listingPrepSummarySnapshot: record.listingPrepSummarySnapshot ?? null,
+    selectedListingPrepReadySnapshot: record.selectedListingPrepReadySnapshot ?? null,
+    selectedListingPrepExportVersion: record.selectedListingPrepExportVersion ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -497,6 +607,13 @@ function mapListingPrepPackage(record: any) {
     validationSnapshot: record.validationSnapshot,
     warningSnapshot: record.warningSnapshot ?? null,
     overrideSnapshot: record.overrideSnapshot ?? null,
+    marketplaceMappingTemplateId: record.marketplaceMappingTemplateId ?? null,
+    marketplaceMappingTemplateName: record.marketplaceMappingTemplate?.name ?? null,
+    exportVersion: record.exportVersion ?? null,
+    exportShapeSnapshot: record.exportShapeSnapshot ?? null,
+    overrideHistorySnapshot: record.overrideHistorySnapshot ?? null,
+    readyForListingPrep: Boolean(record.readyForListingPrep),
+    readyForListingPrepSummary: record.readyForListingPrepSummary ?? null,
     notes: record.notes ?? null,
     approvedAt: record.approvedAt?.toISOString() ?? null,
     approvedByMembershipId: record.approvedByMembershipId ?? null,
@@ -877,6 +994,86 @@ export async function updateShippingZoneRule(input: {
     zoneRuleId: input.zoneRuleId
   });
   return { ok: true, shippingZoneRule: mapShippingZoneRule(updated) };
+}
+
+export async function createMarketplaceMappingTemplate(input: {
+  organizationId: string;
+  costProfileId?: string | null;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  productLabelFormat?: string | null;
+  skuFormat?: string | null;
+  includeWarningNotes?: boolean;
+  includeOverrideNotes?: boolean;
+  dimensionsFormat?: string | null;
+  materialFormat?: string | null;
+  packagingFormat?: string | null;
+  pricingFormat?: string | null;
+  notes?: string | null;
+  templateSnapshot?: unknown;
+}) {
+  const costProfileId = input.costProfileId ?? null;
+  if (costProfileId) {
+    const profile = await getCostProfileRecord({ organizationId: input.organizationId, costProfileId });
+    if (!profile) {
+      throw new Error("Cost profile not found.");
+    }
+  }
+
+  const template = await createMarketplaceMappingTemplateRecord(input);
+  const hydrated = await getMarketplaceMappingTemplateRecord({
+    organizationId: input.organizationId,
+    mappingTemplateId: template.id
+  });
+  return { ok: true, marketplaceMappingTemplate: mapMarketplaceMappingTemplate(hydrated) };
+}
+
+export async function listMarketplaceMappingTemplates(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  const templates = await listMarketplaceMappingTemplatesForOrganization(input);
+  return { ok: true, marketplaceMappingTemplates: templates.map(mapMarketplaceMappingTemplate) };
+}
+
+export async function getMarketplaceMappingTemplate(input: {
+  organizationId: string;
+  mappingTemplateId: string;
+}) {
+  const template = await getMarketplaceMappingTemplateRecord(input);
+  if (!template) {
+    throw new Error("Marketplace mapping template not found.");
+  }
+  return { ok: true, marketplaceMappingTemplate: mapMarketplaceMappingTemplate(template) };
+}
+
+export async function updateMarketplaceMappingTemplate(input: {
+  organizationId: string;
+  mappingTemplateId: string;
+} & AnyRecord) {
+  const existing = await getMarketplaceMappingTemplateRecord({
+    organizationId: input.organizationId,
+    mappingTemplateId: input.mappingTemplateId
+  });
+  if (!existing) {
+    throw new Error("Marketplace mapping template not found.");
+  }
+
+  await updateMarketplaceMappingTemplateRecord({
+    organizationId: input.organizationId,
+    mappingTemplateId: input.mappingTemplateId,
+    data: normalizeUpdateData({
+      ...input,
+      organizationId: undefined,
+      mappingTemplateId: undefined
+    })
+  });
+
+  const updated = await getMarketplaceMappingTemplateRecord({
+    organizationId: input.organizationId,
+    mappingTemplateId: input.mappingTemplateId
+  });
+  return { ok: true, marketplaceMappingTemplate: mapMarketplaceMappingTemplate(updated) };
 }
 
 export async function createLaunchTemplate(input: {
@@ -1799,7 +1996,9 @@ export async function getComparisonSetHandoffSummary(input: {
     selectedLaunchWarningSnapshot: set.selectedLaunchWarningSnapshot ?? null,
     exportSummary: set.selectedLaunchExportSnapshot ?? null,
     listingPrepSummary: set.listingPrepSummarySnapshot ?? null,
-    selectedListingPrepPackageId: set.selectedListingPrepPackageId ?? null
+    selectedListingPrepPackageId: set.selectedListingPrepPackageId ?? null,
+    selectedListingPrepReadySnapshot: set.selectedListingPrepReadySnapshot ?? null,
+    selectedListingPrepExportVersion: set.selectedListingPrepExportVersion ?? null
   };
 }
 
@@ -1878,7 +2077,9 @@ export async function getComparisonSetExportSummary(input: {
     selectedLaunchReadinessStatus: set.selectedLaunchReadinessStatus ?? null,
     selectedLaunchWarningSnapshot: set.selectedLaunchWarningSnapshot ?? null,
     listingPrepSummary: set.listingPrepSummarySnapshot ?? null,
-    selectedListingPrepPackageId: set.selectedListingPrepPackageId ?? null
+    selectedListingPrepPackageId: set.selectedListingPrepPackageId ?? null,
+    selectedListingPrepReadySnapshot: set.selectedListingPrepReadySnapshot ?? null,
+    selectedListingPrepExportVersion: set.selectedListingPrepExportVersion ?? null
   };
 }
 
@@ -1886,6 +2087,7 @@ export async function buildListingPrepPackage(input: {
   organizationId: string;
   comparisonSetId: string;
   selectedScenarioId?: string | null;
+  marketplaceMappingTemplateId?: string | null;
   notes?: string | null;
 }) {
   const comparisonSet = await getCalculationComparisonSetRecord(input);
@@ -1909,7 +2111,24 @@ export async function buildListingPrepPackage(input: {
     throw new Error("Selected launch scenario not found in this comparison set.");
   }
 
-  const artifacts = buildListingArtifactsForScenario({ scenarioRecord, overrideApproved: false });
+  const mappingTemplate =
+    input.marketplaceMappingTemplateId
+      ? await getMarketplaceMappingTemplateRecord({
+          organizationId: input.organizationId,
+          mappingTemplateId: input.marketplaceMappingTemplateId
+        })
+      : null;
+  if (input.marketplaceMappingTemplateId && !mappingTemplate) {
+    throw new Error("Marketplace mapping template not found.");
+  }
+
+  const artifacts = buildListingArtifactsForScenario({
+    scenarioRecord,
+    overrideApproved: false,
+    mappingTemplate,
+    comparisonSetId: comparisonSet.id,
+    exportVersion: "listing-prep-v1"
+  });
   const listingPrepPackage = await createListingPrepPackageRecord({
     organizationId: input.organizationId,
     comparisonSetId: comparisonSet.id,
@@ -1922,6 +2141,12 @@ export async function buildListingPrepPackage(input: {
     validationSnapshot: artifacts.validationSnapshot,
     warningSnapshot: artifacts.strongerAlertSnapshot?.warnings ?? null,
     overrideSnapshot: artifacts.overrideSnapshot,
+    marketplaceMappingTemplateId: mappingTemplate?.id ?? null,
+    exportVersion: artifacts.exportVersion,
+    exportShapeSnapshot: artifacts.exportShapeSnapshot,
+    overrideHistorySnapshot: artifacts.overrideHistorySnapshot,
+    readyForListingPrep: artifacts.readyForListingPrep,
+    readyForListingPrepSummary: artifacts.readyForListingPrepSummary,
     notes: input.notes ?? null,
     approvedAt: artifacts.packageStatus.packageReadinessLabel === "READY" ? new Date() : null
   });
@@ -1933,7 +2158,8 @@ export async function buildListingPrepPackage(input: {
       listingPrepPackageId: listingPrepPackage.id,
       priceFloorOverrideRequested: artifacts.overrideSnapshot.overrideRequested,
       priceFloorOverrideApproved: artifacts.overrideSnapshot.overrideApproved,
-      priceFloorOverrideSnapshot: artifacts.overrideSnapshot
+      priceFloorOverrideSnapshot: artifacts.overrideSnapshot,
+      latestOverrideSummarySnapshot: artifacts.overrideHistorySnapshot?.latestOverride ?? null
     })
   });
 
@@ -1947,8 +2173,13 @@ export async function buildListingPrepPackage(input: {
         packageStatus: artifacts.packageStatus.packageStatus,
         packageReadinessLabel: artifacts.packageStatus.packageReadinessLabel,
         validationSummary: artifacts.validationSnapshot.validationSummary,
-        overrideSummary: artifacts.overrideSnapshot.summary
-      }
+        overrideSummary: artifacts.overrideSnapshot.summary,
+        readyForListingPrep: artifacts.readyForListingPrep,
+        readyForListingPrepSummary: artifacts.readyForListingPrepSummary,
+        mappingTemplateLabel: mappingTemplate?.name ?? null
+      },
+      selectedListingPrepReadySnapshot: artifacts.readyForListingPrepSummary,
+      selectedListingPrepExportVersion: artifacts.exportVersion
     })
   });
 
@@ -1982,6 +2213,92 @@ export async function getListingPrepPackage(input: {
   return { ok: true, listingPrepPackage: mapListingPrepPackage(record) };
 }
 
+export async function refreshListingPrepPackage(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+  notes?: string | null;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+
+  const artifacts = buildListingArtifactsForScenario({
+    scenarioRecord: record.calculationScenario,
+    overrideReason:
+      typeof (record.overrideSnapshot as Record<string, unknown> | null)?.overrideReason === "string"
+        ? String((record.overrideSnapshot as Record<string, unknown>).overrideReason)
+        : null,
+    overrideApproved: Boolean((record.overrideSnapshot as Record<string, unknown> | null)?.overrideApproved),
+    approvedByMembershipId:
+      typeof (record.overrideSnapshot as Record<string, unknown> | null)?.approvedByMembershipId === "string"
+        ? String((record.overrideSnapshot as Record<string, unknown>).approvedByMembershipId)
+        : null,
+    existingOverrideHistory: Array.isArray((record.overrideHistorySnapshot as Record<string, unknown> | null)?.history)
+      ? (((record.overrideHistorySnapshot as Record<string, unknown>).history as unknown[]) as Array<Record<string, unknown>>)
+      : null,
+    mappingTemplate: record.marketplaceMappingTemplate ?? null,
+    comparisonSetId: record.comparisonSetId ?? null,
+    packageId: record.id,
+    exportVersion: record.exportVersion ?? "listing-prep-v1"
+  });
+
+  await updateListingPrepPackageRecord({
+    organizationId: input.organizationId,
+    listingPrepPackageId: record.id,
+    data: normalizeUpdateData({
+      status: artifacts.packageStatus.packageStatus,
+      listingReadinessStatus: artifacts.listingReadinessStatus,
+      exportSnapshot: artifacts.exportSnapshot,
+      marketplaceFieldSnapshot: artifacts.marketplaceFieldSnapshot,
+      validationSnapshot: artifacts.validationSnapshot,
+      warningSnapshot: artifacts.strongerAlertSnapshot?.warnings ?? null,
+      overrideSnapshot: artifacts.overrideSnapshot,
+      exportVersion: artifacts.exportVersion,
+      exportShapeSnapshot: artifacts.exportShapeSnapshot,
+      overrideHistorySnapshot: artifacts.overrideHistorySnapshot,
+      readyForListingPrep: artifacts.readyForListingPrep,
+      readyForListingPrepSummary: artifacts.readyForListingPrepSummary,
+      notes: input.notes ?? record.notes ?? null,
+      approvedAt: artifacts.packageStatus.packageStatus === "READY" ? new Date() : null
+    })
+  });
+
+  await updateCalculationScenarioRecord({
+    organizationId: input.organizationId,
+    scenarioId: record.calculationScenarioId,
+    data: normalizeUpdateData({
+      latestOverrideSummarySnapshot: artifacts.overrideHistorySnapshot?.latestOverride ?? null,
+      listingPrepPackageId: record.id
+    })
+  });
+
+  if (record.comparisonSetId) {
+    await updateCalculationComparisonSetRecord({
+      organizationId: input.organizationId,
+      comparisonSetId: record.comparisonSetId,
+      data: normalizeUpdateData({
+        selectedListingPrepPackageId: record.id,
+        listingPrepSummarySnapshot: {
+          listingPrepPackageId: record.id,
+          packageStatus: artifacts.packageStatus.packageStatus,
+          packageReadinessLabel: artifacts.packageStatus.packageReadinessLabel,
+          validationSummary: artifacts.validationSnapshot.validationSummary,
+          overrideSummary: artifacts.overrideSnapshot.summary,
+          readyForListingPrep: artifacts.readyForListingPrep,
+          readyForListingPrepSummary: artifacts.readyForListingPrepSummary,
+          mappingTemplateLabel: record.marketplaceMappingTemplate?.name ?? null
+        },
+        selectedListingPrepReadySnapshot: artifacts.readyForListingPrepSummary,
+        selectedListingPrepExportVersion: artifacts.exportVersion
+      })
+    });
+  }
+
+  const refreshed = await getListingPrepPackageRecord(input);
+  return { ok: true, listingPrepPackage: mapListingPrepPackage(refreshed) };
+}
+
 export async function evaluateMarketplaceFieldValidation(input: {
   organizationId: string;
   listingPrepPackageId: string;
@@ -2010,6 +2327,23 @@ export async function evaluateMarketplaceFieldValidation(input: {
       overrideApproved: Boolean(overrideSnapshot.overrideApproved)
     }
   });
+  const readyForListingPrepSummary = calculateReadyForListingPrep({
+    listingReadinessStatus: record.listingReadinessStatus,
+    validationSnapshot,
+    packageStatus,
+    strongerAlerts,
+    overrideSnapshot: {
+      overrideApproved: Boolean(overrideSnapshot.overrideApproved),
+      summary: typeof overrideSnapshot.summary === "string" ? String(overrideSnapshot.summary) : null
+    },
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? {}) as Record<string, unknown>,
+    mappingTemplate: record.marketplaceMappingTemplate
+      ? {
+          id: record.marketplaceMappingTemplate.id,
+          name: record.marketplaceMappingTemplate.name
+        }
+      : null
+  });
 
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -2017,10 +2351,33 @@ export async function evaluateMarketplaceFieldValidation(input: {
     data: normalizeUpdateData({
       validationSnapshot,
       status: packageStatus.packageStatus,
+      readyForListingPrep: readyForListingPrepSummary.readyForListingPrep,
+      readyForListingPrepSummary,
       notes: input.notes ?? record.notes ?? null,
       approvedAt: packageStatus.packageStatus === "READY" ? new Date() : null
     })
   });
+
+  if (record.comparisonSetId) {
+    await updateCalculationComparisonSetRecord({
+      organizationId: input.organizationId,
+      comparisonSetId: record.comparisonSetId,
+      data: normalizeUpdateData({
+        listingPrepSummarySnapshot: {
+          listingPrepPackageId: record.id,
+          packageStatus: packageStatus.packageStatus,
+          packageReadinessLabel: packageStatus.packageReadinessLabel,
+          validationSummary: validationSnapshot.validationSummary,
+          overrideSummary: overrideSnapshot.summary ?? null,
+          readyForListingPrep: readyForListingPrepSummary.readyForListingPrep,
+          readyForListingPrepSummary,
+          mappingTemplateLabel: record.marketplaceMappingTemplate?.name ?? null
+        },
+        selectedListingPrepReadySnapshot: readyForListingPrepSummary,
+        selectedListingPrepExportVersion: record.exportVersion ?? "listing-prep-v1"
+      })
+    });
+  }
 
   const refreshed = await getListingPrepPackageRecord(input);
   return { ok: true, listingPrepPackage: mapListingPrepPackage(refreshed) };
@@ -2058,6 +2415,28 @@ export async function requestPriceFloorOverride(input: {
     validationStatus: validationSnapshot.validationStatus,
     overrideSnapshot
   });
+  const overrideHistorySnapshot = buildOverrideHistorySnapshot({
+    existingHistory: Array.isArray((record.overrideHistorySnapshot as Record<string, unknown> | null)?.history)
+      ? (((record.overrideHistorySnapshot as Record<string, unknown>).history as unknown[]) as Array<Record<string, unknown>>)
+      : null,
+    latestOverride: overrideSnapshot,
+    approvedAt: overrideSnapshot.overrideApproved ? new Date() : null,
+    approvedByMembershipId: input.approvedByMembershipId ?? null
+  });
+  const readyForListingPrepSummary = calculateReadyForListingPrep({
+    listingReadinessStatus: record.listingReadinessStatus,
+    validationSnapshot,
+    packageStatus,
+    strongerAlerts,
+    overrideSnapshot,
+    exportShapeSnapshot: (record.exportShapeSnapshot ?? {}) as Record<string, unknown>,
+    mappingTemplate: record.marketplaceMappingTemplate
+      ? {
+          id: record.marketplaceMappingTemplate.id,
+          name: record.marketplaceMappingTemplate.name
+        }
+      : null
+  });
 
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -2066,6 +2445,9 @@ export async function requestPriceFloorOverride(input: {
       overrideSnapshot,
       validationSnapshot,
       status: packageStatus.packageStatus,
+      overrideHistorySnapshot,
+      readyForListingPrep: readyForListingPrepSummary.readyForListingPrep,
+      readyForListingPrepSummary,
       approvedAt: overrideSnapshot.overrideApproved ? new Date() : null,
       approvedByMembershipId: input.approvedByMembershipId ?? null
     })
@@ -2078,7 +2460,8 @@ export async function requestPriceFloorOverride(input: {
       priceFloorOverrideRequested: overrideSnapshot.overrideRequested,
       priceFloorOverrideApproved: overrideSnapshot.overrideApproved,
       priceFloorOverrideSnapshot: overrideSnapshot,
-      listingPrepPackageId: record.id
+      listingPrepPackageId: record.id,
+      latestOverrideSummarySnapshot: overrideHistorySnapshot.latestOverride ?? null
     })
   });
 
@@ -2093,8 +2476,13 @@ export async function requestPriceFloorOverride(input: {
           packageStatus: packageStatus.packageStatus,
           packageReadinessLabel: packageStatus.packageReadinessLabel,
           validationSummary: validationSnapshot.validationSummary,
-          overrideSummary: overrideSnapshot.summary
-        }
+          overrideSummary: overrideSnapshot.summary,
+          readyForListingPrep: readyForListingPrepSummary.readyForListingPrep,
+          readyForListingPrepSummary,
+          mappingTemplateLabel: record.marketplaceMappingTemplate?.name ?? null
+        },
+        selectedListingPrepReadySnapshot: readyForListingPrepSummary,
+        selectedListingPrepExportVersion: record.exportVersion ?? "listing-prep-v1"
       })
     });
   }

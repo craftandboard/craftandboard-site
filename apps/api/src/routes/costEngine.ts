@@ -16,6 +16,7 @@ import {
   createEdgeBandCostRule,
   createLaunchGuardrailProfile,
   createLaunchTemplate,
+  createMarketplaceMappingTemplate,
   buildListingPrepPackage,
   createMaterialCostRule,
   createPackagingCostRule,
@@ -31,6 +32,7 @@ import {
   getLaunchGuardrailProfile,
   getLaunchTemplate,
   getListingPrepPackage,
+  getMarketplaceMappingTemplate,
   getShelfCostCalculation,
   getShippingZoneRule,
   listAmazonFeePresets,
@@ -39,9 +41,11 @@ import {
   listLaunchGuardrailProfiles,
   listLaunchTemplates,
   listListingPrepPackages,
+  listMarketplaceMappingTemplates,
   listShelfCostCalculations,
   listShippingZoneRules,
   requestPriceFloorOverride,
+  refreshListingPrepPackage,
   saveComparisonSet,
   saveShelfCostCalculation,
   rankComparisonSet,
@@ -54,6 +58,7 @@ import {
   updateLaunchGuardrailProfile,
   updateLaunchTemplate,
   updateMaterialCostRule,
+  updateMarketplaceMappingTemplate,
   updatePackagingCostRule,
   updateShippingCostRule,
   updateShippingZoneRule
@@ -70,6 +75,7 @@ import {
   createEdgeBandCostRuleSchema,
   createLaunchGuardrailProfileSchema,
   createLaunchTemplateSchema,
+  createMarketplaceMappingTemplateSchema,
   createMaterialCostRuleSchema,
   createPackagingCostRuleSchema,
   createShippingCostRuleSchema,
@@ -82,9 +88,12 @@ import {
   edgeBandRuleIdParamsSchema,
   listingPrepPackageIdParamsSchema,
   listListingPrepPackagesQuerySchema,
+  listMarketplaceMappingTemplatesQuerySchema,
+  mappingTemplateIdParamsSchema,
   packagingRuleIdParamsSchema,
   presetIdParamsSchema,
   priceFloorOverrideSchema,
+  refreshListingPrepPackageSchema,
   saveComparisonSetSchema,
   saveShelfCostCalculationSchema,
   shippingRuleIdParamsSchema,
@@ -93,6 +102,7 @@ import {
   updateEdgeBandCostRuleSchema,
   updateLaunchGuardrailProfileSchema,
   updateLaunchTemplateSchema,
+  updateMarketplaceMappingTemplateSchema,
   updateMaterialCostRuleSchema,
   updatePackagingCostRuleSchema,
   updateShippingCostRuleSchema,
@@ -130,6 +140,7 @@ function handleCostEngineRouteError(error: unknown, res: any, next: any) {
       "Cost comparison set not found.",
       "Launch template not found.",
       "Launch guardrail profile not found.",
+      "Marketplace mapping template not found.",
       "Listing prep package not found."
     ]);
     res.status(notFoundErrors.has(error.message) ? 404 : 400).json({ ok: false, error: error.message });
@@ -581,6 +592,70 @@ router.patch("/launch-guardrail-profiles/:guardrailProfileId", async (req, res, 
   }
 });
 
+router.post("/cost-profiles/:costProfileId/marketplace-mapping-templates", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createMarketplaceMappingTemplateSchema.parse(req.body);
+    res.status(201).json(
+      await createMarketplaceMappingTemplate({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/marketplace-mapping-templates", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const query = listMarketplaceMappingTemplatesQuerySchema.parse(req.query);
+    res.json(
+      await listMarketplaceMappingTemplates({
+        organizationId: context.currentOrganization.id,
+        costProfileId: query.costProfileId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/marketplace-mapping-templates/:mappingTemplateId", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const params = mappingTemplateIdParamsSchema.parse(req.params);
+    res.json(
+      await getMarketplaceMappingTemplate({
+        organizationId: context.currentOrganization.id,
+        mappingTemplateId: params.mappingTemplateId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/marketplace-mapping-templates/:mappingTemplateId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = mappingTemplateIdParamsSchema.parse(req.params);
+    const body = updateMarketplaceMappingTemplateSchema.parse(req.body);
+    res.json(
+      await updateMarketplaceMappingTemplate({
+        organizationId: context.currentOrganization.id,
+        mappingTemplateId: params.mappingTemplateId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.post("/cost-calculations/calculate", async (req, res, next) => {
   try {
     const context = getCostCalculationWriteContext(req);
@@ -810,6 +885,23 @@ router.post("/cost-comparison-sets/:comparisonSetId/listing-prep-package", async
         organizationId: context.currentOrganization.id,
         comparisonSetId: params.comparisonSetId,
         ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/listing-prep-packages/:listingPrepPackageId/refresh", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    const body = refreshListingPrepPackageSchema.parse(req.body ?? {});
+    res.json(
+      await refreshListingPrepPackage({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId,
+        notes: body.notes ?? null
       })
     );
   } catch (error) {

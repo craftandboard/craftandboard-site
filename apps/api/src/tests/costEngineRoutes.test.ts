@@ -42,14 +42,18 @@ const serviceMocks = vi.hoisted(() => ({
   createLaunchGuardrailProfile: vi.fn(),
   createLaunchTemplate: vi.fn(),
   buildListingPrepPackage: vi.fn(),
+  createMarketplaceMappingTemplate: vi.fn(),
   listAmazonFeePresets: vi.fn(),
+  listMarketplaceMappingTemplates: vi.fn(),
   getAmazonFeePreset: vi.fn(),
   getLaunchGuardrailProfile: vi.fn(),
   getListingPrepPackage: vi.fn(),
+  getMarketplaceMappingTemplate: vi.fn(),
   getComparisonSetRecommendation: vi.fn(),
   getComparisonSetHandoffSummary: vi.fn(),
   getComparisonSetExportSummary: vi.fn(),
   updateAmazonFeePreset: vi.fn(),
+  updateMarketplaceMappingTemplate: vi.fn(),
   createShippingZoneRule: vi.fn(),
   listShippingZoneRules: vi.fn(),
   getShippingZoneRule: vi.fn(),
@@ -67,6 +71,7 @@ const serviceMocks = vi.hoisted(() => ({
   selectLaunchScenario: vi.fn(),
   evaluateMarketplaceFieldValidation: vi.fn(),
   requestPriceFloorOverride: vi.fn(),
+  refreshListingPrepPackage: vi.fn(),
   saveShelfCostCalculation: vi.fn(),
   listShelfCostCalculations: vi.fn(),
   getShelfCostCalculation: vi.fn(),
@@ -118,14 +123,18 @@ beforeEach(async () => {
   serviceMocks.createLaunchGuardrailProfile.mockResolvedValue({ ok: true, launchGuardrailProfile: { id: "guard_1" } });
   serviceMocks.createLaunchTemplate.mockResolvedValue({ ok: true, launchTemplate: { id: "template_1" } });
   serviceMocks.buildListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
+  serviceMocks.createMarketplaceMappingTemplate.mockResolvedValue({ ok: true, marketplaceMappingTemplate: { id: "mapping_1" } });
   serviceMocks.listAmazonFeePresets.mockResolvedValue({ ok: true, presets: [] });
+  serviceMocks.listMarketplaceMappingTemplates.mockResolvedValue({ ok: true, marketplaceMappingTemplates: [] });
   serviceMocks.getAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
   serviceMocks.getLaunchGuardrailProfile.mockResolvedValue({ ok: true, launchGuardrailProfile: { id: "guard_1" } });
   serviceMocks.getListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
+  serviceMocks.getMarketplaceMappingTemplate.mockResolvedValue({ ok: true, marketplaceMappingTemplate: { id: "mapping_1" } });
   serviceMocks.getComparisonSetRecommendation.mockResolvedValue({ ok: true, recommendation: null });
   serviceMocks.getComparisonSetHandoffSummary.mockResolvedValue({ ok: true, handoffSummary: null, selectedLaunchScenarioId: null, riskSummary: null, selectedLaunchReadinessStatus: null, selectedLaunchWarningSnapshot: null, exportSummary: null });
   serviceMocks.getComparisonSetExportSummary.mockResolvedValue({ ok: true, exportSummary: null, selectedLaunchScenarioId: null, selectedLaunchReadinessStatus: null, selectedLaunchWarningSnapshot: null });
   serviceMocks.updateAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.updateMarketplaceMappingTemplate.mockResolvedValue({ ok: true, marketplaceMappingTemplate: { id: "mapping_1" } });
   serviceMocks.createShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
   serviceMocks.listShippingZoneRules.mockResolvedValue({ ok: true, shippingZoneRules: [] });
   serviceMocks.getShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
@@ -143,6 +152,7 @@ beforeEach(async () => {
   serviceMocks.selectLaunchScenario.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
   serviceMocks.evaluateMarketplaceFieldValidation.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.requestPriceFloorOverride.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
+  serviceMocks.refreshListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.saveShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
   serviceMocks.listShelfCostCalculations.mockResolvedValue({ ok: true, calculations: [] });
   serviceMocks.getShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
@@ -306,6 +316,30 @@ describe("cost engine routes", () => {
     });
   });
 
+  it("creates marketplace mapping templates in org scope", async () => {
+    const response = await fetch(`${baseUrl}/cost-profiles/profile_1/marketplace-mapping-templates`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Amazon balanced export", productLabelFormat: "{productLabel}" })
+    });
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createMarketplaceMappingTemplate).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Amazon balanced export",
+      productLabelFormat: "{productLabel}"
+    });
+  });
+
+  it("lists marketplace mapping templates", async () => {
+    const response = await fetch(`${baseUrl}/marketplace-mapping-templates?costProfileId=profile_1`);
+    expect(response.status).toBe(200);
+    expect(serviceMocks.listMarketplaceMappingTemplates).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1"
+    });
+  });
+
   it("saves comparison sets", async () => {
     const response = await fetch(`${baseUrl}/cost-comparison-sets`, {
       method: "POST",
@@ -369,14 +403,19 @@ describe("cost engine routes", () => {
     const response = await fetch(`${baseUrl}/cost-comparison-sets/set_1/listing-prep-package`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ selectedScenarioId: "scenario_1", notes: "Prep for listing" })
+      body: JSON.stringify({
+        selectedScenarioId: "scenario_1",
+        notes: "Prep for listing",
+        marketplaceMappingTemplateId: "mapping_1"
+      })
     });
     expect(response.status).toBe(201);
     expect(serviceMocks.buildListingPrepPackage).toHaveBeenCalledWith({
       organizationId: "org_local_craft_board",
       comparisonSetId: "set_1",
       selectedScenarioId: "scenario_1",
-      notes: "Prep for listing"
+      notes: "Prep for listing",
+      marketplaceMappingTemplateId: "mapping_1"
     });
   });
 
@@ -416,6 +455,20 @@ describe("cost engine routes", () => {
       reason: "Intentional launch exception",
       approve: true,
       approvedByMembershipId: "membership_local_brandon"
+    });
+  });
+
+  it("refreshes a listing-prep package", async () => {
+    const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/refresh`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({})
+    });
+    expect(response.status).toBe(200);
+    expect(serviceMocks.refreshListingPrepPackage).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      listingPrepPackageId: "package_1",
+      notes: null
     });
   });
 

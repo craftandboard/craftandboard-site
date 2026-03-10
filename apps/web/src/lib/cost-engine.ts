@@ -256,6 +256,38 @@ export function getListingPrepPackageStatusTone(status: string | null | undefine
   }
 }
 
+export function getReadyForListingPrepLabel(status: string | null | undefined, ready?: boolean | null) {
+  if (status === "READY_WITH_OVERRIDE") {
+    return "Ready with override";
+  }
+  if (status === "READY") {
+    return "Ready for listing prep";
+  }
+  if (status === "BLOCKED") {
+    return "Blocked";
+  }
+  if (status === "NEEDS_REVIEW") {
+    return "Needs review";
+  }
+  if (ready) {
+    return "Ready for listing prep";
+  }
+  return "Not ready";
+}
+
+export function getReadyForListingPrepTone(status: string | null | undefined, ready?: boolean | null) {
+  if (status === "READY_WITH_OVERRIDE") {
+    return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+  }
+  if (status === "READY" || ready) {
+    return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+  }
+  if (status === "BLOCKED") {
+    return "border-rose-400/30 bg-rose-400/10 text-rose-100";
+  }
+  return "border-white/10 bg-white/5 text-slate-200";
+}
+
 export function getFieldValidationLabel(status: string | null | undefined) {
   switch (status) {
     case "VALID":

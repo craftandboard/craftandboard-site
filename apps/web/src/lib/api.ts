@@ -2848,6 +2848,26 @@ export interface LaunchGuardrailProfileItem {
   updatedAt: string;
 }
 
+export interface MarketplaceMappingTemplateItem {
+  id: string;
+  orgId: string;
+  costProfileId: string | null;
+  name: string;
+  status: "ACTIVE" | "ARCHIVED";
+  productLabelFormat: string | null;
+  skuFormat: string | null;
+  includeWarningNotes: boolean;
+  includeOverrideNotes: boolean;
+  dimensionsFormat: string | null;
+  materialFormat: string | null;
+  packagingFormat: string | null;
+  pricingFormat: string | null;
+  notes: string | null;
+  templateSnapshot?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MaterialCostRuleItem {
   id: string;
   orgId: string;
@@ -2960,6 +2980,7 @@ export interface CostProfileDetail {
   shippingZoneRules: ShippingZoneRuleItem[];
   launchTemplates: LaunchTemplateItem[];
   launchGuardrailProfiles: LaunchGuardrailProfileItem[];
+  marketplaceMappingTemplates: MarketplaceMappingTemplateItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -3255,6 +3276,7 @@ export interface CostScenarioResult {
   priceFloorOverrideRequested?: boolean;
   priceFloorOverrideApproved?: boolean;
   priceFloorOverrideSnapshot?: Record<string, unknown> | null;
+  latestOverrideSummarySnapshot?: Record<string, unknown> | null;
   deltas: {
     subtotalCostCents: number;
     breakEvenPriceCents: number;
@@ -3296,6 +3318,8 @@ export interface CostComparisonResult {
   selectedListingPrepPackageId?: string | null;
   selectedListingPrepPackageName?: string | null;
   listingPrepSummarySnapshot?: Record<string, unknown> | null;
+  selectedListingPrepReadySnapshot?: Record<string, unknown> | null;
+  selectedListingPrepExportVersion?: string | null;
   scenarios: CostScenarioResult[];
 }
 
@@ -3334,6 +3358,7 @@ export interface CalculationScenarioRecord {
   priceFloorOverrideRequested: boolean;
   priceFloorOverrideApproved: boolean;
   priceFloorOverrideSnapshot: Record<string, unknown> | null;
+  latestOverrideSummarySnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3360,6 +3385,8 @@ export interface ComparisonSetRecord {
   selectedListingPrepPackageId: string | null;
   selectedListingPrepPackageName: string | null;
   listingPrepSummarySnapshot: Record<string, unknown> | null;
+  selectedListingPrepReadySnapshot: Record<string, unknown> | null;
+  selectedListingPrepExportVersion: string | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3400,6 +3427,13 @@ export interface ListingPrepPackageRecord {
   validationSnapshot: Record<string, unknown>;
   warningSnapshot: Array<Record<string, unknown>> | null;
   overrideSnapshot: Record<string, unknown> | null;
+  marketplaceMappingTemplateId: string | null;
+  marketplaceMappingTemplateName: string | null;
+  exportVersion: string | null;
+  exportShapeSnapshot: Record<string, unknown> | null;
+  overrideHistorySnapshot: Record<string, unknown> | null;
+  readyForListingPrep: boolean;
+  readyForListingPrepSummary: Record<string, unknown> | null;
   notes: string | null;
   approvedAt: string | null;
   approvedByMembershipId: string | null;
@@ -3743,6 +3777,53 @@ export async function updateLaunchGuardrailProfile(
   );
 }
 
+export async function createMarketplaceMappingTemplate(
+  costProfileId: string,
+  input: {
+    name: string;
+    status?: "ACTIVE" | "ARCHIVED";
+    productLabelFormat?: string | null;
+    skuFormat?: string | null;
+    includeWarningNotes?: boolean;
+    includeOverrideNotes?: boolean;
+    dimensionsFormat?: string | null;
+    materialFormat?: string | null;
+    packagingFormat?: string | null;
+    pricingFormat?: string | null;
+    notes?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; marketplaceMappingTemplate: MarketplaceMappingTemplateItem }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/marketplace-mapping-templates`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function getMarketplaceMappingTemplates(input?: { costProfileId?: string }) {
+  const params = new URLSearchParams();
+  if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
+  const query = params.toString();
+  return readJson<{ ok: true; marketplaceMappingTemplates: MarketplaceMappingTemplateItem[] }>(
+    `/marketplace-mapping-templates${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getMarketplaceMappingTemplate(mappingTemplateId: string) {
+  return readJson<{ ok: true; marketplaceMappingTemplate: MarketplaceMappingTemplateItem }>(
+    `/marketplace-mapping-templates/${encodeURIComponent(mappingTemplateId)}`
+  );
+}
+
+export async function updateMarketplaceMappingTemplate(
+  mappingTemplateId: string,
+  input: Record<string, unknown>
+) {
+  return sendJson<{ ok: true; marketplaceMappingTemplate: MarketplaceMappingTemplateItem }>(
+    `/marketplace-mapping-templates/${encodeURIComponent(mappingTemplateId)}`,
+    { method: "PATCH", body: JSON.stringify(input) }
+  );
+}
+
 export async function getLaunchTemplates(input?: { costProfileId?: string }) {
   const params = new URLSearchParams();
   if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
@@ -3884,6 +3965,10 @@ export async function getCostComparisonHandoffSummary(comparisonSetId: string) {
     selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
     selectedLaunchWarningSnapshot: Array<Record<string, unknown>> | null;
     exportSummary: Record<string, unknown> | null;
+    listingPrepSummary: Record<string, unknown> | null;
+    selectedListingPrepPackageId: string | null;
+    selectedListingPrepReadySnapshot: Record<string, unknown> | null;
+    selectedListingPrepExportVersion: string | null;
   }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/handoff-summary`);
 }
 
@@ -3904,15 +3989,33 @@ export async function getCostComparisonExportSummary(comparisonSetId: string) {
     selectedLaunchScenarioId: string | null;
     selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
     selectedLaunchWarningSnapshot: Array<Record<string, unknown>> | null;
+    listingPrepSummary: Record<string, unknown> | null;
+    selectedListingPrepPackageId: string | null;
+    selectedListingPrepReadySnapshot: Record<string, unknown> | null;
+    selectedListingPrepExportVersion: string | null;
   }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/export-summary`);
 }
 
 export async function buildCostListingPrepPackage(
   comparisonSetId: string,
-  input?: { selectedScenarioId?: string | null; notes?: string | null }
+  input?: {
+    selectedScenarioId?: string | null;
+    marketplaceMappingTemplateId?: string | null;
+    notes?: string | null;
+  }
 ) {
   return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
     `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/listing-prep-package`,
+    { method: "POST", body: JSON.stringify(input ?? {}) }
+  );
+}
+
+export async function refreshListingPrepPackage(
+  listingPrepPackageId: string,
+  input?: { notes?: string | null }
+) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/refresh`,
     { method: "POST", body: JSON.stringify(input ?? {}) }
   );
 }

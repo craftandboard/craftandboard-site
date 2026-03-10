@@ -54,11 +54,16 @@
 43. Change one assumption or input and recalculate
 44. Confirm the result changes and remains explainable
 45. Build a listing-prep package from the selected launch scenario
-46. Verify the listing-prep package card shows package status, readiness status, scenario name, and validation summary
-47. Run marketplace field validation and confirm missing, weak, and ready fields render clearly
-48. If blocking floor warnings exist, enter an override reason and submit override review
-49. Verify the UI clearly distinguishes `READY`, `READY_FOR_REVIEW`, `READY_WITH_OVERRIDE`, and `BLOCKED`
-50. Reload the saved comparison set and confirm listing-prep package, validation snapshot, override summary, and export snapshot persist
+46. Create a marketplace mapping template
+47. Edit the mapping template and confirm format preferences update
+48. Build or refresh the listing-prep package with the selected mapping template
+49. Verify the listing-prep package card shows package status, readiness status, scenario name, mapping template, and export version
+50. Run marketplace field validation and confirm missing, weak, and ready fields render clearly
+51. Verify the ready-for-listing-prep card shows `READY`, `READY_WITH_OVERRIDE`, `NEEDS_REVIEW`, or `BLOCKED` clearly
+52. If blocking floor warnings exist, enter an override reason and submit override review
+53. Verify the override history card shows the latest active override plus readable prior history
+54. Verify the export summary card shows template label, export version, and a stable export block
+55. Reload the saved comparison set and confirm listing-prep package, validation snapshot, override summary, override history, ready-for-listing-prep summary, and export snapshot persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -71,4 +76,7 @@
 - A user can explain why a launch candidate is recommended but not yet listing-ready
 - A user can identify which marketplace-prep fields or price-floor warnings still need review before listing handoff
 - A user can identify whether a listing-prep package is blocked by missing fields or by unapproved floor-price override review
+- A user can explain which marketplace mapping template was applied and how it shaped the export package
+- A user can tell whether a package is ready, ready with override, still needs review, or blocked without reading raw JSON
+- A user can review active versus historical overrides without losing the exact reason text
 - A user can point to the exact stable package snapshot that the next listing phase should consume

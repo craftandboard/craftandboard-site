@@ -32,6 +32,7 @@ export function ListingPrepPackageCard({
   }
 
   const listingPrepSummary = (comparison?.listingPrepSummarySnapshot ?? {}) as Record<string, unknown>;
+  const readySummary = (listingPrepPackage.readyForListingPrepSummary ?? {}) as Record<string, unknown>;
 
   return (
     <section className="rounded-[1.75rem] border border-white/10 bg-white/5 p-6">
@@ -69,6 +70,16 @@ export function ListingPrepPackageCard({
           <p className="mt-1 text-xs text-slate-400">
             {String(listingPrepSummary.validationSummary ?? "Validation summary will appear after marketplace field review.")}
           </p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Mapping template</p>
+          <p className="mt-2 font-semibold text-white">{listingPrepPackage.marketplaceMappingTemplateName ?? "No template applied"}</p>
+          <p className="mt-1 text-xs text-slate-400">Export {listingPrepPackage.exportVersion ?? "listing-prep-v1"}</p>
+        </div>
+        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Ready for listing prep</p>
+          <p className="mt-2 font-semibold text-white">{listingPrepPackage.readyForListingPrep ? "Yes" : "Not yet"}</p>
+          <p className="mt-1 text-xs text-slate-400">{String(readySummary.summary ?? "Run refresh and validation to finalize package readiness.")}</p>
         </div>
       </div>
     </section>

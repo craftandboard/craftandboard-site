@@ -26,6 +26,7 @@ import partsRouter from "./routes/parts.js";
 import batchesRouter from "./routes/batches.js";
 import productionRouter from "./routes/production.js";
 import pricingRouter from "./routes/pricing.js";
+import projectsRouter from "./routes/projects.js";
 import remnantsRouter from "./routes/remnants.js";
 import reportsRouter from "./routes/reports.js";
 import shelfJobsRouter from "./routes/shelfJobs.js";
@@ -33,6 +34,7 @@ import scanningRouter from "./routes/scanning.js";
 import stationsRouter from "./routes/stations.js";
 import stageSignalsRouter from "./routes/stageSignals.js";
 import trustedAutoApplyRouter from "./routes/trustedAutoApply.js";
+import workModulesRouter from "./routes/workModules.js";
 import { logger } from "./lib/logger.js";
 
 export function createApp() {
@@ -71,11 +73,13 @@ export function createApp() {
   app.use("/parts", partsRouter);
   app.use("/batches", batchesRouter);
   app.use("/pricing", pricingRouter);
+  app.use("/projects", projectsRouter);
   app.use("/", shelfJobsRouter);
   app.use("/", scanningRouter);
   app.use("/stations", stationsRouter);
   app.use("/stage-signals", stageSignalsRouter);
   app.use("/trusted-auto-apply", trustedAutoApplyRouter);
+  app.use("/work-modules", workModulesRouter);
   app.use("/production", productionRouter);
   app.use("/remnants", remnantsRouter);
   app.use("/reports", reportsRouter);

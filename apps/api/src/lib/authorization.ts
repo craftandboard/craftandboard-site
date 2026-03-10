@@ -3,6 +3,8 @@ import type { ApiRequestContext } from "./requestContext.js";
 export type ApiCapability =
   | "org_member_read"
   | "org_member_manage"
+  | "project_read"
+  | "work_module_read"
   | "costing_read"
   | "costing_manage"
   | "pricing_read"
@@ -34,6 +36,8 @@ export type ApiCapability =
 const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membership"]["role"]>> = {
   org_member_read: ["OWNER", "ADMIN"],
   org_member_manage: ["OWNER"],
+  project_read: ["OWNER", "ADMIN"],
+  work_module_read: ["OWNER", "ADMIN"],
   costing_read: ["OWNER", "ADMIN"],
   costing_manage: ["OWNER", "ADMIN"],
   pricing_read: ["OWNER", "ADMIN"],
@@ -66,6 +70,8 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
 const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   org_member_read: "organization member access",
   org_member_manage: "organization member management",
+  project_read: "project access",
+  work_module_read: "work module access",
   costing_read: "costing access",
   costing_manage: "costing management",
   pricing_read: "pricing access",

@@ -498,6 +498,9 @@ model Organization {
   settings  OrgSettings?
   orders    Order[]
   orderItems OrderItem[]
+  projects   Project[]
+  projectPhases ProjectPhase[]
+  projectTasks ProjectTask[]
   parts     Part[]
   batches   Batch[]
   bundles   ProductionBundle[]
@@ -579,6 +582,7 @@ model User {
   sessions       Session[]
   activationTokens ActivationToken[]
   passwordResetTokens PasswordResetToken[]
+  assignedProjectTasks ProjectTask[]
   costScenarios  CostScenario[]
   pricingScenarios PricingScenario[]
   shelfCostEstimates ShelfCostEstimate[]
@@ -623,6 +627,68 @@ model Session {
   user       User     @relation(fields: [userId], references: [id])
 
   @@index([userId, expiresAt])
+}
+
+model Project {
+  id             String       @id @default(cuid())
+  organizationId String
+  key            String?
+  name           String
+  address        String?
+  status         String?
+  stage          String?
+  scopeSummary   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  phases         ProjectPhase[]
+  tasks          ProjectTask[]
+
+  @@unique([organizationId, key])
+  @@index([organizationId, updatedAt])
+  @@index([organizationId, stage])
+}
+
+model ProjectPhase {
+  id             String       @id @default(cuid())
+  organizationId String
+  projectId      String
+  name           String
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  project        Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks          ProjectTask[]
+
+  @@unique([projectId, name])
+  @@index([organizationId, projectId, sortOrder])
+}
+
+model ProjectTask {
+  id               String       @id @default(cuid())
+  organizationId   String
+  projectId        String
+  phaseId          String?
+  title            String
+  status           String       @default("OPEN")
+  dueDate          DateTime?
+  assignedToUserId String?
+  isRequired       Boolean      @default(false)
+  sortOrder        Int          @default(0)
+  sourceKey        String?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  organization     Organization @relation(fields: [organizationId], references: [id])
+  project          Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  phase            ProjectPhase? @relation(fields: [phaseId], references: [id], onDelete: SetNull)
+  assignedToUser   User?        @relation(fields: [assignedToUserId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, projectId])
+  @@index([projectId, phaseId, sortOrder])
+  @@index([projectId, status])
+  @@index([assignedToUserId, dueDate])
+  @@unique([organizationId, projectId, sourceKey])
 }
 
 model ActivationToken {

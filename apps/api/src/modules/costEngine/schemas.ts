@@ -385,6 +385,9 @@ export const createChannelMappingPresetSchema = z.object({
   finalCheckOrderingSnapshot: z.unknown().nullable().optional(),
   pricingCriticalPromptSnapshot: z.unknown().nullable().optional(),
   sharePackagingFormatSnapshot: z.unknown().nullable().optional(),
+  entryCriticalOrderingSnapshot: z.unknown().nullable().optional(),
+  entryCompletionCueTemplateSnapshot: z.unknown().nullable().optional(),
+  handoffPacketFormatSnapshot: z.unknown().nullable().optional(),
   notes: z.string().trim().max(4000).nullable().optional(),
   presetSnapshot: z.unknown().nullable().optional()
 });

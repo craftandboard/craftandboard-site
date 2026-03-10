@@ -110,6 +110,12 @@
 99. Verify the share-ready summary card provides a concise internal handoff message and short share text
 100. Edit a channel mapping preset to change final check ordering, pricing-critical prompts, or share packaging summary
 101. Refresh the listing-prep package and confirm execution-package, last-step, ready-now, and share-ready snapshots update and persist
+102. Verify the final handoff packet card clearly shows the current package identity, copy/share sections, final review summary, and warning/override context
+103. Verify the entry-complete cue card clearly distinguishes `ENTRY_READY`, `ENTRY_IN_PROGRESS`, and `ENTRY_BLOCKED`
+104. Verify the entry completion summary card shows required entry checks, remaining checks, blocked checks, and last-step completion notes
+105. Verify the share/copy packaging card makes copy-first and share-first sections obvious
+106. Edit a channel mapping preset to change entry-critical ordering, entry completion cue checks, or handoff packet summary text
+107. Refresh the listing-prep package and confirm handoff-packet, entry-complete, entry-completion, and share/copy snapshots update and persist
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -144,3 +150,6 @@
 - A user can tell what to copy first, what to verify last, and what to share internally from one tighter execution package instead of stitching several cards together
 - A user can distinguish blocking checks from review checks during the last manual listing pass
 - A user can see a concise ready-now reason and next-step instruction without inferring it from lower-level readiness fields
+- A user can see a single final handoff packet that tells them what to copy first, what to share first, and what still remains before entry is complete
+- A user can distinguish operational readiness from entry completion state without inferring it from multiple lower-level cards
+- A user can tell whether the package is `ENTRY_READY`, `ENTRY_IN_PROGRESS`, or `ENTRY_BLOCKED` at a glance

@@ -2905,6 +2905,9 @@ export interface ChannelMappingPresetItem {
   finalCheckOrderingSnapshot: Record<string, unknown> | null;
   pricingCriticalPromptSnapshot: Record<string, unknown> | null;
   sharePackagingFormatSnapshot: Record<string, unknown> | null;
+  entryCriticalOrderingSnapshot: Record<string, unknown> | null;
+  entryCompletionCueTemplateSnapshot: Record<string, unknown> | null;
+  handoffPacketFormatSnapshot: Record<string, unknown> | null;
   notes: string | null;
   presetSnapshot: Record<string, unknown> | null;
   createdAt: string;
@@ -3412,6 +3415,7 @@ export interface CalculationScenarioRecord {
   latestQuickCopySummarySnapshot: Record<string, unknown> | null;
   latestRunbookSummarySnapshot: Record<string, unknown> | null;
   latestExecutionSummarySnapshot: Record<string, unknown> | null;
+  latestHandoffPacketSummarySnapshot: Record<string, unknown> | null;
   assumptionsSnapshot: Record<string, unknown>;
   resultSnapshot: Record<string, unknown>;
   createdAt: string;
@@ -3453,6 +3457,8 @@ export interface ComparisonSetRecord {
   selectedRunbookSummarySnapshot: Record<string, unknown> | null;
   selectedExecutionPackageVersion: string | null;
   selectedExecutionPackageSummarySnapshot: Record<string, unknown> | null;
+  selectedHandoffPacketVersion: string | null;
+  selectedHandoffPacketSummarySnapshot: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3539,6 +3545,12 @@ export interface ListingPrepPackageRecord {
   shareReadySummarySnapshot: Record<string, unknown> | null;
   executionPackageVersion: string | null;
   copyShareErgonomicsSummary: Record<string, unknown> | null;
+  finalHandoffPacketSnapshot: Record<string, unknown> | null;
+  entryCompleteCueSnapshot: Record<string, unknown> | null;
+  entryCompletionStatus: string | null;
+  entryCompletionSummarySnapshot: Record<string, unknown> | null;
+  handoffPacketVersion: string | null;
+  shareCopyPackagingSummary: Record<string, unknown> | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4405,6 +4417,41 @@ export async function getListingPrepReadyNowSummary(listingPrepPackageId: string
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/ready-now-summary`);
+}
+
+export async function getListingPrepFinalHandoffPacket(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    finalHandoffPacket: Record<string, unknown> | null;
+    shareCopyPackagingSummary: Record<string, unknown> | null;
+    handoffPacketVersion: string | null;
+    entryCompletionStatus: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/final-handoff-packet`);
+}
+
+export async function getListingPrepEntryCompleteCue(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    entryCompleteCue: Record<string, unknown> | null;
+    entryCompletionStatus: string | null;
+    readyNowSummary: Record<string, unknown> | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/entry-complete-cue`);
+}
+
+export async function getListingPrepEntryCompletionSummary(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    entryCompletionSummary: Record<string, unknown> | null;
+    entryCompleteCue: Record<string, unknown> | null;
+    shareCopyPackagingSummary: Record<string, unknown> | null;
+    handoffPacketVersion: string | null;
+    approvalState: string;
+    currentApprovedArtifact: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/entry-completion-summary`);
 }
 
 export interface LeadListItem {

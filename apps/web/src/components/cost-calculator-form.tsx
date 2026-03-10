@@ -86,12 +86,16 @@ import { OperatorWorksheetPackageCard } from "./operator-worksheet-package-card"
 import { FinalReviewPromptCard } from "./final-review-prompt-card";
 import { ArtifactHandoffSummaryCard } from "./artifact-handoff-summary-card";
 import { ExecutionPackageCard } from "./execution-package-card";
+import { EntryCompleteCueCard } from "./entry-complete-cue-card";
+import { EntryCompletionSummaryCard } from "./entry-completion-summary-card";
 import { FinalRunbookCard } from "./final-runbook-card";
+import { FinalHandoffPacketCard } from "./final-handoff-packet-card";
 import { InternalShareSummaryCard } from "./internal-share-summary-card";
 import { LastChangeSummaryCard } from "./last-change-summary-card";
 import { LastStepChecklistCard } from "./last-step-checklist-card";
 import { ReadyNowSummaryCard } from "./ready-now-summary-card";
 import { ShareReadySummaryCard } from "./share-ready-summary-card";
+import { ShareCopyPackagingCard } from "./share-copy-packaging-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { OverrideHistoryCard } from "./override-history-card";
 import { PriceFloorOverrideReviewCard } from "./price-floor-override-review-card";
@@ -1177,9 +1181,15 @@ export function CostCalculatorForm() {
         completionCueTemplateSnapshot: parseSnapshotLines(formData.get("completionCueChecks"), "lastChecks"),
         finalCheckOrderingSnapshot: parseSnapshotLines(formData.get("finalCheckOrdering"), "groups"),
         pricingCriticalPromptSnapshot: parseSnapshotLines(formData.get("pricingCriticalPrompts"), "checks"),
+        entryCriticalOrderingSnapshot: parseSnapshotLines(formData.get("entryCriticalOrdering"), "groups"),
+        entryCompletionCueTemplateSnapshot: parseSnapshotLines(formData.get("entryCompletionCueChecks"), "lastChecks"),
         sharePackagingFormatSnapshot: {
           label: String(formData.get("sharePackagingLabel") ?? "") || null,
           summary: String(formData.get("sharePackagingSummary") ?? "") || null
+        },
+        handoffPacketFormatSnapshot: {
+          label: String(formData.get("handoffPacketLabel") ?? "") || null,
+          summary: String(formData.get("handoffPacketSummary") ?? "") || null
         },
         shortSummaryFormatSnapshot: {
           headline: String(formData.get("shortSummaryHeadline") ?? "") || null,
@@ -1254,9 +1264,15 @@ export function CostCalculatorForm() {
         completionCueTemplateSnapshot: parseSnapshotLines(formData.get("completionCueChecks"), "lastChecks"),
         finalCheckOrderingSnapshot: parseSnapshotLines(formData.get("finalCheckOrdering"), "groups"),
         pricingCriticalPromptSnapshot: parseSnapshotLines(formData.get("pricingCriticalPrompts"), "checks"),
+        entryCriticalOrderingSnapshot: parseSnapshotLines(formData.get("entryCriticalOrdering"), "groups"),
+        entryCompletionCueTemplateSnapshot: parseSnapshotLines(formData.get("entryCompletionCueChecks"), "lastChecks"),
         sharePackagingFormatSnapshot: {
           label: String(formData.get("sharePackagingLabel") ?? "") || null,
           summary: String(formData.get("sharePackagingSummary") ?? "") || null
+        },
+        handoffPacketFormatSnapshot: {
+          label: String(formData.get("handoffPacketLabel") ?? "") || null,
+          summary: String(formData.get("handoffPacketSummary") ?? "") || null
         },
         shortSummaryFormatSnapshot: {
           headline: String(formData.get("shortSummaryHeadline") ?? "") || null,
@@ -1630,6 +1646,10 @@ export function CostCalculatorForm() {
           <OperatorWorksheetPackageCard listingPrepPackage={listingPrepPackage} />
           <FinalRunbookCard listingPrepPackage={listingPrepPackage} />
           <ExecutionPackageCard listingPrepPackage={listingPrepPackage} />
+          <FinalHandoffPacketCard listingPrepPackage={listingPrepPackage} />
+          <EntryCompleteCueCard listingPrepPackage={listingPrepPackage} />
+          <EntryCompletionSummaryCard listingPrepPackage={listingPrepPackage} />
+          <ShareCopyPackagingCard listingPrepPackage={listingPrepPackage} />
           <LastStepChecklistCard listingPrepPackage={listingPrepPackage} />
           <ManualListingCopyBlockCard listingPrepPackage={listingPrepPackage} />
           <WorksheetExportSummaryCard listingPrepPackage={listingPrepPackage} />

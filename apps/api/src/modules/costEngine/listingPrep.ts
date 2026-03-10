@@ -1830,6 +1830,182 @@ export function buildCopyShareErgonomicsSummary(input: {
   };
 }
 
+export function buildEntryCompleteCueSnapshot(input: {
+  approvalState: string;
+  currentApprovedArtifact: boolean;
+  overrideSnapshot?: Record<string, unknown> | null;
+  checklistSnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  readyNowSummarySnapshot?: Record<string, unknown> | null;
+  preset?: {
+    entryCompletionCueTemplateSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const requiredMissing = Array.isArray(input.checklistSnapshot?.requiredMissingFields)
+    ? (input.checklistSnapshot?.requiredMissingFields as string[])
+    : [];
+  const blockingWarnings = (input.warningSnapshot ?? []).filter((warning) => warning.severity === "BLOCKING");
+  const warningReview = (input.warningSnapshot ?? [])
+    .filter((warning) => warning.severity !== "BLOCKING")
+    .map((warning) => warning.message);
+  const templateChecks = Array.isArray(input.preset?.entryCompletionCueTemplateSnapshot?.lastChecks)
+    ? (input.preset?.entryCompletionCueTemplateSnapshot?.lastChecks as string[])
+    : [];
+  const entryCriticalChecks = [
+    ...(input.currentApprovedArtifact
+      ? ["Use the current approved artifact for manual entry."]
+      : ["This is not the current approved artifact. Confirm the active package first."]),
+    ...(Boolean(input.overrideSnapshot?.overrideApproved)
+      ? ["Override-approved package in use. Re-read the override note before entry completes."]
+      : []),
+    ...templateChecks
+  ];
+  const entryRemainingChecks = [
+    ...(requiredMissing.length ? requiredMissing.map((field) => `Resolve required field: ${field}.`) : []),
+    ...warningReview
+  ];
+  const entryCompletionStatus =
+    blockingWarnings.length > 0 || requiredMissing.length > 0
+      ? "ENTRY_BLOCKED"
+      : input.readyNowSummarySnapshot?.readyNowBoolean || input.readyNowSummarySnapshot?.readyWithOverrideBoolean
+        ? "ENTRY_READY"
+        : input.currentApprovedArtifact
+          ? "ENTRY_IN_PROGRESS"
+          : "ENTRY_BLOCKED";
+
+  return {
+    entryCompletionStatus,
+    entryReadyBoolean: entryCompletionStatus === "ENTRY_READY",
+    entryInProgressBoolean: entryCompletionStatus === "ENTRY_IN_PROGRESS",
+    entryCompleteBoolean: false,
+    entryBlockedBoolean: entryCompletionStatus === "ENTRY_BLOCKED",
+    entryCriticalChecks,
+    entryRemainingChecks,
+    summary:
+      entryCompletionStatus === "ENTRY_READY"
+        ? "Manual entry can begin once the final checks are acknowledged."
+        : entryCompletionStatus === "ENTRY_IN_PROGRESS"
+          ? "Manual entry is close, but a few review items still remain."
+          : "Manual entry should not begin until blocking issues are cleared."
+  };
+}
+
+export function buildEntryCompletionSummarySnapshot(input: {
+  entryCompleteCueSnapshot?: Record<string, unknown> | null;
+  lastStepChecklistSnapshot?: Record<string, unknown> | null;
+  preset?: {
+    entryCriticalOrderingSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const requiredEntryChecks = Array.isArray(input.entryCompleteCueSnapshot?.entryCriticalChecks)
+    ? (input.entryCompleteCueSnapshot?.entryCriticalChecks as string[])
+    : [];
+  const remainingChecks = Array.isArray(input.entryCompleteCueSnapshot?.entryRemainingChecks)
+    ? (input.entryCompleteCueSnapshot?.entryRemainingChecks as string[])
+    : [];
+  const blockedChecks = Array.isArray(input.lastStepChecklistSnapshot?.blockingChecks)
+    ? (input.lastStepChecklistSnapshot?.blockingChecks as string[])
+    : [];
+  const finalNotes = Array.isArray(input.preset?.entryCriticalOrderingSnapshot?.notes)
+    ? (input.preset?.entryCriticalOrderingSnapshot?.notes as string[])
+    : [];
+
+  return {
+    requiredEntryChecks,
+    remainingChecks,
+    blockedChecks,
+    finalOrdering:
+      (Array.isArray(input.preset?.entryCriticalOrderingSnapshot?.groups)
+        ? (input.preset?.entryCriticalOrderingSnapshot?.groups as string[])
+        : ["copy-first", "share-ready", "final-review", "entry-complete"]) ?? [],
+    lastStepCompletionNotes: finalNotes,
+    summary:
+      blockedChecks.length > 0
+        ? "Entry completion still has blocked checks."
+        : remainingChecks.length > 0
+          ? "Entry completion is in progress."
+          : "Entry completion summary is clear."
+  };
+}
+
+export function buildShareCopyPackagingSummary(input: {
+  quickCopySummarySnapshot?: Record<string, unknown> | null;
+  shareReadySummarySnapshot?: Record<string, unknown> | null;
+  finalReviewPromptSnapshot?: Record<string, unknown> | null;
+  currentApprovedArtifactSummary?: Record<string, unknown> | null;
+  preset?: {
+    handoffPacketFormatSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  const copyFirstBlocks = Array.isArray(input.quickCopySummarySnapshot?.priorityCopyBlocks)
+    ? (input.quickCopySummarySnapshot?.priorityCopyBlocks as unknown[])
+    : [];
+  const shareFirstBlocks = Array.isArray(input.shareReadySummarySnapshot?.internalShareBlocks)
+    ? (input.shareReadySummarySnapshot?.internalShareBlocks as unknown[])
+    : [];
+  return {
+    copyFirstBlocks,
+    shareFirstBlocks,
+    shortShareText:
+      input.shareReadySummarySnapshot?.shortShareText ??
+      input.currentApprovedArtifactSummary?.summary ??
+      null,
+    useNowPacketSummary:
+      input.currentApprovedArtifactSummary?.summary ??
+      input.shareReadySummarySnapshot?.whatToUseNowSummary ??
+      "Review the current approved artifact summary before sharing.",
+    finalReviewSummary:
+      input.finalReviewPromptSnapshot?.summary ??
+      "Review final prompts before manual listing entry.",
+    handoffFormatLabel: input.preset?.handoffPacketFormatSnapshot?.label ?? "handoff-packet-v1",
+    summary:
+      copyFirstBlocks.length > 0
+        ? "Copy/share packaging is ready for internal handoff."
+        : "Copy/share packaging still needs review."
+  };
+}
+
+export function buildFinalHandoffPacketSnapshot(input: {
+  packageId: string;
+  packageName?: string | null;
+  approvalState: string;
+  currentApprovedArtifactSummary?: Record<string, unknown> | null;
+  quickCopySummarySnapshot?: Record<string, unknown> | null;
+  shareReadySummarySnapshot?: Record<string, unknown> | null;
+  finalReviewPromptSnapshot?: Record<string, unknown> | null;
+  entryCompleteCueSnapshot?: Record<string, unknown> | null;
+  entryCompletionSummarySnapshot?: Record<string, unknown> | null;
+  warningSnapshot?: WarningItem[] | null;
+  overrideSnapshot?: Record<string, unknown> | null;
+  preset?: {
+    handoffPacketFormatSnapshot?: Record<string, unknown> | null;
+  } | null;
+}) {
+  return {
+    handoffPacketVersion: "handoff-packet-v1",
+    header: {
+      packageId: input.packageId,
+      packageName: input.packageName ?? null,
+      approvalState: input.approvalState,
+      currentArtifact: input.currentApprovedArtifactSummary ?? null,
+      formatLabel: input.preset?.handoffPacketFormatSnapshot?.label ?? "handoff-packet-v1"
+    },
+    copyFirst: input.quickCopySummarySnapshot ?? null,
+    shareFirst: input.shareReadySummarySnapshot ?? null,
+    finalReview: input.finalReviewPromptSnapshot ?? null,
+    entryComplete: input.entryCompleteCueSnapshot ?? null,
+    entryCompletion: input.entryCompletionSummarySnapshot ?? null,
+    warningOverride: {
+      warnings: input.warningSnapshot ?? [],
+      overrideSummary: input.overrideSnapshot ?? null
+    },
+    handoffPacketSummary:
+      input.entryCompleteCueSnapshot?.summary ??
+      input.currentApprovedArtifactSummary?.summary ??
+      "Final handoff packet is available for internal manual listing use."
+  };
+}
+
 export function buildWorksheetSummarySnapshot(input: {
   worksheet?: Record<string, unknown> | null;
   presetSelectionSummary?: Record<string, unknown> | null;

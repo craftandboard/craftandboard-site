@@ -34,7 +34,10 @@ import {
   getLaunchTemplate,
   getChannelMappingPreset,
   getExecutionPackage,
+  getEntryCompleteCue,
+  getEntryCompletionSummary,
   getFinalRunbook,
+  getFinalHandoffPacket,
   getLastStepChecklist,
   getListingPrepPackage,
   getQuickCopySummary,
@@ -1224,6 +1227,51 @@ router.get("/listing-prep-packages/:listingPrepPackageId/ready-now-summary", asy
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getReadyNowSummary({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/final-handoff-packet", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getFinalHandoffPacket({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/entry-complete-cue", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getEntryCompleteCue({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/entry-completion-summary", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getEntryCompletionSummary({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

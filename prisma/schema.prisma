@@ -2615,6 +2615,7 @@ model CalculationScenario {
   latestQuickCopySummarySnapshot Json?
   latestRunbookSummarySnapshot Json?
   latestExecutionSummarySnapshot Json?
+  latestHandoffPacketSummarySnapshot Json?
 
   @@index([organizationId, createdAt])
   @@index([organizationId, costProfileId])
@@ -2656,6 +2657,8 @@ model CalculationComparisonSet {
   selectedRunbookSummarySnapshot Json?
   selectedExecutionPackageVersion String?
   selectedExecutionPackageSummarySnapshot Json?
+  selectedHandoffPacketVersion String?
+  selectedHandoffPacketSummarySnapshot Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2729,6 +2732,12 @@ model ListingPrepPackage {
   shareReadySummarySnapshot Json?
   executionPackageVersion String?
   copyShareErgonomicsSummary Json?
+  finalHandoffPacketSnapshot Json?
+  entryCompleteCueSnapshot Json?
+  entryCompletionStatus String?
+  entryCompletionSummarySnapshot Json?
+  handoffPacketVersion String?
+  shareCopyPackagingSummary Json?
   currentApprovedArtifact Boolean                 @default(false)
   notes                  String?
   approvedAt             DateTime?
@@ -2758,6 +2767,8 @@ model ListingPrepPackage {
   @@index([organizationId, quickCopyVersion])
   @@index([organizationId, runbookVersion])
   @@index([organizationId, executionPackageVersion])
+  @@index([organizationId, handoffPacketVersion])
+  @@index([organizationId, entryCompletionStatus])
 }
 
 model MarketplaceMappingTemplate {
@@ -2823,6 +2834,9 @@ model ChannelMappingPreset {
   finalCheckOrderingSnapshot Json?
   pricingCriticalPromptSnapshot Json?
   sharePackagingFormatSnapshot Json?
+  entryCriticalOrderingSnapshot Json?
+  entryCompletionCueTemplateSnapshot Json?
+  handoffPacketFormatSnapshot Json?
   notes                String?
   presetSnapshot       Json?
   createdAt            DateTime                 @default(now())

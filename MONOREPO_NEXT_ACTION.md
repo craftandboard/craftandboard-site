@@ -3,9 +3,9 @@
 Safest canonical repo right now: `/Users/brandon/Projects/craft-and-board`
 
 Do not do yet:
-- do not import Stripe or project payments blindly
-- do not pull in proposal, deposit, or lead flows yet
-- do not collapse project-domain and manufacturing job terms
+- do not import Stripe or payment runtime first
+- do not merge deposit or project-payment schema into pricing/costing models
+- do not collapse sales stages into project or manufacturing statuses
 
-Exact next Phase 5 action:
-- define the payment, proposal, deposit, and lead boundary plan before any finance or sales-domain import starts
+Exact next Phase 6 action:
+- import `leads` and `proposals` as read-first bounded modules, with project-sales linkage, stage/status translation, and audit adapters in place before any deposit, payment, or Stripe work

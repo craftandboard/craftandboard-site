@@ -8,6 +8,8 @@ export async function resolveCostEngineAssumptions(input: {
   edgeBandCode?: string | null;
   packagingCode?: string | null;
   shippingCode?: string | null;
+  amazonFeePresetId?: string | null;
+  shippingZoneRuleId?: string | null;
   edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
 }) {
   const profile = await getCostProfileRecord({
@@ -40,6 +42,20 @@ export async function resolveCostEngineAssumptions(input: {
   const shippingRule = input.shippingCode
     ? profile.shippingCostRules.find((rule: any) => rule.shippingCode === input.shippingCode)
     : null;
+  const amazonFeePreset = input.amazonFeePresetId
+    ? profile.amazonFeePresets.find((preset: any) => preset.id === input.amazonFeePresetId)
+    : null;
+  const shippingZoneRule = input.shippingZoneRuleId
+    ? profile.shippingZoneRules.find((rule: any) => rule.id === input.shippingZoneRuleId)
+    : null;
+
+  if (input.amazonFeePresetId && !amazonFeePreset) {
+    throw new Error("Amazon fee preset not found for the selected profile.");
+  }
+
+  if (input.shippingZoneRuleId && !shippingZoneRule) {
+    throw new Error("Shipping zone rule not found for the selected profile.");
+  }
 
   return {
     profile: {
@@ -120,6 +136,37 @@ export async function resolveCostEngineAssumptions(input: {
           shippingBufferCents: shippingRule.shippingBufferCents,
           marketplaceHandlingCents: shippingRule.marketplaceHandlingCents,
           flatOverride: shippingRule.flatOverride
+        }
+      : null,
+    amazonFeePreset: amazonFeePreset
+      ? {
+          id: amazonFeePreset.id,
+          name: amazonFeePreset.name,
+          referralFeePct: decimalToNumber(amazonFeePreset.referralFeePct) ?? 0,
+          closingFeeCents: amazonFeePreset.closingFeeCents,
+          fulfillmentFeeCents: amazonFeePreset.fulfillmentFeeCents,
+          storageAllowanceCents: amazonFeePreset.storageAllowanceCents,
+          advertisingAllowancePct: decimalToNumber(amazonFeePreset.advertisingAllowancePct),
+          advertisingAllowanceCents: amazonFeePreset.advertisingAllowanceCents,
+          returnReservePct: decimalToNumber(amazonFeePreset.returnReservePct),
+          returnReserveCents: amazonFeePreset.returnReserveCents,
+          damageReservePct: decimalToNumber(amazonFeePreset.damageReservePct),
+          damageReserveCents: amazonFeePreset.damageReserveCents,
+          miscMarketplacePct: decimalToNumber(amazonFeePreset.miscMarketplacePct),
+          miscMarketplaceCents: amazonFeePreset.miscMarketplaceCents
+        }
+      : null,
+    shippingZoneRule: shippingZoneRule
+      ? {
+          id: shippingZoneRule.id,
+          name: shippingZoneRule.name,
+          zoneCode: shippingZoneRule.zoneCode,
+          baseCostCents: shippingZoneRule.baseCostCents,
+          weightAdderCents: shippingZoneRule.weightAdderCents,
+          dimensionalAdderCents: shippingZoneRule.dimensionalAdderCents,
+          bufferPct: decimalToNumber(shippingZoneRule.bufferPct),
+          bufferCents: shippingZoneRule.bufferCents,
+          marketplaceHandlingCents: shippingZoneRule.marketplaceHandlingCents
         }
       : null
   };

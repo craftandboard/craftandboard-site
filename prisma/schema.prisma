@@ -783,7 +783,12 @@ model Organization {
   edgeBandCostRules EdgeBandCostRule[]
   packagingCostRules PackagingCostRule[]
   shippingCostRules ShippingCostRule[]
+  amazonFeePresets AmazonFeePreset[]
+  shippingZoneRules ShippingZoneRule[]
   shelfCostCalculations ShelfCostCalculation[]
+  calculationScenarios CalculationScenario[]
+  calculationComparisonSets CalculationComparisonSet[]
+  comparisonSetScenarios ComparisonSetScenario[]
   shelfCostEstimates ShelfCostEstimate[]
   orderCostEstimates OrderCostEstimate[]
   shelfProducts ShelfProduct[]
@@ -2282,7 +2287,10 @@ model CostProfile {
   edgeBandCostRules                 EdgeBandCostRule[]
   packagingCostRules                PackagingCostRule[]
   shippingCostRules                 ShippingCostRule[]
+  amazonFeePresets                 AmazonFeePreset[]
+  shippingZoneRules                ShippingZoneRule[]
   shelfCostCalculations             ShelfCostCalculation[]
+  calculationScenarios             CalculationScenario[]
 
   @@index([organizationId, isDefault])
   @@index([organizationId, status])
@@ -2353,6 +2361,7 @@ model PackagingCostRule {
   updatedAt                 DateTime    @updatedAt
   organization              Organization @relation(fields: [organizationId], references: [id])
   costProfile               CostProfile @relation(fields: [costProfileId], references: [id])
+  calculationScenarios      CalculationScenario[]
 
   @@index([organizationId, costProfileId])
   @@index([organizationId, packagingCode])
@@ -2379,15 +2388,75 @@ model ShippingCostRule {
   updatedAt            DateTime    @updatedAt
   organization         Organization @relation(fields: [organizationId], references: [id])
   costProfile          CostProfile @relation(fields: [costProfileId], references: [id])
+  calculationScenarios CalculationScenario[]
 
   @@index([organizationId, costProfileId])
   @@index([organizationId, shippingCode])
+}
+
+model AmazonFeePreset {
+  id                         String            @id @default(cuid())
+  organizationId             String
+  costProfileId              String?
+  name                       String
+  status                     CostProfileStatus @default(ACTIVE)
+  referralFeePct             Decimal           @db.Decimal(8, 3)
+  closingFeeCents            Int?
+  fulfillmentFeeCents        Int?
+  storageAllowanceCents      Int?
+  advertisingAllowancePct    Decimal?          @db.Decimal(8, 3)
+  advertisingAllowanceCents  Int?
+  returnReservePct           Decimal?          @db.Decimal(8, 3)
+  returnReserveCents         Int?
+  damageReservePct           Decimal?          @db.Decimal(8, 3)
+  damageReserveCents         Int?
+  miscMarketplacePct         Decimal?          @db.Decimal(8, 3)
+  miscMarketplaceCents       Int?
+  notes                      String?
+  metadata                   Json?
+  createdAt                  DateTime          @default(now())
+  updatedAt                  DateTime          @updatedAt
+  organization               Organization      @relation(fields: [organizationId], references: [id])
+  costProfile                CostProfile?      @relation(fields: [costProfileId], references: [id])
+  shelfCostCalculations      ShelfCostCalculation[]
+  calculationScenarios       CalculationScenario[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, costProfileId])
+}
+
+model ShippingZoneRule {
+  id                       String            @id @default(cuid())
+  organizationId           String
+  costProfileId            String?
+  name                     String
+  zoneCode                 String
+  status                   CostProfileStatus @default(ACTIVE)
+  baseCostCents            Int
+  weightAdderCents         Int?
+  dimensionalAdderCents    Int?
+  bufferPct                Decimal?          @db.Decimal(8, 3)
+  bufferCents              Int?
+  marketplaceHandlingCents Int?
+  notes                    String?
+  metadata                 Json?
+  createdAt                DateTime          @default(now())
+  updatedAt                DateTime          @updatedAt
+  organization             Organization      @relation(fields: [organizationId], references: [id])
+  costProfile              CostProfile?      @relation(fields: [costProfileId], references: [id])
+  shelfCostCalculations    ShelfCostCalculation[]
+  calculationScenarios     CalculationScenario[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, costProfileId])
 }
 
 model ShelfCostCalculation {
   id                           String                   @id @default(cuid())
   organizationId               String
   costProfileId                String
+  amazonFeePresetId            String?
+  shippingZoneRuleId           String?
   name                         String?
   sku                          String?
   quantity                     Int
@@ -2412,8 +2481,14 @@ model ShelfCostCalculation {
   shippingBufferCostCents      Int               @default(0)
   overheadCostCents            Int
   marketplaceFeeCostCents      Int               @default(0)
+  referralFeeCostCents         Int?              @default(0)
+  closingFeeCostCents          Int?              @default(0)
+  fulfillmentFeeCostCents      Int?              @default(0)
+  storageAllowanceCostCents    Int?              @default(0)
+  advertisingAllowanceCostCents Int?             @default(0)
   returnReserveCostCents       Int               @default(0)
   damageReserveCostCents       Int               @default(0)
+  miscMarketplaceCostCents     Int?              @default(0)
   subtotalCostCents            Int
   breakEvenPriceCents          Int?
   recommendedMinSellPriceCents Int?
@@ -2426,13 +2501,73 @@ model ShelfCostCalculation {
   packagingSnapshot            Json?
   shippingSnapshot             Json?
   pricingSnapshot              Json?
+  amazonFeeSnapshot            Json?
+  shippingZoneSnapshot         Json?
   resultSnapshot               Json
   createdAt                    DateTime                 @default(now())
   updatedAt                    DateTime                 @updatedAt
   organization                 Organization             @relation(fields: [organizationId], references: [id])
   costProfile                  CostProfile              @relation(fields: [costProfileId], references: [id])
+  amazonFeePreset              AmazonFeePreset?         @relation(fields: [amazonFeePresetId], references: [id])
+  shippingZoneRule             ShippingZoneRule?        @relation(fields: [shippingZoneRuleId], references: [id])
+  calculationScenarios         CalculationScenario[]
 
   @@index([organizationId, costProfileId, createdAt])
+}
+
+model CalculationScenario {
+  id                     String                 @id @default(cuid())
+  organizationId         String
+  name                   String
+  costProfileId          String
+  amazonFeePresetId      String?
+  shippingZoneRuleId     String?
+  packagingRuleId        String?
+  shippingRuleId         String?
+  shelfCostCalculationId String?
+  assumptionsSnapshot    Json
+  resultSnapshot         Json
+  createdAt              DateTime               @default(now())
+  updatedAt              DateTime               @updatedAt
+  organization           Organization           @relation(fields: [organizationId], references: [id])
+  costProfile            CostProfile            @relation(fields: [costProfileId], references: [id])
+  amazonFeePreset        AmazonFeePreset?       @relation(fields: [amazonFeePresetId], references: [id])
+  shippingZoneRule       ShippingZoneRule?      @relation(fields: [shippingZoneRuleId], references: [id])
+  packagingRule          PackagingCostRule?     @relation(fields: [packagingRuleId], references: [id])
+  shippingRule           ShippingCostRule?      @relation(fields: [shippingRuleId], references: [id])
+  shelfCostCalculation   ShelfCostCalculation?  @relation(fields: [shelfCostCalculationId], references: [id])
+  comparisonSetScenarios ComparisonSetScenario[]
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, costProfileId])
+}
+
+model CalculationComparisonSet {
+  id                   String                 @id @default(cuid())
+  organizationId       String
+  name                 String
+  baseShelfSpecSnapshot Json
+  notes                String?
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  organization         Organization           @relation(fields: [organizationId], references: [id])
+  scenarios            ComparisonSetScenario[]
+
+  @@index([organizationId, createdAt])
+}
+
+model ComparisonSetScenario {
+  id                    String                   @id @default(cuid())
+  organizationId        String
+  comparisonSetId       String
+  calculationScenarioId String
+  sortOrder             Int?
+  createdAt             DateTime                 @default(now())
+  organization          Organization             @relation(fields: [organizationId], references: [id])
+  comparisonSet         CalculationComparisonSet @relation(fields: [comparisonSetId], references: [id])
+  calculationScenario   CalculationScenario      @relation(fields: [calculationScenarioId], references: [id])
+
+  @@index([organizationId, comparisonSetId])
 }
 
 model CostRate {

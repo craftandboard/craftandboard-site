@@ -7,5 +7,5 @@ Do not do yet:
 - do not broaden the pilot into a full CRM, dashboard suite, or branded public portal yet
 - do not replace backend rule checks with frontend-only business logic
 
-Exact next MVP action:
-- open `/cost-calculator`, enter Hugo’s real packaging/shipping/pricing assumptions, then run `docs/cost-engine/hugo-shelf-cost-calculator-qa-checklist.md` before deciding whether the next spec should deepen Amazon sell-price realism or return to FieldMetriq pilot fixes
+Exact next cost-engine action:
+- open `/cost-calculator`, enter Hugo’s real Amazon fee presets and shipping zones, run a saved comparison set for at least a near-zone and far-zone launch case, then execute `docs/cost-engine/hugo-shelf-cost-calculator-qa-checklist.md` before deciding whether the next spec should deepen launch-price guardrails or pivot engineering focus back to FieldMetriq pilot fixes

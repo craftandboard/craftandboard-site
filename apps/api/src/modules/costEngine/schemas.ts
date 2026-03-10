@@ -4,6 +4,7 @@ import { COST_PROFILE_STATUSES, SHELF_COST_EDGE_BAND_PATTERNS } from "./contract
 const percentSchema = z.number().min(0).max(100);
 const nonNegativeCentsSchema = z.number().int().min(0);
 const nullableNonNegativeCentsSchema = nonNegativeCentsSchema.nullable().optional();
+const optionalNullableIdSchema = z.string().trim().min(1).nullable().optional();
 
 export const costProfileStatusSchema = z.enum(COST_PROFILE_STATUSES);
 export const shelfCostEdgeBandPatternSchema = z.enum(SHELF_COST_EDGE_BAND_PATTERNS);
@@ -28,8 +29,20 @@ export const shippingRuleIdParamsSchema = z.object({
   shippingRuleId: z.string().trim().min(1)
 });
 
+export const presetIdParamsSchema = z.object({
+  presetId: z.string().trim().min(1)
+});
+
+export const zoneRuleIdParamsSchema = z.object({
+  zoneRuleId: z.string().trim().min(1)
+});
+
 export const calculationIdParamsSchema = z.object({
   calculationId: z.string().trim().min(1)
+});
+
+export const comparisonSetIdParamsSchema = z.object({
+  comparisonSetId: z.string().trim().min(1)
 });
 
 export const createCostProfileSchema = z.object({
@@ -61,9 +74,7 @@ export const createCostProfileSchema = z.object({
 
 export const updateCostProfileSchema = createCostProfileSchema
   .omit({ name: true })
-  .extend({
-    name: z.string().trim().min(1).max(160).optional()
-  })
+  .extend({ name: z.string().trim().min(1).max(160).optional() })
   .refine((value) => Object.keys(value).length > 0, {
     message: "At least one cost profile field must be provided."
   });
@@ -144,7 +155,50 @@ export const updateShippingCostRuleSchema = createShippingCostRuleSchema.partial
   { message: "At least one shipping rule field must be provided." }
 );
 
-export const calculateShelfCostSchema = z.object({
+export const createAmazonFeePresetSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  status: costProfileStatusSchema.optional(),
+  referralFeePct: percentSchema,
+  closingFeeCents: nullableNonNegativeCentsSchema,
+  fulfillmentFeeCents: nullableNonNegativeCentsSchema,
+  storageAllowanceCents: nullableNonNegativeCentsSchema,
+  advertisingAllowancePct: percentSchema.nullable().optional(),
+  advertisingAllowanceCents: nullableNonNegativeCentsSchema,
+  returnReservePct: percentSchema.nullable().optional(),
+  returnReserveCents: nullableNonNegativeCentsSchema,
+  damageReservePct: percentSchema.nullable().optional(),
+  damageReserveCents: nullableNonNegativeCentsSchema,
+  miscMarketplacePct: percentSchema.nullable().optional(),
+  miscMarketplaceCents: nullableNonNegativeCentsSchema,
+  notes: z.string().trim().max(4000).nullable().optional(),
+  metadata: z.unknown().optional()
+});
+
+export const updateAmazonFeePresetSchema = createAmazonFeePresetSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one Amazon fee preset field must be provided." }
+);
+
+export const createShippingZoneRuleSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  zoneCode: z.string().trim().min(1).max(80),
+  status: costProfileStatusSchema.optional(),
+  baseCostCents: nonNegativeCentsSchema,
+  weightAdderCents: nullableNonNegativeCentsSchema,
+  dimensionalAdderCents: nullableNonNegativeCentsSchema,
+  bufferPct: percentSchema.nullable().optional(),
+  bufferCents: nullableNonNegativeCentsSchema,
+  marketplaceHandlingCents: nullableNonNegativeCentsSchema,
+  notes: z.string().trim().max(4000).nullable().optional(),
+  metadata: z.unknown().optional()
+});
+
+export const updateShippingZoneRuleSchema = createShippingZoneRuleSchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: "At least one shipping zone field must be provided." }
+);
+
+const calculationInputBaseSchema = z.object({
   costProfileId: z.string().trim().min(1),
   name: z.string().trim().max(160).nullable().optional(),
   sku: z.string().trim().max(160).nullable().optional(),
@@ -158,6 +212,8 @@ export const calculateShelfCostSchema = z.object({
   edgeBandPattern: shelfCostEdgeBandPatternSchema,
   packagingCode: z.string().trim().max(80).nullable().optional(),
   shippingCode: z.string().trim().max(80).nullable().optional(),
+  amazonFeePresetId: optionalNullableIdSchema,
+  shippingZoneRuleId: optionalNullableIdSchema,
   laborMinutes: z.number().min(0),
   machineMinutes: z.number().min(0),
   overheadMinutes: z.number().min(0).nullable().optional(),
@@ -171,8 +227,46 @@ export const calculateShelfCostSchema = z.object({
   shippingBufferCents: nullableNonNegativeCentsSchema
 });
 
-export const saveShelfCostCalculationSchema = calculateShelfCostSchema;
+export const calculateShelfCostSchema = calculationInputBaseSchema;
+export const saveShelfCostCalculationSchema = calculationInputBaseSchema;
+
+export const compareScenarioInputSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  amazonFeePresetId: optionalNullableIdSchema,
+  shippingZoneRuleId: optionalNullableIdSchema,
+  packagingCode: z.string().trim().max(80).nullable().optional(),
+  shippingCode: z.string().trim().max(80).nullable().optional(),
+  targetMarginPct: percentSchema.nullable().optional(),
+  growthMarginPct: percentSchema.nullable().optional(),
+  marketplaceFeePct: percentSchema.nullable().optional(),
+  returnReservePct: percentSchema.nullable().optional(),
+  damageReservePct: percentSchema.nullable().optional(),
+  shippingBufferPct: percentSchema.nullable().optional(),
+  shippingBufferCents: nullableNonNegativeCentsSchema
+});
+
+export const compareShelfCostScenariosSchema = z.object({
+  name: z.string().trim().max(160).nullable().optional(),
+  notes: z.string().trim().max(4000).nullable().optional(),
+  baseSpec: calculationInputBaseSchema,
+  scenarios: z.array(compareScenarioInputSchema).min(1)
+});
+
+export const saveComparisonSetSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  notes: z.string().trim().max(4000).nullable().optional(),
+  baseSpec: calculationInputBaseSchema,
+  scenarios: z.array(compareScenarioInputSchema).min(1)
+});
 
 export const listShelfCostCalculationsQuerySchema = z.object({
+  costProfileId: z.string().trim().min(1).optional()
+});
+
+export const listAmazonFeePresetsQuerySchema = z.object({
+  costProfileId: z.string().trim().min(1).optional()
+});
+
+export const listShippingZoneRulesQuerySchema = z.object({
   costProfileId: z.string().trim().min(1).optional()
 });

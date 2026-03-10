@@ -23,6 +23,8 @@ export function CostPricingRecommendationCard({
     ["Recommended minimum", preview.recommendedMinSellPriceCents],
     ["Recommended target", preview.recommendedTargetSellPriceCents],
     ["Marketplace fee allowance", preview.marketplaceFeeCostCents],
+    ["Referral fee", preview.referralFeeCostCents],
+    ["Advertising allowance", preview.advertisingAllowanceCostCents],
     ["Return reserve", preview.returnReserveCostCents],
     ["Damage reserve", preview.damageReserveCostCents]
   ];
@@ -57,6 +59,10 @@ export function CostPricingRecommendationCard({
         <div className="mt-2 flex items-center justify-between">
           <span>Damage reserve %</span>
           <span className="font-semibold">{formatPercent(result.pricing.damageReservePct)}</span>
+        </div>
+        <div className="mt-2 flex items-center justify-between">
+          <span>Advertising allowance %</span>
+          <span className="font-semibold">{formatPercent(result.pricing.advertisingAllowancePct)}</span>
         </div>
       </div>
     </section>

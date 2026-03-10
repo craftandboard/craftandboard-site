@@ -39,6 +39,10 @@ export function CostHistoryList({
                   {formatCostLabel(calculation.materialCode)}
                 </p>
                 <p className="mt-1 text-xs text-slate-500">
+                  {calculation.amazonFeePresetName || "Profile fee defaults"} ·{" "}
+                  {calculation.shippingZoneRuleName || "Base shipping"}
+                </p>
+                <p className="mt-1 text-xs text-slate-500">
                   Saved {new Date(calculation.createdAt).toLocaleString()}
                 </p>
               </div>

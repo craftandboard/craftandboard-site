@@ -10,42 +10,65 @@ import {
 } from "../modules/costEngine/contextAdapter.js";
 import {
   calculateShelfCostView,
+  compareShelfCostScenarios,
+  createAmazonFeePreset,
   createCostProfile,
   createEdgeBandCostRule,
   createMaterialCostRule,
   createPackagingCostRule,
   createShippingCostRule,
+  createShippingZoneRule,
+  getAmazonFeePreset,
+  getComparisonSet,
   getCostProfile,
   getShelfCostCalculation,
+  getShippingZoneRule,
+  listAmazonFeePresets,
+  listComparisonSets,
   listCostProfiles,
   listShelfCostCalculations,
+  listShippingZoneRules,
+  saveComparisonSet,
   saveShelfCostCalculation,
+  updateAmazonFeePreset,
   updateCostProfile,
   updateEdgeBandCostRule,
   updateMaterialCostRule,
   updatePackagingCostRule,
-  updateShippingCostRule
+  updateShippingCostRule,
+  updateShippingZoneRule
 } from "../modules/costEngine/service.js";
 import {
   calculateShelfCostSchema,
   calculationIdParamsSchema,
+  compareShelfCostScenariosSchema,
+  comparisonSetIdParamsSchema,
   costProfileIdParamsSchema,
+  createAmazonFeePresetSchema,
   createCostProfileSchema,
   createEdgeBandCostRuleSchema,
   createMaterialCostRuleSchema,
   createPackagingCostRuleSchema,
   createShippingCostRuleSchema,
+  createShippingZoneRuleSchema,
+  listAmazonFeePresetsQuerySchema,
   listShelfCostCalculationsQuerySchema,
+  listShippingZoneRulesQuerySchema,
   materialRuleIdParamsSchema,
   edgeBandRuleIdParamsSchema,
   packagingRuleIdParamsSchema,
+  presetIdParamsSchema,
+  saveComparisonSetSchema,
   saveShelfCostCalculationSchema,
   shippingRuleIdParamsSchema,
+  updateAmazonFeePresetSchema,
   updateCostProfileSchema,
   updateEdgeBandCostRuleSchema,
   updateMaterialCostRuleSchema,
   updatePackagingCostRuleSchema,
-  updateShippingCostRuleSchema
+  updateShippingCostRuleSchema,
+  updateShippingZoneRuleSchema,
+  zoneRuleIdParamsSchema
 } from "../modules/costEngine/schemas.js";
 
 const router = Router();
@@ -64,7 +87,13 @@ function handleCostEngineRouteError(error: unknown, res: any, next: any) {
     return;
   }
   if (error instanceof Error) {
-    const notFoundErrors = new Set(["Cost profile not found.", "Shelf cost calculation not found."]);
+    const notFoundErrors = new Set([
+      "Cost profile not found.",
+      "Shelf cost calculation not found.",
+      "Amazon fee preset not found.",
+      "Shipping zone rule not found.",
+      "Cost comparison set not found."
+    ]);
     res.status(notFoundErrors.has(error.message) ? 404 : 400).json({ ok: false, error: error.message });
     return;
   }
@@ -258,11 +287,155 @@ router.patch("/shipping-rules/:shippingRuleId", async (req, res, next) => {
   }
 });
 
+router.post("/cost-profiles/:costProfileId/amazon-fee-presets", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createAmazonFeePresetSchema.parse(req.body);
+    res.status(201).json(
+      await createAmazonFeePreset({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/amazon-fee-presets", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const query = listAmazonFeePresetsQuerySchema.parse(req.query);
+    res.json(
+      await listAmazonFeePresets({
+        organizationId: context.currentOrganization.id,
+        costProfileId: query.costProfileId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/amazon-fee-presets/:presetId", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const params = presetIdParamsSchema.parse(req.params);
+    res.json(
+      await getAmazonFeePreset({
+        organizationId: context.currentOrganization.id,
+        presetId: params.presetId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/amazon-fee-presets/:presetId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = presetIdParamsSchema.parse(req.params);
+    const body = updateAmazonFeePresetSchema.parse(req.body);
+    res.json(
+      await updateAmazonFeePreset({
+        organizationId: context.currentOrganization.id,
+        presetId: params.presetId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-profiles/:costProfileId/shipping-zone-rules", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = costProfileIdParamsSchema.parse(req.params);
+    const body = createShippingZoneRuleSchema.parse(req.body);
+    res.status(201).json(
+      await createShippingZoneRule({
+        organizationId: context.currentOrganization.id,
+        costProfileId: params.costProfileId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/shipping-zone-rules", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const query = listShippingZoneRulesQuerySchema.parse(req.query);
+    res.json(
+      await listShippingZoneRules({
+        organizationId: context.currentOrganization.id,
+        costProfileId: query.costProfileId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/shipping-zone-rules/:zoneRuleId", async (req, res, next) => {
+  try {
+    const context = getCostProfileReadContext(req);
+    const params = zoneRuleIdParamsSchema.parse(req.params);
+    res.json(
+      await getShippingZoneRule({
+        organizationId: context.currentOrganization.id,
+        zoneRuleId: params.zoneRuleId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.patch("/shipping-zone-rules/:zoneRuleId", async (req, res, next) => {
+  try {
+    const context = getCostProfileWriteContext(req);
+    const params = zoneRuleIdParamsSchema.parse(req.params);
+    const body = updateShippingZoneRuleSchema.parse(req.body);
+    res.json(
+      await updateShippingZoneRule({
+        organizationId: context.currentOrganization.id,
+        zoneRuleId: params.zoneRuleId,
+        ...body
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.post("/cost-calculations/calculate", async (req, res, next) => {
   try {
     const context = getCostCalculationWriteContext(req);
     const body = calculateShelfCostSchema.parse(req.body);
     res.json(await calculateShelfCostView({ organizationId: context.currentOrganization.id, ...body }));
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-calculations/compare", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const body = compareShelfCostScenariosSchema.parse(req.body);
+    res.json(
+      await compareShelfCostScenarios({
+        organizationId: context.currentOrganization.id,
+        ...body,
+        baseSpec: { ...body.baseSpec, organizationId: context.currentOrganization.id }
+      })
+    );
   } catch (error) {
     handleCostEngineRouteError(error, res, next);
   }
@@ -298,6 +471,46 @@ router.get("/cost-calculations/:calculationId", async (req, res, next) => {
       await getShelfCostCalculation({
         organizationId: context.currentOrganization.id,
         calculationId: params.calculationId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.post("/cost-comparison-sets", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const body = saveComparisonSetSchema.parse(req.body);
+    res.status(201).json(
+      await saveComparisonSet({
+        organizationId: context.currentOrganization.id,
+        ...body,
+        baseSpec: { ...body.baseSpec, organizationId: context.currentOrganization.id }
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-comparison-sets", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    res.json(await listComparisonSets({ organizationId: context.currentOrganization.id }));
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-comparison-sets/:comparisonSetId", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    res.json(
+      await getComparisonSet({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId
       })
     );
   } catch (error) {

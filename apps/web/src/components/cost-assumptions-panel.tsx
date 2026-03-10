@@ -5,8 +5,10 @@ import {
   formatCostLabel,
   formatMoney,
   formatPercent,
+  getAmazonFeePresetSummary,
   getPackagingRuleSummary,
-  getShippingRuleSummary
+  getShippingRuleSummary,
+  getShippingZoneRuleSummary
 } from "../lib/cost-engine";
 
 export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail | null }) {
@@ -26,7 +28,8 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
           <h3 className="mt-2 text-xl font-semibold text-white">{profile.name}</h3>
           <p className="mt-1 text-sm text-slate-300">
             {profile.materialRules.length} material rules · {profile.edgeBandRules.length} edge band rules ·{" "}
-            {profile.packagingRules.length} packaging rules · {profile.shippingRules.length} shipping rules
+            {profile.packagingRules.length} packaging rules · {profile.shippingRules.length} shipping rules ·{" "}
+            {profile.amazonFeePresets.length} fee presets · {profile.shippingZoneRules.length} zone rules
           </p>
         </div>
         <div className="rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-slate-300">
@@ -120,6 +123,27 @@ export function CostAssumptionsPanel({ profile }: { profile: CostProfileDetail |
             ))}
             {profile.packagingRules.length === 0 && profile.shippingRules.length === 0 ? (
               <p className="text-slate-400">No packaging or shipping rules yet.</p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Amazon Fees / Zones</p>
+          <div className="mt-3 space-y-3 text-sm text-slate-200">
+            {profile.amazonFeePresets.slice(0, 2).map((preset) => (
+              <div key={preset.id} className="rounded-xl border border-white/10 px-3 py-3">
+                <p className="font-medium text-white">{preset.name}</p>
+                <p className="mt-1 text-xs text-slate-300">{getAmazonFeePresetSummary(preset)}</p>
+              </div>
+            ))}
+            {profile.shippingZoneRules.slice(0, 2).map((rule) => (
+              <div key={rule.id} className="rounded-xl border border-white/10 px-3 py-3">
+                <p className="font-medium text-white">{rule.name}</p>
+                <p className="mt-1 text-xs text-slate-300">{getShippingZoneRuleSummary(rule)}</p>
+              </div>
+            ))}
+            {profile.amazonFeePresets.length === 0 && profile.shippingZoneRules.length === 0 ? (
+              <p className="text-slate-400">No Amazon fee presets or shipping zone rules yet.</p>
             ) : null}
           </div>
         </div>

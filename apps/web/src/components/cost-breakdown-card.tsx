@@ -29,6 +29,9 @@ export function CostBreakdownCard({
     ["Packaging total", preview.packagingCostCents],
     ["Shipping total", preview.shippingCostCents],
     ["Shipping buffer", preview.shippingBufferCostCents],
+    ["Referral fee", preview.referralFeeCostCents],
+    ["Fulfillment fee", preview.fulfillmentFeeCostCents],
+    ["Advertising allowance", preview.advertisingAllowanceCostCents],
     ["Overhead", preview.overheadCostCents]
   ];
 
@@ -105,6 +108,10 @@ export function CostBreakdownCard({
           <p className="mt-1 text-sm text-slate-200">
             Packing minutes:{" "}
             <span className="font-semibold">{result.packaging.packingMinutes.toFixed(1)} min</span>
+          </p>
+          <p className="mt-1 text-sm text-slate-200">
+            Shipping zone:{" "}
+            <span className="font-semibold">{result.shipping.shippingZoneName || "Base shipping only"}</span>
           </p>
         </div>
       </div>

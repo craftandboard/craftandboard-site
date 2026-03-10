@@ -114,3 +114,42 @@ export function getShippingRuleSummary(rule: {
   }
   return parts.join(" · ");
 }
+
+export function getAmazonFeePresetSummary(preset: {
+  referralFeePct: number;
+  closingFeeCents: number | null;
+  fulfillmentFeeCents: number | null;
+  advertisingAllowancePct: number | null;
+  returnReservePct: number | null;
+  damageReservePct: number | null;
+  miscMarketplacePct: number | null;
+}) {
+  const parts = [`Referral ${formatPercent(preset.referralFeePct)}`];
+  if (preset.closingFeeCents) parts.push(`Closing ${formatMoney(preset.closingFeeCents)}`);
+  if (preset.fulfillmentFeeCents) parts.push(`Fulfillment ${formatMoney(preset.fulfillmentFeeCents)}`);
+  if (preset.advertisingAllowancePct) parts.push(`Ads ${formatPercent(preset.advertisingAllowancePct)}`);
+  if (preset.returnReservePct) parts.push(`Returns ${formatPercent(preset.returnReservePct)}`);
+  if (preset.damageReservePct) parts.push(`Damage ${formatPercent(preset.damageReservePct)}`);
+  if (preset.miscMarketplacePct) parts.push(`Misc ${formatPercent(preset.miscMarketplacePct)}`);
+  return parts.join(" · ");
+}
+
+export function getShippingZoneRuleSummary(rule: {
+  zoneCode: string;
+  baseCostCents: number;
+  weightAdderCents: number | null;
+  dimensionalAdderCents: number | null;
+  bufferPct: number | null;
+  bufferCents: number | null;
+  marketplaceHandlingCents: number | null;
+}) {
+  const parts = [`Zone ${rule.zoneCode}`, `Base ${formatMoney(rule.baseCostCents)}`];
+  if (rule.weightAdderCents) parts.push(`Weight ${formatMoney(rule.weightAdderCents)}/lb`);
+  if (rule.dimensionalAdderCents) parts.push(`Dim ${formatMoney(rule.dimensionalAdderCents)}/lb`);
+  if (rule.bufferPct) parts.push(`Buffer ${formatPercent(rule.bufferPct)}`);
+  if (rule.bufferCents) parts.push(`Buffer ${formatMoney(rule.bufferCents)}`);
+  if (rule.marketplaceHandlingCents) {
+    parts.push(`Handling ${formatMoney(rule.marketplaceHandlingCents)}`);
+  }
+  return parts.join(" · ");
+}

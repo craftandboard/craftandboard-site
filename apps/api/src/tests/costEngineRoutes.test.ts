@@ -37,10 +37,22 @@ const serviceMocks = vi.hoisted(() => ({
   updatePackagingCostRule: vi.fn(),
   createShippingCostRule: vi.fn(),
   updateShippingCostRule: vi.fn(),
+  createAmazonFeePreset: vi.fn(),
+  listAmazonFeePresets: vi.fn(),
+  getAmazonFeePreset: vi.fn(),
+  updateAmazonFeePreset: vi.fn(),
+  createShippingZoneRule: vi.fn(),
+  listShippingZoneRules: vi.fn(),
+  getShippingZoneRule: vi.fn(),
+  updateShippingZoneRule: vi.fn(),
   calculateShelfCostView: vi.fn(),
+  compareShelfCostScenarios: vi.fn(),
   saveShelfCostCalculation: vi.fn(),
   listShelfCostCalculations: vi.fn(),
-  getShelfCostCalculation: vi.fn()
+  getShelfCostCalculation: vi.fn(),
+  saveComparisonSet: vi.fn(),
+  listComparisonSets: vi.fn(),
+  getComparisonSet: vi.fn()
 }));
 
 vi.mock("../modules/costEngine/contextAdapter.js", () => contextMocks);
@@ -81,10 +93,22 @@ beforeEach(async () => {
   serviceMocks.updatePackagingCostRule.mockResolvedValue({ ok: true });
   serviceMocks.createShippingCostRule.mockResolvedValue({ ok: true });
   serviceMocks.updateShippingCostRule.mockResolvedValue({ ok: true });
+  serviceMocks.createAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.listAmazonFeePresets.mockResolvedValue({ ok: true, presets: [] });
+  serviceMocks.getAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.updateAmazonFeePreset.mockResolvedValue({ ok: true, preset: { id: "preset_1" } });
+  serviceMocks.createShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
+  serviceMocks.listShippingZoneRules.mockResolvedValue({ ok: true, shippingZoneRules: [] });
+  serviceMocks.getShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
+  serviceMocks.updateShippingZoneRule.mockResolvedValue({ ok: true, shippingZoneRule: { id: "zone_1" } });
   serviceMocks.calculateShelfCostView.mockResolvedValue({ ok: true, calculation: { subtotalCostCents: 1000 } });
+  serviceMocks.compareShelfCostScenarios.mockResolvedValue({ ok: true, comparison: { scenarios: [] } });
   serviceMocks.saveShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
   serviceMocks.listShelfCostCalculations.mockResolvedValue({ ok: true, calculations: [] });
   serviceMocks.getShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
+  serviceMocks.saveComparisonSet.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
+  serviceMocks.listComparisonSets.mockResolvedValue({ ok: true, comparisonSets: [] });
+  serviceMocks.getComparisonSet.mockResolvedValue({ ok: true, comparisonSet: { id: "set_1" } });
 });
 
 afterEach(async () => {
@@ -173,6 +197,66 @@ describe("cost engine routes", () => {
       damageReservePct: 1,
       shippingBufferPct: 5
     });
+  });
+
+  it("creates amazon fee presets in org scope", async () => {
+    const response = await fetch(`${baseUrl}/cost-profiles/profile_1/amazon-fee-presets`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ name: "Amazon Standard", referralFeePct: 15 })
+    });
+    expect(response.status).toBe(201);
+    expect(serviceMocks.createAmazonFeePreset).toHaveBeenCalledWith({
+      organizationId: "org_local_craft_board",
+      costProfileId: "profile_1",
+      name: "Amazon Standard",
+      referralFeePct: 15
+    });
+  });
+
+  it("compares cost scenarios", async () => {
+    const response = await fetch(`${baseUrl}/cost-calculations/compare`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        baseSpec: {
+          costProfileId: "profile_1",
+          quantity: 1,
+          lengthIn: 30,
+          depthIn: 12,
+          materialCode: "WHITE_MELAMINE_075",
+          edgeBandPattern: "NONE",
+          laborMinutes: 10,
+          machineMinutes: 8
+        },
+        scenarios: [{ name: "Baseline" }]
+      })
+    });
+    expect(response.status).toBe(200);
+    expect(serviceMocks.compareShelfCostScenarios).toHaveBeenCalled();
+  });
+
+  it("saves comparison sets", async () => {
+    const response = await fetch(`${baseUrl}/cost-comparison-sets`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        name: "Launch compare",
+        baseSpec: {
+          costProfileId: "profile_1",
+          quantity: 1,
+          lengthIn: 30,
+          depthIn: 12,
+          materialCode: "WHITE_MELAMINE_075",
+          edgeBandPattern: "NONE",
+          laborMinutes: 10,
+          machineMinutes: 8
+        },
+        scenarios: [{ name: "Baseline" }]
+      })
+    });
+    expect(response.status).toBe(201);
+    expect(serviceMocks.saveComparisonSet).toHaveBeenCalled();
   });
 
   it("lists saved calculations", async () => {

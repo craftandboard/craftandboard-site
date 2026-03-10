@@ -96,6 +96,14 @@ export async function getCostProfileRecord(input: {
       shippingCostRules: {
         where: { active: true },
         orderBy: [{ shippingName: "asc" }, { id: "asc" }]
+      },
+      amazonFeePresets: {
+        where: { status: "ACTIVE" },
+        orderBy: [{ name: "asc" }, { id: "asc" }]
+      },
+      shippingZoneRules: {
+        where: { status: "ACTIVE" },
+        orderBy: [{ name: "asc" }, { id: "asc" }]
       }
     }
   });
@@ -310,6 +318,8 @@ export async function updateShippingCostRuleRecord(input: {
 export async function createShelfCostCalculationRecord(input: {
   organizationId: string;
   costProfileId: string;
+  amazonFeePresetId?: string | null;
+  shippingZoneRuleId?: string | null;
   name?: string | null;
   sku?: string | null;
   quantity: number;
@@ -335,8 +345,14 @@ export async function createShelfCostCalculationRecord(input: {
   shippingBufferCostCents: number;
   overheadCostCents: number;
   marketplaceFeeCostCents: number;
+  referralFeeCostCents?: number | null;
+  closingFeeCostCents?: number | null;
+  fulfillmentFeeCostCents?: number | null;
+  storageAllowanceCostCents?: number | null;
+  advertisingAllowanceCostCents?: number | null;
   returnReserveCostCents: number;
   damageReserveCostCents: number;
+  miscMarketplaceCostCents?: number | null;
   subtotalCostCents: number;
   breakEvenPriceCents?: number | null;
   recommendedMinSellPriceCents?: number | null;
@@ -349,12 +365,16 @@ export async function createShelfCostCalculationRecord(input: {
   packagingSnapshot?: unknown;
   shippingSnapshot?: unknown;
   pricingSnapshot?: unknown;
+  amazonFeeSnapshot?: unknown;
+  shippingZoneSnapshot?: unknown;
   resultSnapshot: unknown;
 }) {
   return prismaClient.shelfCostCalculation.create({
     data: {
       organizationId: input.organizationId,
       costProfileId: input.costProfileId,
+      amazonFeePresetId: input.amazonFeePresetId ?? null,
+      shippingZoneRuleId: input.shippingZoneRuleId ?? null,
       name: input.name ?? null,
       sku: input.sku ?? null,
       quantity: input.quantity,
@@ -380,8 +400,14 @@ export async function createShelfCostCalculationRecord(input: {
       shippingBufferCostCents: input.shippingBufferCostCents,
       overheadCostCents: input.overheadCostCents,
       marketplaceFeeCostCents: input.marketplaceFeeCostCents,
+      referralFeeCostCents: input.referralFeeCostCents ?? undefined,
+      closingFeeCostCents: input.closingFeeCostCents ?? undefined,
+      fulfillmentFeeCostCents: input.fulfillmentFeeCostCents ?? undefined,
+      storageAllowanceCostCents: input.storageAllowanceCostCents ?? undefined,
+      advertisingAllowanceCostCents: input.advertisingAllowanceCostCents ?? undefined,
       returnReserveCostCents: input.returnReserveCostCents,
       damageReserveCostCents: input.damageReserveCostCents,
+      miscMarketplaceCostCents: input.miscMarketplaceCostCents ?? undefined,
       subtotalCostCents: input.subtotalCostCents,
       breakEvenPriceCents: input.breakEvenPriceCents ?? undefined,
       recommendedMinSellPriceCents: input.recommendedMinSellPriceCents ?? undefined,
@@ -394,6 +420,8 @@ export async function createShelfCostCalculationRecord(input: {
       packagingSnapshot: normalizeMetadata(input.packagingSnapshot),
       shippingSnapshot: normalizeMetadata(input.shippingSnapshot),
       pricingSnapshot: normalizeMetadata(input.pricingSnapshot),
+      amazonFeeSnapshot: normalizeMetadata(input.amazonFeeSnapshot),
+      shippingZoneSnapshot: normalizeMetadata(input.shippingZoneSnapshot),
       resultSnapshot: normalizeMetadata(input.resultSnapshot)
     }
   });
@@ -409,7 +437,9 @@ export async function listShelfCostCalculationsForOrganization(input: {
       ...(input.costProfileId ? { costProfileId: input.costProfileId } : {})
     },
     include: {
-      costProfile: true
+      costProfile: true,
+      amazonFeePreset: true,
+      shippingZoneRule: true
     },
     orderBy: [{ createdAt: "desc" }, { id: "desc" }]
   });
@@ -425,7 +455,270 @@ export async function getShelfCostCalculationRecord(input: {
       id: input.calculationId
     },
     include: {
-      costProfile: true
+      costProfile: true,
+      amazonFeePreset: true,
+      shippingZoneRule: true
+    }
+  });
+}
+
+export async function createAmazonFeePresetRecord(input: {
+  organizationId: string;
+  costProfileId?: string | null;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  referralFeePct: number;
+  closingFeeCents?: number | null;
+  fulfillmentFeeCents?: number | null;
+  storageAllowanceCents?: number | null;
+  advertisingAllowancePct?: number | null;
+  advertisingAllowanceCents?: number | null;
+  returnReservePct?: number | null;
+  returnReserveCents?: number | null;
+  damageReservePct?: number | null;
+  damageReserveCents?: number | null;
+  miscMarketplacePct?: number | null;
+  miscMarketplaceCents?: number | null;
+  notes?: string | null;
+  metadata?: unknown;
+}) {
+  return prismaClient.amazonFeePreset.create({
+    data: {
+      organizationId: input.organizationId,
+      costProfileId: input.costProfileId ?? undefined,
+      name: input.name,
+      status: input.status ?? "ACTIVE",
+      referralFeePct: input.referralFeePct,
+      closingFeeCents: input.closingFeeCents ?? undefined,
+      fulfillmentFeeCents: input.fulfillmentFeeCents ?? undefined,
+      storageAllowanceCents: input.storageAllowanceCents ?? undefined,
+      advertisingAllowancePct: input.advertisingAllowancePct ?? undefined,
+      advertisingAllowanceCents: input.advertisingAllowanceCents ?? undefined,
+      returnReservePct: input.returnReservePct ?? undefined,
+      returnReserveCents: input.returnReserveCents ?? undefined,
+      damageReservePct: input.damageReservePct ?? undefined,
+      damageReserveCents: input.damageReserveCents ?? undefined,
+      miscMarketplacePct: input.miscMarketplacePct ?? undefined,
+      miscMarketplaceCents: input.miscMarketplaceCents ?? undefined,
+      notes: input.notes ?? null,
+      metadata: normalizeMetadata(input.metadata)
+    }
+  });
+}
+
+export async function listAmazonFeePresetsForOrganization(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  return prismaClient.amazonFeePreset.findMany({
+    where: {
+      organizationId: input.organizationId,
+      ...(input.costProfileId ? { OR: [{ costProfileId: input.costProfileId }, { costProfileId: null }] } : {})
+    },
+    orderBy: [{ status: "asc" }, { name: "asc" }, { id: "asc" }]
+  });
+}
+
+export async function getAmazonFeePresetRecord(input: {
+  organizationId: string;
+  presetId: string;
+}) {
+  return prismaClient.amazonFeePreset.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      id: input.presetId
+    }
+  });
+}
+
+export async function updateAmazonFeePresetRecord(input: {
+  organizationId: string;
+  presetId: string;
+  data: Record<string, unknown>;
+}) {
+  return prismaClient.amazonFeePreset.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      id: input.presetId
+    },
+    data: input.data
+  });
+}
+
+export async function createShippingZoneRuleRecord(input: {
+  organizationId: string;
+  costProfileId?: string | null;
+  name: string;
+  zoneCode: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  baseCostCents: number;
+  weightAdderCents?: number | null;
+  dimensionalAdderCents?: number | null;
+  bufferPct?: number | null;
+  bufferCents?: number | null;
+  marketplaceHandlingCents?: number | null;
+  notes?: string | null;
+  metadata?: unknown;
+}) {
+  return prismaClient.shippingZoneRule.create({
+    data: {
+      organizationId: input.organizationId,
+      costProfileId: input.costProfileId ?? undefined,
+      name: input.name,
+      zoneCode: input.zoneCode,
+      status: input.status ?? "ACTIVE",
+      baseCostCents: input.baseCostCents,
+      weightAdderCents: input.weightAdderCents ?? undefined,
+      dimensionalAdderCents: input.dimensionalAdderCents ?? undefined,
+      bufferPct: input.bufferPct ?? undefined,
+      bufferCents: input.bufferCents ?? undefined,
+      marketplaceHandlingCents: input.marketplaceHandlingCents ?? undefined,
+      notes: input.notes ?? null,
+      metadata: normalizeMetadata(input.metadata)
+    }
+  });
+}
+
+export async function listShippingZoneRulesForOrganization(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  return prismaClient.shippingZoneRule.findMany({
+    where: {
+      organizationId: input.organizationId,
+      ...(input.costProfileId ? { OR: [{ costProfileId: input.costProfileId }, { costProfileId: null }] } : {})
+    },
+    orderBy: [{ status: "asc" }, { name: "asc" }, { id: "asc" }]
+  });
+}
+
+export async function getShippingZoneRuleRecord(input: {
+  organizationId: string;
+  zoneRuleId: string;
+}) {
+  return prismaClient.shippingZoneRule.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      id: input.zoneRuleId
+    }
+  });
+}
+
+export async function updateShippingZoneRuleRecord(input: {
+  organizationId: string;
+  zoneRuleId: string;
+  data: Record<string, unknown>;
+}) {
+  return prismaClient.shippingZoneRule.updateMany({
+    where: {
+      organizationId: input.organizationId,
+      id: input.zoneRuleId
+    },
+    data: input.data
+  });
+}
+
+export async function createCalculationScenarioRecord(input: {
+  organizationId: string;
+  name: string;
+  costProfileId: string;
+  amazonFeePresetId?: string | null;
+  shippingZoneRuleId?: string | null;
+  packagingRuleId?: string | null;
+  shippingRuleId?: string | null;
+  shelfCostCalculationId?: string | null;
+  assumptionsSnapshot: unknown;
+  resultSnapshot: unknown;
+}) {
+  return prismaClient.calculationScenario.create({
+    data: {
+      organizationId: input.organizationId,
+      name: input.name,
+      costProfileId: input.costProfileId,
+      amazonFeePresetId: input.amazonFeePresetId ?? undefined,
+      shippingZoneRuleId: input.shippingZoneRuleId ?? undefined,
+      packagingRuleId: input.packagingRuleId ?? undefined,
+      shippingRuleId: input.shippingRuleId ?? undefined,
+      shelfCostCalculationId: input.shelfCostCalculationId ?? undefined,
+      assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
+      resultSnapshot: normalizeMetadata(input.resultSnapshot)
+    }
+  });
+}
+
+export async function createCalculationComparisonSetRecord(input: {
+  organizationId: string;
+  name: string;
+  baseShelfSpecSnapshot: unknown;
+  notes?: string | null;
+}) {
+  return prismaClient.calculationComparisonSet.create({
+    data: {
+      organizationId: input.organizationId,
+      name: input.name,
+      baseShelfSpecSnapshot: normalizeMetadata(input.baseShelfSpecSnapshot),
+      notes: input.notes ?? null
+    }
+  });
+}
+
+export async function createComparisonSetScenarioRecord(input: {
+  organizationId: string;
+  comparisonSetId: string;
+  calculationScenarioId: string;
+  sortOrder?: number | null;
+}) {
+  return prismaClient.comparisonSetScenario.create({
+    data: {
+      organizationId: input.organizationId,
+      comparisonSetId: input.comparisonSetId,
+      calculationScenarioId: input.calculationScenarioId,
+      sortOrder: input.sortOrder ?? undefined
+    }
+  });
+}
+
+export async function listCalculationComparisonSetsForOrganization(organizationId: string) {
+  return prismaClient.calculationComparisonSet.findMany({
+    where: { organizationId },
+    include: {
+      scenarios: {
+        include: {
+          calculationScenario: {
+            include: {
+              amazonFeePreset: true,
+              shippingZoneRule: true
+            }
+          }
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
+      }
+    },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }]
+  });
+}
+
+export async function getCalculationComparisonSetRecord(input: {
+  organizationId: string;
+  comparisonSetId: string;
+}) {
+  return prismaClient.calculationComparisonSet.findFirst({
+    where: {
+      organizationId: input.organizationId,
+      id: input.comparisonSetId
+    },
+    include: {
+      scenarios: {
+        include: {
+          calculationScenario: {
+            include: {
+              amazonFeePreset: true,
+              shippingZoneRule: true
+            }
+          }
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }, { id: "asc" }]
+      }
     }
   });
 }

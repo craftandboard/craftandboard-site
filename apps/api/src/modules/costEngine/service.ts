@@ -1,22 +1,35 @@
-import { calculateShelfCost } from "./calculator.js";
+import { calculateShelfCost, compareScenarioResults } from "./calculator.js";
 import { resolveCostEngineAssumptions } from "./assumptions.js";
 import { decimalToNumber } from "./normalization.js";
 import {
+  createAmazonFeePresetRecord,
+  createCalculationComparisonSetRecord,
+  createCalculationScenarioRecord,
+  createComparisonSetScenarioRecord,
   createCostProfileRecord,
   createEdgeBandCostRuleRecord,
   createMaterialCostRuleRecord,
   createPackagingCostRuleRecord,
   createShelfCostCalculationRecord,
   createShippingCostRuleRecord,
+  createShippingZoneRuleRecord,
+  getAmazonFeePresetRecord,
+  getCalculationComparisonSetRecord,
   getCostProfileRecord,
   getShelfCostCalculationRecord,
+  getShippingZoneRuleRecord,
+  listAmazonFeePresetsForOrganization,
+  listCalculationComparisonSetsForOrganization,
   listCostProfilesForOrganization,
   listShelfCostCalculationsForOrganization,
+  listShippingZoneRulesForOrganization,
+  updateAmazonFeePresetRecord,
   updateCostProfileRecord,
   updateEdgeBandCostRuleRecord,
   updateMaterialCostRuleRecord,
   updatePackagingCostRuleRecord,
-  updateShippingCostRuleRecord
+  updateShippingCostRuleRecord,
+  updateShippingZoneRuleRecord
 } from "./repository.js";
 
 type AnyRecord = Record<string, unknown>;
@@ -26,6 +39,28 @@ function mapRuleDates<T extends { createdAt: Date; updatedAt: Date }>(record: T)
     ...record,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString()
+  };
+}
+
+function mapAmazonFeePreset(record: any) {
+  return {
+    ...mapRuleDates(record),
+    orgId: record.organizationId,
+    costProfileId: record.costProfileId ?? null,
+    referralFeePct: decimalToNumber(record.referralFeePct) ?? 0,
+    advertisingAllowancePct: decimalToNumber(record.advertisingAllowancePct),
+    returnReservePct: decimalToNumber(record.returnReservePct),
+    damageReservePct: decimalToNumber(record.damageReservePct),
+    miscMarketplacePct: decimalToNumber(record.miscMarketplacePct)
+  };
+}
+
+function mapShippingZoneRule(record: any) {
+  return {
+    ...mapRuleDates(record),
+    orgId: record.organizationId,
+    costProfileId: record.costProfileId ?? null,
+    bufferPct: decimalToNumber(record.bufferPct)
   };
 }
 
@@ -100,6 +135,8 @@ function mapCostProfile(profile: any) {
       marketplaceHandlingCents: rule.marketplaceHandlingCents,
       sortOrder: rule.sortOrder
     })),
+    amazonFeePresets: (profile.amazonFeePresets ?? []).map(mapAmazonFeePreset),
+    shippingZoneRules: (profile.shippingZoneRules ?? []).map(mapShippingZoneRule),
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString()
   };
@@ -121,6 +158,10 @@ function mapCalculation(record: any) {
     orgId: record.organizationId,
     costProfileId: record.costProfileId,
     costProfileName: record.costProfile?.name ?? null,
+    amazonFeePresetId: record.amazonFeePresetId ?? null,
+    amazonFeePresetName: record.amazonFeePreset?.name ?? null,
+    shippingZoneRuleId: record.shippingZoneRuleId ?? null,
+    shippingZoneRuleName: record.shippingZoneRule?.name ?? null,
     name: record.name ?? null,
     sku: record.sku ?? null,
     quantity: record.quantity,
@@ -146,8 +187,14 @@ function mapCalculation(record: any) {
     shippingBufferCostCents: record.shippingBufferCostCents,
     overheadCostCents: record.overheadCostCents,
     marketplaceFeeCostCents: record.marketplaceFeeCostCents,
+    referralFeeCostCents: record.referralFeeCostCents ?? 0,
+    closingFeeCostCents: record.closingFeeCostCents ?? 0,
+    fulfillmentFeeCostCents: record.fulfillmentFeeCostCents ?? 0,
+    storageAllowanceCostCents: record.storageAllowanceCostCents ?? 0,
+    advertisingAllowanceCostCents: record.advertisingAllowanceCostCents ?? 0,
     returnReserveCostCents: record.returnReserveCostCents,
     damageReserveCostCents: record.damageReserveCostCents,
+    miscMarketplaceCostCents: record.miscMarketplaceCostCents ?? 0,
     subtotalCostCents: record.subtotalCostCents,
     breakEvenPriceCents: record.breakEvenPriceCents,
     recommendedMinSellPriceCents: record.recommendedMinSellPriceCents,
@@ -160,7 +207,49 @@ function mapCalculation(record: any) {
     packagingSnapshot: record.packagingSnapshot,
     shippingSnapshot: record.shippingSnapshot,
     pricingSnapshot: record.pricingSnapshot,
+    amazonFeeSnapshot: record.amazonFeeSnapshot,
+    shippingZoneSnapshot: record.shippingZoneSnapshot,
     resultSnapshot: record.resultSnapshot,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString()
+  };
+}
+
+function mapScenario(record: any) {
+  return {
+    id: record.id,
+    orgId: record.organizationId,
+    name: record.name,
+    costProfileId: record.costProfileId,
+    amazonFeePresetId: record.amazonFeePresetId ?? null,
+    amazonFeePresetName: record.amazonFeePreset?.name ?? null,
+    shippingZoneRuleId: record.shippingZoneRuleId ?? null,
+    shippingZoneRuleName: record.shippingZoneRule?.name ?? null,
+    packagingRuleId: record.packagingRuleId ?? null,
+    packagingRuleName: record.packagingRule?.packagingName ?? null,
+    shippingRuleId: record.shippingRuleId ?? null,
+    shippingRuleName: record.shippingRule?.shippingName ?? null,
+    shelfCostCalculationId: record.shelfCostCalculationId ?? null,
+    assumptionsSnapshot: record.assumptionsSnapshot,
+    resultSnapshot: record.resultSnapshot,
+    createdAt: record.createdAt.toISOString(),
+    updatedAt: record.updatedAt.toISOString()
+  };
+}
+
+function mapComparisonSet(record: any) {
+  return {
+    id: record.id,
+    orgId: record.organizationId,
+    name: record.name,
+    notes: record.notes ?? null,
+    baseShelfSpecSnapshot: record.baseShelfSpecSnapshot,
+    scenarios: (record.scenarios ?? []).map((entry: any) => ({
+      id: entry.id,
+      sortOrder: entry.sortOrder ?? null,
+      createdAt: entry.createdAt.toISOString(),
+      scenario: mapScenario(entry.calculationScenario)
+    })),
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString()
   };
@@ -199,10 +288,7 @@ export async function createCostProfile(input: {
     costProfileId: profile.id
   });
 
-  return {
-    ok: true,
-    profile: mapCostProfile(hydrated)
-  };
+  return { ok: true, profile: mapCostProfile(hydrated) };
 }
 
 export async function listCostProfiles(input: { organizationId: string }) {
@@ -229,10 +315,7 @@ export async function getCostProfile(input: { organizationId: string; costProfil
     throw new Error("Cost profile not found.");
   }
 
-  return {
-    ok: true,
-    profile: mapCostProfile(profile)
-  };
+  return { ok: true, profile: mapCostProfile(profile) };
 }
 
 export async function updateCostProfile(input: {
@@ -251,10 +334,7 @@ export async function updateCostProfile(input: {
   });
 
   const updated = await getCostProfileRecord(input);
-  return {
-    ok: true,
-    profile: mapCostProfile(updated)
-  };
+  return { ok: true, profile: mapCostProfile(updated) };
 }
 
 export async function createMaterialCostRule(input: {
@@ -393,7 +473,153 @@ export async function updateShippingCostRule(input: {
   return { ok: true };
 }
 
-export async function calculateShelfCostView(input: {
+export async function createAmazonFeePreset(input: {
+  organizationId: string;
+  costProfileId?: string | null;
+  name: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  referralFeePct: number;
+  closingFeeCents?: number | null;
+  fulfillmentFeeCents?: number | null;
+  storageAllowanceCents?: number | null;
+  advertisingAllowancePct?: number | null;
+  advertisingAllowanceCents?: number | null;
+  returnReservePct?: number | null;
+  returnReserveCents?: number | null;
+  damageReservePct?: number | null;
+  damageReserveCents?: number | null;
+  miscMarketplacePct?: number | null;
+  miscMarketplaceCents?: number | null;
+  notes?: string | null;
+  metadata?: unknown;
+}) {
+  const costProfileId = input.costProfileId ?? null;
+  if (costProfileId) {
+    const profile = await getCostProfileRecord({ organizationId: input.organizationId, costProfileId });
+    if (!profile) {
+      throw new Error("Cost profile not found.");
+    }
+  }
+
+  const preset = await createAmazonFeePresetRecord(input);
+  const hydrated = await getAmazonFeePresetRecord({
+    organizationId: input.organizationId,
+    presetId: preset.id
+  });
+  return { ok: true, preset: mapAmazonFeePreset(hydrated) };
+}
+
+export async function listAmazonFeePresets(input: { organizationId: string; costProfileId?: string }) {
+  const presets = await listAmazonFeePresetsForOrganization(input);
+  return { ok: true, presets: presets.map(mapAmazonFeePreset) };
+}
+
+export async function getAmazonFeePreset(input: { organizationId: string; presetId: string }) {
+  const preset = await getAmazonFeePresetRecord(input);
+  if (!preset) {
+    throw new Error("Amazon fee preset not found.");
+  }
+  return { ok: true, preset: mapAmazonFeePreset(preset) };
+}
+
+export async function updateAmazonFeePreset(input: {
+  organizationId: string;
+  presetId: string;
+} & AnyRecord) {
+  const existing = await getAmazonFeePresetRecord({
+    organizationId: input.organizationId,
+    presetId: input.presetId
+  });
+  if (!existing) {
+    throw new Error("Amazon fee preset not found.");
+  }
+
+  await updateAmazonFeePresetRecord({
+    organizationId: input.organizationId,
+    presetId: input.presetId,
+    data: normalizeUpdateData({ ...input, organizationId: undefined, presetId: undefined })
+  });
+
+  const updated = await getAmazonFeePresetRecord({
+    organizationId: input.organizationId,
+    presetId: input.presetId
+  });
+  return { ok: true, preset: mapAmazonFeePreset(updated) };
+}
+
+export async function createShippingZoneRule(input: {
+  organizationId: string;
+  costProfileId?: string | null;
+  name: string;
+  zoneCode: string;
+  status?: "ACTIVE" | "ARCHIVED";
+  baseCostCents: number;
+  weightAdderCents?: number | null;
+  dimensionalAdderCents?: number | null;
+  bufferPct?: number | null;
+  bufferCents?: number | null;
+  marketplaceHandlingCents?: number | null;
+  notes?: string | null;
+  metadata?: unknown;
+}) {
+  const costProfileId = input.costProfileId ?? null;
+  if (costProfileId) {
+    const profile = await getCostProfileRecord({ organizationId: input.organizationId, costProfileId });
+    if (!profile) {
+      throw new Error("Cost profile not found.");
+    }
+  }
+
+  const rule = await createShippingZoneRuleRecord(input);
+  const hydrated = await getShippingZoneRuleRecord({
+    organizationId: input.organizationId,
+    zoneRuleId: rule.id
+  });
+  return { ok: true, shippingZoneRule: mapShippingZoneRule(hydrated) };
+}
+
+export async function listShippingZoneRules(input: {
+  organizationId: string;
+  costProfileId?: string;
+}) {
+  const rules = await listShippingZoneRulesForOrganization(input);
+  return { ok: true, shippingZoneRules: rules.map(mapShippingZoneRule) };
+}
+
+export async function getShippingZoneRule(input: { organizationId: string; zoneRuleId: string }) {
+  const rule = await getShippingZoneRuleRecord(input);
+  if (!rule) {
+    throw new Error("Shipping zone rule not found.");
+  }
+  return { ok: true, shippingZoneRule: mapShippingZoneRule(rule) };
+}
+
+export async function updateShippingZoneRule(input: {
+  organizationId: string;
+  zoneRuleId: string;
+} & AnyRecord) {
+  const existing = await getShippingZoneRuleRecord({
+    organizationId: input.organizationId,
+    zoneRuleId: input.zoneRuleId
+  });
+  if (!existing) {
+    throw new Error("Shipping zone rule not found.");
+  }
+
+  await updateShippingZoneRuleRecord({
+    organizationId: input.organizationId,
+    zoneRuleId: input.zoneRuleId,
+    data: normalizeUpdateData({ ...input, organizationId: undefined, zoneRuleId: undefined })
+  });
+
+  const updated = await getShippingZoneRuleRecord({
+    organizationId: input.organizationId,
+    zoneRuleId: input.zoneRuleId
+  });
+  return { ok: true, shippingZoneRule: mapShippingZoneRule(updated) };
+}
+
+type CostCalculationViewInput = {
   organizationId: string;
   costProfileId: string;
   name?: string | null;
@@ -408,6 +634,8 @@ export async function calculateShelfCostView(input: {
   edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
   packagingCode?: string | null;
   shippingCode?: string | null;
+  amazonFeePresetId?: string | null;
+  shippingZoneRuleId?: string | null;
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes?: number | null;
@@ -419,7 +647,9 @@ export async function calculateShelfCostView(input: {
   damageReservePct?: number | null;
   shippingBufferPct?: number | null;
   shippingBufferCents?: number | null;
-}) {
+};
+
+export async function calculateShelfCostView(input: CostCalculationViewInput) {
   const assumptions = await resolveCostEngineAssumptions(input);
   const result = calculateShelfCost(input, assumptions);
 
@@ -437,6 +667,8 @@ export async function calculateShelfCostView(input: {
       edgeBandPattern: input.edgeBandPattern,
       packagingCode: input.packagingCode ?? null,
       shippingCode: input.shippingCode ?? null,
+      amazonFeePresetId: input.amazonFeePresetId ?? null,
+      shippingZoneRuleId: input.shippingZoneRuleId ?? null,
       laborMinutes: input.laborMinutes,
       machineMinutes: input.machineMinutes,
       overheadMinutes: input.overheadMinutes ?? null,
@@ -448,43 +680,21 @@ export async function calculateShelfCostView(input: {
       materialRule: assumptions.materialRule,
       edgeBandRule: assumptions.edgeBandRule,
       packagingRule: assumptions.packagingRule,
-      shippingRule: assumptions.shippingRule
+      shippingRule: assumptions.shippingRule,
+      amazonFeePreset: assumptions.amazonFeePreset,
+      shippingZoneRule: assumptions.shippingZoneRule
     },
     result
   };
 }
 
-export async function saveShelfCostCalculation(input: {
-  organizationId: string;
-  costProfileId: string;
-  name?: string | null;
-  sku?: string | null;
-  quantity: number;
-  lengthIn: number;
-  depthIn: number;
-  thicknessIn?: number | null;
-  weightLb?: number | null;
-  materialCode: string;
-  edgeBandCode?: string | null;
-  edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
-  packagingCode?: string | null;
-  shippingCode?: string | null;
-  laborMinutes: number;
-  machineMinutes: number;
-  overheadMinutes?: number | null;
-  packingMinutes?: number | null;
-  targetMarginPct?: number | null;
-  growthMarginPct?: number | null;
-  marketplaceFeePct?: number | null;
-  returnReservePct?: number | null;
-  damageReservePct?: number | null;
-  shippingBufferPct?: number | null;
-  shippingBufferCents?: number | null;
-}) {
+export async function saveShelfCostCalculation(input: CostCalculationViewInput) {
   const payload = await calculateShelfCostView(input);
   const record = await createShelfCostCalculationRecord({
     organizationId: input.organizationId,
     costProfileId: input.costProfileId,
+    amazonFeePresetId: input.amazonFeePresetId ?? null,
+    shippingZoneRuleId: input.shippingZoneRuleId ?? null,
     name: input.name,
     sku: input.sku,
     quantity: input.quantity,
@@ -510,8 +720,14 @@ export async function saveShelfCostCalculation(input: {
     shippingBufferCostCents: payload.calculation.shippingBufferCostCents,
     overheadCostCents: payload.calculation.overheadCostCents,
     marketplaceFeeCostCents: payload.calculation.marketplaceFeeCostCents,
+    referralFeeCostCents: payload.calculation.referralFeeCostCents,
+    closingFeeCostCents: payload.calculation.closingFeeCostCents,
+    fulfillmentFeeCostCents: payload.calculation.fulfillmentFeeCostCents,
+    storageAllowanceCostCents: payload.calculation.storageAllowanceCostCents,
+    advertisingAllowanceCostCents: payload.calculation.advertisingAllowanceCostCents,
     returnReserveCostCents: payload.calculation.returnReserveCostCents,
     damageReserveCostCents: payload.calculation.damageReserveCostCents,
+    miscMarketplaceCostCents: payload.calculation.miscMarketplaceCostCents,
     subtotalCostCents: payload.calculation.subtotalCostCents,
     breakEvenPriceCents: payload.calculation.breakEvenPriceCents,
     recommendedMinSellPriceCents: payload.calculation.recommendedMinSellPriceCents,
@@ -524,6 +740,8 @@ export async function saveShelfCostCalculation(input: {
     packagingSnapshot: payload.result.packaging,
     shippingSnapshot: payload.result.shipping,
     pricingSnapshot: payload.result.pricing,
+    amazonFeeSnapshot: payload.result.amazonFees,
+    shippingZoneSnapshot: payload.result.shippingZone,
     resultSnapshot: payload.result
   });
 
@@ -532,10 +750,7 @@ export async function saveShelfCostCalculation(input: {
     calculationId: record.id
   });
 
-  return {
-    ok: true,
-    calculation: mapCalculation(hydrated)
-  };
+  return { ok: true, calculation: mapCalculation(hydrated) };
 }
 
 export async function listShelfCostCalculations(input: {
@@ -543,10 +758,7 @@ export async function listShelfCostCalculations(input: {
   costProfileId?: string;
 }) {
   const calculations = await listShelfCostCalculationsForOrganization(input);
-  return {
-    ok: true,
-    calculations: calculations.map(mapCalculation)
-  };
+  return { ok: true, calculations: calculations.map(mapCalculation) };
 }
 
 export async function getShelfCostCalculation(input: {
@@ -558,8 +770,186 @@ export async function getShelfCostCalculation(input: {
     throw new Error("Shelf cost calculation not found.");
   }
 
+  return { ok: true, calculation: mapCalculation(calculation) };
+}
+
+type ScenarioInput = {
+  name: string;
+  amazonFeePresetId?: string | null;
+  shippingZoneRuleId?: string | null;
+  packagingCode?: string | null;
+  shippingCode?: string | null;
+  targetMarginPct?: number | null;
+  growthMarginPct?: number | null;
+  marketplaceFeePct?: number | null;
+  returnReservePct?: number | null;
+  damageReservePct?: number | null;
+  shippingBufferPct?: number | null;
+  shippingBufferCents?: number | null;
+};
+
+export async function compareShelfCostScenarios(input: {
+  organizationId: string;
+  name?: string | null;
+  notes?: string | null;
+  baseSpec: CostCalculationViewInput;
+  scenarios: ScenarioInput[];
+}) {
+  if (!input.scenarios.length) {
+    throw new Error("At least one scenario is required.");
+  }
+
+  const scenarioResults = [];
+  for (const [index, scenario] of input.scenarios.entries()) {
+    const mergedInput = {
+      ...input.baseSpec,
+      organizationId: input.organizationId,
+      name: input.baseSpec.name ?? `Scenario ${index + 1}`,
+      amazonFeePresetId:
+        scenario.amazonFeePresetId !== undefined ? scenario.amazonFeePresetId : input.baseSpec.amazonFeePresetId,
+      shippingZoneRuleId:
+        scenario.shippingZoneRuleId !== undefined ? scenario.shippingZoneRuleId : input.baseSpec.shippingZoneRuleId,
+      packagingCode:
+        scenario.packagingCode !== undefined ? scenario.packagingCode : input.baseSpec.packagingCode,
+      shippingCode:
+        scenario.shippingCode !== undefined ? scenario.shippingCode : input.baseSpec.shippingCode,
+      targetMarginPct:
+        scenario.targetMarginPct !== undefined ? scenario.targetMarginPct : input.baseSpec.targetMarginPct,
+      growthMarginPct:
+        scenario.growthMarginPct !== undefined ? scenario.growthMarginPct : input.baseSpec.growthMarginPct,
+      marketplaceFeePct:
+        scenario.marketplaceFeePct !== undefined ? scenario.marketplaceFeePct : input.baseSpec.marketplaceFeePct,
+      returnReservePct:
+        scenario.returnReservePct !== undefined ? scenario.returnReservePct : input.baseSpec.returnReservePct,
+      damageReservePct:
+        scenario.damageReservePct !== undefined ? scenario.damageReservePct : input.baseSpec.damageReservePct,
+      shippingBufferPct:
+        scenario.shippingBufferPct !== undefined ? scenario.shippingBufferPct : input.baseSpec.shippingBufferPct,
+      shippingBufferCents:
+        scenario.shippingBufferCents !== undefined
+          ? scenario.shippingBufferCents
+          : input.baseSpec.shippingBufferCents
+    };
+
+    const payload = await calculateShelfCostView(mergedInput);
+    const assumptionsSnapshot = payload.assumptions as Record<string, unknown>;
+    scenarioResults.push({
+      id: `scenario-${index + 1}`,
+      name: scenario.name,
+      calculation: payload.calculation,
+      assumptionsSnapshot,
+      result: payload.result,
+      changedAssumptions: {
+        packagingCode: mergedInput.packagingCode ?? null,
+        shippingCode: mergedInput.shippingCode ?? null,
+        amazonFeePresetId: mergedInput.amazonFeePresetId ?? null,
+        shippingZoneRuleId: mergedInput.shippingZoneRuleId ?? null,
+        targetMarginPct: mergedInput.targetMarginPct ?? null,
+        growthMarginPct: mergedInput.growthMarginPct ?? null
+      }
+    });
+  }
+
+  const deltaComparison = compareScenarioResults(
+    scenarioResults.map((scenario) => ({
+      id: scenario.id,
+      name: scenario.name,
+      result: scenario.result,
+      assumptionsSnapshot: scenario.assumptionsSnapshot
+    }))
+  );
+
   return {
     ok: true,
-    calculation: mapCalculation(calculation)
+    comparison: {
+      name: input.name ?? null,
+      notes: input.notes ?? null,
+      baseSpec: input.baseSpec,
+      baselineScenarioId: deltaComparison.baselineScenarioId,
+      scenarios: scenarioResults.map((scenario) => {
+        const deltaEntry = deltaComparison.scenarios.find((entry) => entry.id === scenario.id);
+        return {
+          ...scenario,
+          deltas: deltaEntry?.deltas ?? {
+            subtotalCostCents: 0,
+            breakEvenPriceCents: 0,
+            recommendedMinSellPriceCents: 0,
+            recommendedTargetSellPriceCents: 0
+          }
+        };
+      })
+    }
   };
+}
+
+export async function saveComparisonSet(input: {
+  organizationId: string;
+  name: string;
+  notes?: string | null;
+  baseSpec: CostCalculationViewInput;
+  scenarios: ScenarioInput[];
+}) {
+  const comparison = await compareShelfCostScenarios(input);
+  const set = await createCalculationComparisonSetRecord({
+    organizationId: input.organizationId,
+    name: input.name,
+    notes: input.notes ?? null,
+    baseShelfSpecSnapshot: comparison.comparison.baseSpec
+  });
+
+  for (const [index, scenario] of comparison.comparison.scenarios.entries()) {
+    const scenarioRecord = await createCalculationScenarioRecord({
+      organizationId: input.organizationId,
+      name: scenario.name,
+      costProfileId: input.baseSpec.costProfileId,
+      amazonFeePresetId: scenario.changedAssumptions.amazonFeePresetId,
+      shippingZoneRuleId: scenario.changedAssumptions.shippingZoneRuleId,
+      packagingRuleId: null,
+      shippingRuleId: null,
+      shelfCostCalculationId: null,
+      assumptionsSnapshot: scenario.assumptionsSnapshot,
+      resultSnapshot: scenario.result
+    });
+
+    await createComparisonSetScenarioRecord({
+      organizationId: input.organizationId,
+      comparisonSetId: set.id,
+      calculationScenarioId: scenarioRecord.id,
+      sortOrder: index
+    });
+  }
+
+  const hydrated = await getCalculationComparisonSetRecord({
+    organizationId: input.organizationId,
+    comparisonSetId: set.id
+  });
+  return { ok: true, comparisonSet: mapComparisonSet(hydrated) };
+}
+
+export async function listComparisonSets(input: { organizationId: string }) {
+  const sets = await listCalculationComparisonSetsForOrganization(input.organizationId);
+  return {
+    ok: true,
+    comparisonSets: sets.map((record: any) => ({
+      id: record.id,
+      orgId: record.organizationId,
+      name: record.name,
+      notes: record.notes ?? null,
+      scenarioCount: record.scenarios.length,
+      createdAt: record.createdAt.toISOString(),
+      updatedAt: record.updatedAt.toISOString()
+    }))
+  };
+}
+
+export async function getComparisonSet(input: {
+  organizationId: string;
+  comparisonSetId: string;
+}) {
+  const set = await getCalculationComparisonSetRecord(input);
+  if (!set) {
+    throw new Error("Cost comparison set not found.");
+  }
+
+  return { ok: true, comparisonSet: mapComparisonSet(set) };
 }

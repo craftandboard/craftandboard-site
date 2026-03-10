@@ -2766,6 +2766,49 @@ export interface CostProfileSummaryItem {
   updatedAt: string;
 }
 
+export interface AmazonFeePresetItem {
+  id: string;
+  orgId: string;
+  costProfileId: string | null;
+  name: string;
+  status: "ACTIVE" | "ARCHIVED";
+  referralFeePct: number;
+  closingFeeCents: number | null;
+  fulfillmentFeeCents: number | null;
+  storageAllowanceCents: number | null;
+  advertisingAllowancePct: number | null;
+  advertisingAllowanceCents: number | null;
+  returnReservePct: number | null;
+  returnReserveCents: number | null;
+  damageReservePct: number | null;
+  damageReserveCents: number | null;
+  miscMarketplacePct: number | null;
+  miscMarketplaceCents: number | null;
+  notes: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShippingZoneRuleItem {
+  id: string;
+  orgId: string;
+  costProfileId: string | null;
+  name: string;
+  zoneCode: string;
+  status: "ACTIVE" | "ARCHIVED";
+  baseCostCents: number;
+  weightAdderCents: number | null;
+  dimensionalAdderCents: number | null;
+  bufferPct: number | null;
+  bufferCents: number | null;
+  marketplaceHandlingCents: number | null;
+  notes: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface MaterialCostRuleItem {
   id: string;
   orgId: string;
@@ -2874,6 +2917,8 @@ export interface CostProfileDetail {
   edgeBandRules: EdgeBandCostRuleItem[];
   packagingRules: PackagingCostRuleItem[];
   shippingRules: ShippingCostRuleItem[];
+  amazonFeePresets: AmazonFeePresetItem[];
+  shippingZoneRules: ShippingZoneRuleItem[];
   createdAt: string;
   updatedAt: string;
 }
@@ -2892,6 +2937,8 @@ export interface CostCalculationInput {
   edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
   packagingCode?: string | null;
   shippingCode?: string | null;
+  amazonFeePresetId?: string | null;
+  shippingZoneRuleId?: string | null;
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes?: number | null;
@@ -2917,6 +2964,8 @@ export interface CostCalculationPreview {
   edgeBandPattern: "NONE" | "LONG_EDGES" | "SHORT_EDGES" | "ALL_FOUR";
   packagingCode: string | null;
   shippingCode: string | null;
+  amazonFeePresetId: string | null;
+  shippingZoneRuleId: string | null;
   laborMinutes: number;
   machineMinutes: number;
   overheadMinutes: number | null;
@@ -2931,8 +2980,14 @@ export interface CostCalculationPreview {
   shippingBufferCostCents: number;
   overheadCostCents: number;
   marketplaceFeeCostCents: number;
+  referralFeeCostCents: number;
+  closingFeeCostCents: number;
+  fulfillmentFeeCostCents: number;
+  storageAllowanceCostCents: number;
+  advertisingAllowanceCostCents: number;
   returnReserveCostCents: number;
   damageReserveCostCents: number;
+  miscMarketplaceCostCents: number;
   subtotalCostCents: number;
   breakEvenPriceCents: number | null;
   recommendedMinSellPriceCents: number | null;
@@ -2958,8 +3013,14 @@ export interface CostCalculationResult {
     overheadCostCents: number;
     subtotalCostCents: number;
     marketplaceFeeCostCents: number;
+    referralFeeCostCents: number;
+    closingFeeCostCents: number;
+    fulfillmentFeeCostCents: number;
+    storageAllowanceCostCents: number;
+    advertisingAllowanceCostCents: number;
     returnReserveCostCents: number;
     damageReserveCostCents: number;
+    miscMarketplaceCostCents: number;
     breakEvenPriceCents: number | null;
     recommendedMinSellPriceCents: number | null;
     recommendedTargetSellPriceCents: number | null;
@@ -2977,8 +3038,16 @@ export interface CostCalculationResult {
     targetMarginPct: number | null;
     growthMarginPct: number | null;
     marketplaceFeePct: number | null;
+    referralFeePct: number | null;
+    advertisingAllowancePct: number | null;
     returnReservePct: number | null;
     damageReservePct: number | null;
+    miscMarketplacePct: number | null;
+    closingFeeCostCents: number;
+    fulfillmentFeeCostCents: number;
+    storageAllowanceCostCents: number;
+    advertisingAllowanceCostCents: number;
+    miscMarketplaceCostCents: number;
     breakEvenPriceCents: number | null;
     recommendedMinSellPriceCents: number | null;
     recommendedTargetSellPriceCents: number | null;
@@ -2997,7 +3066,37 @@ export interface CostCalculationResult {
     volumeCostCents: number;
     dimensionalCostCents: number;
     marketplaceHandlingCents: number;
+    shippingBufferPct: number | null;
+    shippingBufferCents: number | null;
     bufferCostCents: number;
+    shippingZoneName?: string | null;
+    shippingZoneCode?: string | null;
+  };
+  amazonFees: {
+    presetName?: string | null;
+    referralFeePct: number | null;
+    referralFeeCostCents: number;
+    closingFeeCostCents: number;
+    fulfillmentFeeCostCents: number;
+    storageAllowanceCostCents: number;
+    advertisingAllowancePct: number | null;
+    advertisingAllowanceCostCents: number;
+    returnReservePct: number | null;
+    returnReserveCostCents: number;
+    damageReservePct: number | null;
+    damageReserveCostCents: number;
+    miscMarketplacePct: number | null;
+    miscMarketplaceCostCents: number;
+  };
+  shippingZone: {
+    id?: string | null;
+    name?: string | null;
+    zoneCode?: string | null;
+    baseCostCents: number;
+    weightAdderCostCents: number;
+    dimensionalAdderCostCents: number;
+    bufferCostCents: number;
+    marketplaceHandlingCents: number;
   };
 }
 
@@ -3006,6 +3105,10 @@ export interface ShelfCostCalculationRecord {
   orgId: string;
   costProfileId: string;
   costProfileName: string | null;
+  amazonFeePresetId: string | null;
+  amazonFeePresetName: string | null;
+  shippingZoneRuleId: string | null;
+  shippingZoneRuleName: string | null;
   name: string | null;
   sku: string | null;
   quantity: number;
@@ -3031,8 +3134,14 @@ export interface ShelfCostCalculationRecord {
   shippingBufferCostCents: number;
   overheadCostCents: number;
   marketplaceFeeCostCents: number;
+  referralFeeCostCents: number;
+  closingFeeCostCents: number;
+  fulfillmentFeeCostCents: number;
+  storageAllowanceCostCents: number;
+  advertisingAllowanceCostCents: number;
   returnReserveCostCents: number;
   damageReserveCostCents: number;
+  miscMarketplaceCostCents: number;
   subtotalCostCents: number;
   breakEvenPriceCents: number | null;
   recommendedMinSellPriceCents: number | null;
@@ -3045,7 +3154,100 @@ export interface ShelfCostCalculationRecord {
   packagingSnapshot: Record<string, unknown> | null;
   shippingSnapshot: Record<string, unknown> | null;
   pricingSnapshot: Record<string, unknown> | null;
+  amazonFeeSnapshot: Record<string, unknown> | null;
+  shippingZoneSnapshot: Record<string, unknown> | null;
   resultSnapshot: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CostScenarioInput {
+  name: string;
+  amazonFeePresetId?: string | null;
+  shippingZoneRuleId?: string | null;
+  packagingCode?: string | null;
+  shippingCode?: string | null;
+  targetMarginPct?: number | null;
+  growthMarginPct?: number | null;
+  marketplaceFeePct?: number | null;
+  returnReservePct?: number | null;
+  damageReservePct?: number | null;
+  shippingBufferPct?: number | null;
+  shippingBufferCents?: number | null;
+}
+
+export interface CostScenarioResult {
+  id: string;
+  name: string;
+  calculation: CostCalculationPreview;
+  assumptionsSnapshot: Record<string, unknown>;
+  result: CostCalculationResult;
+  changedAssumptions: {
+    packagingCode: string | null;
+    shippingCode: string | null;
+    amazonFeePresetId: string | null;
+    shippingZoneRuleId: string | null;
+    targetMarginPct: number | null;
+    growthMarginPct: number | null;
+  };
+  deltas: {
+    subtotalCostCents: number;
+    breakEvenPriceCents: number;
+    recommendedMinSellPriceCents: number;
+    recommendedTargetSellPriceCents: number;
+  };
+}
+
+export interface CostComparisonResult {
+  name: string | null;
+  notes: string | null;
+  baseSpec: CostCalculationInput;
+  baselineScenarioId: string;
+  scenarios: CostScenarioResult[];
+}
+
+export interface CalculationScenarioRecord {
+  id: string;
+  orgId: string;
+  name: string;
+  costProfileId: string;
+  amazonFeePresetId: string | null;
+  amazonFeePresetName: string | null;
+  shippingZoneRuleId: string | null;
+  shippingZoneRuleName: string | null;
+  packagingRuleId: string | null;
+  packagingRuleName: string | null;
+  shippingRuleId: string | null;
+  shippingRuleName: string | null;
+  shelfCostCalculationId: string | null;
+  assumptionsSnapshot: Record<string, unknown>;
+  resultSnapshot: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ComparisonSetRecord {
+  id: string;
+  orgId: string;
+  name: string;
+  notes: string | null;
+  baseShelfSpecSnapshot: Record<string, unknown>;
+  scenarios: Array<{
+    id: string;
+    sortOrder: number | null;
+    createdAt: string;
+    scenario: CalculationScenarioRecord;
+  }>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ComparisonSetListItem {
+  id: string;
+  orgId: string;
+  name: string;
+  notes: string | null;
+  scenarioCount: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -3229,6 +3431,97 @@ export async function updateShippingCostRule(shippingRuleId: string, input: Reco
   });
 }
 
+export async function createAmazonFeePreset(
+  costProfileId: string,
+  input: {
+    name: string;
+    status?: "ACTIVE" | "ARCHIVED";
+    referralFeePct: number;
+    closingFeeCents?: number | null;
+    fulfillmentFeeCents?: number | null;
+    storageAllowanceCents?: number | null;
+    advertisingAllowancePct?: number | null;
+    advertisingAllowanceCents?: number | null;
+    returnReservePct?: number | null;
+    returnReserveCents?: number | null;
+    damageReservePct?: number | null;
+    damageReserveCents?: number | null;
+    miscMarketplacePct?: number | null;
+    miscMarketplaceCents?: number | null;
+    notes?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; preset: AmazonFeePresetItem }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/amazon-fee-presets`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function getAmazonFeePresets(input?: { costProfileId?: string }) {
+  const params = new URLSearchParams();
+  if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
+  const query = params.toString();
+  return readJson<{ ok: true; presets: AmazonFeePresetItem[] }>(
+    `/amazon-fee-presets${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getAmazonFeePreset(presetId: string) {
+  return readJson<{ ok: true; preset: AmazonFeePresetItem }>(
+    `/amazon-fee-presets/${encodeURIComponent(presetId)}`
+  );
+}
+
+export async function updateAmazonFeePreset(presetId: string, input: Record<string, unknown>) {
+  return sendJson<{ ok: true; preset: AmazonFeePresetItem }>(
+    `/amazon-fee-presets/${encodeURIComponent(presetId)}`,
+    { method: "PATCH", body: JSON.stringify(input) }
+  );
+}
+
+export async function createShippingZoneRule(
+  costProfileId: string,
+  input: {
+    name: string;
+    zoneCode: string;
+    status?: "ACTIVE" | "ARCHIVED";
+    baseCostCents: number;
+    weightAdderCents?: number | null;
+    dimensionalAdderCents?: number | null;
+    bufferPct?: number | null;
+    bufferCents?: number | null;
+    marketplaceHandlingCents?: number | null;
+    notes?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; shippingZoneRule: ShippingZoneRuleItem }>(
+    `/cost-profiles/${encodeURIComponent(costProfileId)}/shipping-zone-rules`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
+export async function getShippingZoneRules(input?: { costProfileId?: string }) {
+  const params = new URLSearchParams();
+  if (input?.costProfileId) params.set("costProfileId", input.costProfileId);
+  const query = params.toString();
+  return readJson<{ ok: true; shippingZoneRules: ShippingZoneRuleItem[] }>(
+    `/shipping-zone-rules${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getShippingZoneRule(zoneRuleId: string) {
+  return readJson<{ ok: true; shippingZoneRule: ShippingZoneRuleItem }>(
+    `/shipping-zone-rules/${encodeURIComponent(zoneRuleId)}`
+  );
+}
+
+export async function updateShippingZoneRule(zoneRuleId: string, input: Record<string, unknown>) {
+  return sendJson<{ ok: true; shippingZoneRule: ShippingZoneRuleItem }>(
+    `/shipping-zone-rules/${encodeURIComponent(zoneRuleId)}`,
+    { method: "PATCH", body: JSON.stringify(input) }
+  );
+}
+
 export async function calculateShelfCost(input: CostCalculationInput) {
   return sendJson<{
     ok: true;
@@ -3236,6 +3529,18 @@ export async function calculateShelfCost(input: CostCalculationInput) {
     assumptions: Record<string, unknown>;
     result: CostCalculationResult;
   }>("/cost-calculations/calculate", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function compareShelfCostScenarios(input: {
+  name?: string | null;
+  notes?: string | null;
+  baseSpec: CostCalculationInput;
+  scenarios: CostScenarioInput[];
+}) {
+  return sendJson<{ ok: true; comparison: CostComparisonResult }>("/cost-calculations/compare", {
     method: "POST",
     body: JSON.stringify(input)
   });
@@ -3262,6 +3567,28 @@ export async function getShelfCostCalculations(input?: { costProfileId?: string 
 export async function getShelfCostCalculation(calculationId: string) {
   return readJson<{ ok: true; calculation: ShelfCostCalculationRecord }>(
     `/cost-calculations/${encodeURIComponent(calculationId)}`
+  );
+}
+
+export async function saveCostComparisonSet(input: {
+  name: string;
+  notes?: string | null;
+  baseSpec: CostCalculationInput;
+  scenarios: CostScenarioInput[];
+}) {
+  return sendJson<{ ok: true; comparisonSet: ComparisonSetRecord }>("/cost-comparison-sets", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getCostComparisonSets() {
+  return readJson<{ ok: true; comparisonSets: ComparisonSetListItem[] }>("/cost-comparison-sets");
+}
+
+export async function getCostComparisonSet(comparisonSetId: string) {
+  return readJson<{ ok: true; comparisonSet: ComparisonSetRecord }>(
+    `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}`
   );
 }
 

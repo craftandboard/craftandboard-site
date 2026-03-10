@@ -1,29 +1,44 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const repositoryMocks = vi.hoisted(() => ({
+  createAmazonFeePresetRecord: vi.fn(),
+  createCalculationComparisonSetRecord: vi.fn(),
+  createCalculationScenarioRecord: vi.fn(),
+  createComparisonSetScenarioRecord: vi.fn(),
   createCostProfileRecord: vi.fn(),
   createEdgeBandCostRuleRecord: vi.fn(),
   createMaterialCostRuleRecord: vi.fn(),
   createPackagingCostRuleRecord: vi.fn(),
   createShelfCostCalculationRecord: vi.fn(),
   createShippingCostRuleRecord: vi.fn(),
+  createShippingZoneRuleRecord: vi.fn(),
+  getAmazonFeePresetRecord: vi.fn(),
+  getCalculationComparisonSetRecord: vi.fn(),
   getCostProfileRecord: vi.fn(),
   getShelfCostCalculationRecord: vi.fn(),
+  getShippingZoneRuleRecord: vi.fn(),
+  listAmazonFeePresetsForOrganization: vi.fn(),
+  listCalculationComparisonSetsForOrganization: vi.fn(),
   listCostProfilesForOrganization: vi.fn(),
   listShelfCostCalculationsForOrganization: vi.fn(),
+  listShippingZoneRulesForOrganization: vi.fn(),
+  updateAmazonFeePresetRecord: vi.fn(),
   updateCostProfileRecord: vi.fn(),
   updateEdgeBandCostRuleRecord: vi.fn(),
   updateMaterialCostRuleRecord: vi.fn(),
   updatePackagingCostRuleRecord: vi.fn(),
-  updateShippingCostRuleRecord: vi.fn()
+  updateShippingCostRuleRecord: vi.fn(),
+  updateShippingZoneRuleRecord: vi.fn()
 }));
 
 vi.mock("../modules/costEngine/repository.js", () => repositoryMocks);
 
 import {
   calculateShelfCostView,
+  compareShelfCostScenarios,
   getShelfCostCalculation,
   listCostProfiles,
+  saveComparisonSet,
   saveShelfCostCalculation
 } from "../modules/costEngine/service.js";
 
@@ -137,6 +152,47 @@ function makeProfile() {
         createdAt: new Date("2026-03-10T00:00:00.000Z"),
         updatedAt: new Date("2026-03-10T00:00:00.000Z")
       }
+    ],
+    amazonFeePresets: [
+      {
+        id: "preset_1",
+        organizationId: "org_local_craft_board",
+        costProfileId: "profile_1",
+        name: "Amazon Standard",
+        status: "ACTIVE",
+        referralFeePct: { toNumber: () => 15 },
+        closingFeeCents: 99,
+        fulfillmentFeeCents: 450,
+        storageAllowanceCents: 40,
+        advertisingAllowancePct: { toNumber: () => 8 },
+        advertisingAllowanceCents: 0,
+        returnReservePct: { toNumber: () => 2 },
+        returnReserveCents: 0,
+        damageReservePct: { toNumber: () => 1 },
+        damageReserveCents: 0,
+        miscMarketplacePct: { toNumber: () => 0.5 },
+        miscMarketplaceCents: 0,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      }
+    ],
+    shippingZoneRules: [
+      {
+        id: "zone_1",
+        organizationId: "org_local_craft_board",
+        costProfileId: "profile_1",
+        name: "Zone 2",
+        zoneCode: "Z2",
+        status: "ACTIVE",
+        baseCostCents: 250,
+        weightAdderCents: 10,
+        dimensionalAdderCents: 5,
+        bufferPct: { toNumber: () => 4 },
+        bufferCents: 25,
+        marketplaceHandlingCents: 15,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z")
+      }
     ]
   };
 }
@@ -167,6 +223,8 @@ describe("cost engine service", () => {
       edgeBandPattern: "LONG_EDGES",
       packagingCode: "STANDARD",
       shippingCode: "GROUND",
+      amazonFeePresetId: "preset_1",
+      shippingZoneRuleId: "zone_1",
       laborMinutes: 12,
       machineMinutes: 8,
       overheadMinutes: 10,
@@ -184,6 +242,8 @@ describe("cost engine service", () => {
     expect(payload.calculation.shippingCostCents).toBeGreaterThanOrEqual(1295);
     expect(payload.calculation.shippingBufferCostCents).toBeGreaterThan(0);
     expect(payload.calculation.marketplaceFeeCostCents).toBeGreaterThan(0);
+    expect(payload.calculation.referralFeeCostCents).toBeGreaterThan(0);
+    expect(payload.calculation.fulfillmentFeeCostCents).toBe(450);
     expect(payload.calculation.breakEvenPriceCents).toBeGreaterThan(
       payload.calculation.subtotalCostCents
     );
@@ -196,6 +256,103 @@ describe("cost engine service", () => {
     expect(payload.calculation.recommendedSellPriceCents).toBeGreaterThan(
       payload.calculation.subtotalCostCents
     );
+    expect(payload.result.shipping.shippingZoneCode).toBe("Z2");
+    expect(payload.result.amazonFees.presetName).toBe("Amazon Standard");
+  });
+
+  it("compares scenarios and returns side-by-side deltas", async () => {
+    const payload = await compareShelfCostScenarios({
+      organizationId: "org_local_craft_board",
+      baseSpec: {
+        organizationId: "org_local_craft_board",
+        costProfileId: "profile_1",
+        quantity: 1,
+        lengthIn: 30,
+        depthIn: 12,
+        thicknessIn: 0.75,
+        materialCode: "WHITE_MELAMINE_075",
+        edgeBandCode: "PVC_WHITE",
+        edgeBandPattern: "LONG_EDGES",
+        packagingCode: "STANDARD",
+        shippingCode: "GROUND",
+        laborMinutes: 12,
+        machineMinutes: 8
+      },
+      scenarios: [
+        { name: "Baseline", amazonFeePresetId: "preset_1" },
+        { name: "Farther Zone", amazonFeePresetId: "preset_1", shippingZoneRuleId: "zone_1" }
+      ]
+    });
+
+    expect(payload.comparison.scenarios).toHaveLength(2);
+    expect(payload.comparison.scenarios[1]?.deltas.breakEvenPriceCents).not.toBe(0);
+  });
+
+  it("saves comparison sets with scenario records", async () => {
+    repositoryMocks.createCalculationComparisonSetRecord.mockResolvedValueOnce({ id: "compare_1" });
+    repositoryMocks.createCalculationScenarioRecord
+      .mockResolvedValueOnce({ id: "scenario_1" })
+      .mockResolvedValueOnce({ id: "scenario_2" });
+    repositoryMocks.createComparisonSetScenarioRecord.mockResolvedValue({});
+    repositoryMocks.getCalculationComparisonSetRecord.mockResolvedValueOnce({
+      id: "compare_1",
+      organizationId: "org_local_craft_board",
+      name: "Launch compare",
+      notes: null,
+      baseShelfSpecSnapshot: { lengthIn: 30, depthIn: 12 },
+      createdAt: new Date("2026-03-10T00:00:00.000Z"),
+      updatedAt: new Date("2026-03-10T00:00:00.000Z"),
+      scenarios: [
+        {
+          id: "join_1",
+          sortOrder: 0,
+          createdAt: new Date("2026-03-10T00:00:00.000Z"),
+          calculationScenario: {
+            id: "scenario_1",
+            organizationId: "org_local_craft_board",
+            name: "Baseline",
+            costProfileId: "profile_1",
+            amazonFeePresetId: "preset_1",
+            amazonFeePreset: { name: "Amazon Standard" },
+            shippingZoneRuleId: null,
+            shippingZoneRule: null,
+            packagingRuleId: null,
+            packagingRule: null,
+            shippingRuleId: null,
+            shippingRule: null,
+            shelfCostCalculationId: null,
+            assumptionsSnapshot: {},
+            resultSnapshot: {},
+            createdAt: new Date("2026-03-10T00:00:00.000Z"),
+            updatedAt: new Date("2026-03-10T00:00:00.000Z")
+          }
+        }
+      ]
+    });
+
+    const payload = await saveComparisonSet({
+      organizationId: "org_local_craft_board",
+      name: "Launch compare",
+      baseSpec: {
+        organizationId: "org_local_craft_board",
+        costProfileId: "profile_1",
+        quantity: 1,
+        lengthIn: 30,
+        depthIn: 12,
+        thicknessIn: 0.75,
+        materialCode: "WHITE_MELAMINE_075",
+        edgeBandCode: "PVC_WHITE",
+        edgeBandPattern: "LONG_EDGES",
+        packagingCode: "STANDARD",
+        shippingCode: "GROUND",
+        laborMinutes: 12,
+        machineMinutes: 8
+      },
+      scenarios: [{ name: "Baseline", amazonFeePresetId: "preset_1" }]
+    });
+
+    expect(payload.comparisonSet.id).toBe("compare_1");
+    expect(repositoryMocks.createCalculationScenarioRecord).toHaveBeenCalled();
   });
 
   it("rejects missing edge band rules when the pattern requires one", async () => {

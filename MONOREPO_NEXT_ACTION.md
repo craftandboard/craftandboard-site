@@ -3,9 +3,9 @@
 Safest canonical repo right now: `/Users/brandon/Projects/craft-and-board`
 
 Do not do yet:
-- do not let public/provider acceptance bypass Phase 10 orchestration
+- do not let public/provider review or acceptance bypass Phase 10 orchestration
 - do not add invoice/accounting/customer sync yet
-- do not broaden into full branded public portal or e-sign runtime yet
+- do not broaden into full portal, PDF rendering, or e-sign runtime yet
 
-Exact next Phase 12 action:
-- add a minimal public proposal snapshot and acceptance review surface for issued intake tokens without broadening into full document rendering, e-sign runtime, or downstream operational automation
+Exact next Phase 13 action:
+- add a narrow external acceptance presentation layer for signer instructions, review-state transitions, and post-submission confirmation without broadening into full portal, PDF, or signature-provider execution

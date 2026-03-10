@@ -568,6 +568,21 @@ enum ProposalAcceptanceIntakeOutcome {
   FAILED
 }
 
+enum ProposalAcceptanceReviewAction {
+  SNAPSHOT_GENERATED
+  SNAPSHOT_VIEWED
+  TOKEN_VALIDATED_FOR_REVIEW
+  REVIEW_BLOCKED
+  REVIEW_CONTEXT_RETURNED
+  REQUEST_IGNORED_DUPLICATE
+}
+
+enum ProposalAcceptanceReviewOutcome {
+  APPLIED
+  SKIPPED
+  FAILED
+}
+
 enum ShelfJobStatus {
   READY
   HOLD
@@ -683,6 +698,7 @@ model Organization {
   proposalAcceptanceIntakes ProposalAcceptanceIntake[]
   proposalAcceptanceEvidence ProposalAcceptanceEvidence[]
   proposalAcceptanceIntakeLogs ProposalAcceptanceIntakeLog[]
+  proposalAcceptanceReviewLogs ProposalAcceptanceReviewLog[]
   parts     Part[]
   batches   Batch[]
   bundles   ProductionBundle[]
@@ -928,6 +944,7 @@ model Proposal {
   acceptanceIntakes ProposalAcceptanceIntake[]
   acceptanceEvidence ProposalAcceptanceEvidence[]
   acceptanceIntakeLogs ProposalAcceptanceIntakeLog[]
+  acceptanceReviewLogs ProposalAcceptanceReviewLog[]
 
   @@index([organizationId, projectId])
   @@index([organizationId, leadId])
@@ -1233,6 +1250,7 @@ model ProposalAcceptanceIntake {
   proposal              Proposal                      @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   evidence              ProposalAcceptanceEvidence[]
   logs                  ProposalAcceptanceIntakeLog[]
+  reviewLogs            ProposalAcceptanceReviewLog[]
 
   @@index([organizationId, proposalId])
   @@index([organizationId, proposalId, status])
@@ -1271,6 +1289,24 @@ model ProposalAcceptanceIntakeLog {
 
   @@index([organizationId, intakeId])
   @@index([organizationId, proposalId])
+}
+
+model ProposalAcceptanceReviewLog {
+  id             String                          @id @default(cuid())
+  organizationId String
+  proposalId     String
+  intakeId       String
+  action         ProposalAcceptanceReviewAction
+  outcome        ProposalAcceptanceReviewOutcome
+  message        String?
+  details        Json?
+  createdAt      DateTime                        @default(now())
+  organization   Organization                    @relation(fields: [organizationId], references: [id])
+  proposal       Proposal                        @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  intake         ProposalAcceptanceIntake        @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, proposalId])
+  @@index([organizationId, intakeId])
 }
 
 model ActivationToken {

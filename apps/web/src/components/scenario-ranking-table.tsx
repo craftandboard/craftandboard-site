@@ -4,6 +4,8 @@ import type { CostComparisonResult } from "../lib/api";
 import {
   formatMoney,
   getLaunchStrategyLabel,
+  getListingReadinessLabel,
+  getListingReadinessTone,
   getRankingLabel,
   getRiskLevelLabel,
   getRiskLevelTone
@@ -37,6 +39,7 @@ export function ScenarioRankingTable({
               <th className="px-4 py-3 text-left">Strategy</th>
               <th className="px-4 py-3 text-right">Score</th>
               <th className="px-4 py-3 text-left">Risk</th>
+              <th className="px-4 py-3 text-left">Readiness</th>
               <th className="px-4 py-3 text-right">Target</th>
               <th className="px-4 py-3 text-right">Floor</th>
               <th className="px-4 py-3 text-right">Action</th>
@@ -61,6 +64,11 @@ export function ScenarioRankingTable({
                 <td className="px-4 py-3">
                   <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getRiskLevelTone(scenario.riskLevel)}`}>
                     {getRiskLevelLabel(scenario.riskLevel)}
+                  </span>
+                </td>
+                <td className="px-4 py-3">
+                  <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getListingReadinessTone(scenario.listingReadinessStatus)}`}>
+                    {getListingReadinessLabel(scenario.listingReadinessStatus)}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-right">

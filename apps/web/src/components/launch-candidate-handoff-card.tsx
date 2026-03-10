@@ -1,7 +1,7 @@
 "use client";
 
 import type { CostComparisonResult } from "../lib/api";
-import { formatMoney } from "../lib/cost-engine";
+import { formatMoney, getListingReadinessLabel, getListingReadinessTone } from "../lib/cost-engine";
 
 export function LaunchCandidateHandoffCard({
   comparison
@@ -22,11 +22,17 @@ export function LaunchCandidateHandoffCard({
   const shelfSpec = (handoff.shelfSpec ?? {}) as Record<string, unknown>;
   const burdens = (handoff.burdens ?? {}) as Record<string, unknown>;
   const risk = (handoff.risk ?? {}) as Record<string, unknown>;
+  const readinessStatus = comparison?.selectedLaunchReadinessStatus ?? null;
 
   return (
     <section className="rounded-[1.75rem] border border-emerald-400/20 bg-emerald-400/10 p-6">
       <p className="text-xs uppercase tracking-[0.2em] text-emerald-200">Launch Handoff</p>
-      <h3 className="mt-2 text-xl font-semibold text-white">{String(handoff.scenarioName ?? "Selected launch candidate")}</h3>
+      <div className="mt-2 flex flex-wrap items-center gap-3">
+        <h3 className="text-xl font-semibold text-white">{String(handoff.scenarioName ?? "Selected launch candidate")}</h3>
+        <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${getListingReadinessTone(readinessStatus)}`}>
+          {getListingReadinessLabel(readinessStatus)}
+        </span>
+      </div>
       <p className="mt-2 text-sm text-emerald-50/90">
         {typeof risk.summary === "string"
           ? risk.summary

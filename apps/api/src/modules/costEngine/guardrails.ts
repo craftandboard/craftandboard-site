@@ -1,4 +1,4 @@
-import type { LaunchRiskLevel } from "./contracts.js";
+import type { LaunchRiskLevel, ListingReadinessStatus } from "./contracts.js";
 
 type GuardrailProfile = {
   id: string;
@@ -56,6 +56,15 @@ function ratioDelta(high: number, low: number) {
 }
 
 function buildWarning(code: string, severity: LaunchRiskLevel, message: string, details: Record<string, unknown>) {
+  return { code, severity, message, details };
+}
+
+function buildReadinessWarning(
+  code: string,
+  severity: "BLOCKING" | "WARNING",
+  message: string,
+  details: Record<string, unknown>
+) {
   return { code, severity, message, details };
 }
 
@@ -346,5 +355,268 @@ export function buildLaunchCandidateHandoff(input: {
     risk: input.riskSummary,
     assumptionsSnapshot: input.scenario.assumptionsSnapshot,
     resultSnapshot: input.scenario.result
+  };
+}
+
+export function buildStrongerPriceFloorAlerts(input: {
+  scenario: ScenarioForGuardrails & {
+    guardrailSnapshot?: Record<string, unknown> | null;
+    riskLevel?: LaunchRiskLevel | null;
+  };
+  selectedLaunchPriceCents?: number | null;
+}) {
+  const launchPrice =
+    input.selectedLaunchPriceCents ??
+    input.scenario.result.breakdown.recommendedTargetSellPriceCents;
+  const minimumSellPrice = input.scenario.result.breakdown.recommendedMinSellPriceCents;
+  const breakEvenPrice = input.scenario.result.breakdown.breakEvenPriceCents;
+  const saferMarginPrice = input.scenario.result.breakdown.recommendedTargetSellPriceCents;
+  const totalFees =
+    input.scenario.result.breakdown.marketplaceFeeCostCents +
+    (input.scenario.result.amazonFees?.closingFeeCostCents ?? 0) +
+    (input.scenario.result.amazonFees?.fulfillmentFeeCostCents ?? 0) +
+    (input.scenario.result.amazonFees?.storageAllowanceCostCents ?? 0) +
+    (input.scenario.result.amazonFees?.advertisingAllowanceCostCents ?? 0) +
+    (input.scenario.result.amazonFees?.miscMarketplaceCostCents ?? 0);
+  const totalShipping =
+    input.scenario.result.shipping.baseCostCents +
+    (input.scenario.result.shipping.weightCostCents ?? 0) +
+    (input.scenario.result.shipping.volumeCostCents ?? 0) +
+    (input.scenario.result.shipping.dimensionalCostCents ?? 0) +
+    input.scenario.result.shipping.shippingBufferCostCents;
+  const reserveCost =
+    input.scenario.result.breakdown.returnReserveCostCents +
+    input.scenario.result.breakdown.damageReserveCostCents;
+
+  const warnings = [];
+  const launchToMinBufferPct = percentOf(launchPrice - minimumSellPrice, launchPrice || 1);
+  const minToBreakEvenPct = percentOf(minimumSellPrice - breakEvenPrice, minimumSellPrice || 1);
+  const saferGapPct = percentOf(saferMarginPrice - launchPrice, launchPrice || 1);
+  const feeBurdenPct = percentOf(totalFees, launchPrice || 1);
+  const shippingBurdenPct = percentOf(totalShipping, launchPrice || 1);
+  const reserveBurdenPct = percentOf(reserveCost, launchPrice || 1);
+
+  if (launchPrice < minimumSellPrice) {
+    warnings.push(
+      buildReadinessWarning(
+        "LAUNCH_BELOW_MINIMUM_SELL",
+        "BLOCKING",
+        "Launch price is below the current minimum sell price.",
+        { launchPriceCents: launchPrice, minimumSellPriceCents: minimumSellPrice }
+      )
+    );
+  }
+
+  if (minimumSellPrice <= breakEvenPrice) {
+    warnings.push(
+      buildReadinessWarning(
+        "MINIMUM_NEAR_BREAK_EVEN",
+        "BLOCKING",
+        "Minimum sell price leaves almost no room above break-even.",
+        { minimumSellPriceCents: minimumSellPrice, breakEvenPriceCents: breakEvenPrice }
+      )
+    );
+  }
+
+  if (launchToMinBufferPct < 5) {
+    warnings.push(
+      buildReadinessWarning(
+        "LOW_BUFFER_ABOVE_MINIMUM",
+        "BLOCKING",
+        "Launch price is too close to the minimum sell price for listing safety.",
+        { launchToMinBufferPct, launchPriceCents: launchPrice, minimumSellPriceCents: minimumSellPrice }
+      )
+    );
+  }
+
+  if (minToBreakEvenPct < 4) {
+    warnings.push(
+      buildReadinessWarning(
+        "LOW_BUFFER_ABOVE_BREAK_EVEN",
+        "BLOCKING",
+        "Minimum sell price is too close to break-even.",
+        { minToBreakEvenPct, minimumSellPriceCents: minimumSellPrice, breakEvenPriceCents: breakEvenPrice }
+      )
+    );
+  }
+
+  if (saferGapPct > 18) {
+    warnings.push(
+      buildReadinessWarning(
+        "SAFER_MARGIN_GAP_HIGH",
+        "WARNING",
+        "Safer-margin price sits materially above the recommended launch price.",
+        { saferGapPct, saferMarginPriceCents: saferMarginPrice, launchPriceCents: launchPrice }
+      )
+    );
+  }
+
+  if (feeBurdenPct > 32) {
+    warnings.push(
+      buildReadinessWarning(
+        "HIGH_FEE_LOAD",
+        "WARNING",
+        "Marketplace fee load leaves too little room for pricing mistakes.",
+        { feeBurdenPct }
+      )
+    );
+  }
+
+  if (shippingBurdenPct > 24) {
+    warnings.push(
+      buildReadinessWarning(
+        "HIGH_SHIPPING_LOAD",
+        "WARNING",
+        "Shipping burden makes this launch candidate fragile.",
+        { shippingBurdenPct }
+      )
+    );
+  }
+
+  if (reserveBurdenPct > 8) {
+    warnings.push(
+      buildReadinessWarning(
+        "HIGH_RESERVE_LOAD",
+        "WARNING",
+        "Reserve burden is high relative to the proposed launch price.",
+        { reserveBurdenPct }
+      )
+    );
+  }
+
+  if (input.scenario.riskLevel === "HIGH") {
+    warnings.push(
+      buildReadinessWarning(
+        "HIGH_RISK_SCENARIO",
+        "BLOCKING",
+        "Scenario still carries high launch risk despite ranking.",
+        { riskLevel: input.scenario.riskLevel }
+      )
+    );
+  }
+
+  return {
+    warnings,
+    summary:
+      warnings.length === 0
+        ? "Selected launch candidate clears the stronger listing-readiness checks."
+        : warnings.some((warning) => warning.severity === "BLOCKING")
+          ? "Selected launch candidate still has blocking listing-readiness concerns."
+          : "Selected launch candidate can move forward, but the pricing floor and burden warnings should be reviewed."
+  };
+}
+
+export function buildMarketplaceFieldPrep(input: {
+  scenario: ScenarioForGuardrails & {
+    amazonFeePresetName?: string | null;
+    shippingZoneRuleName?: string | null;
+    packagingRuleName?: string | null;
+    shippingRuleName?: string | null;
+  };
+}) {
+  const assumptions = input.scenario.assumptionsSnapshot;
+  const dimensions = `${String(assumptions.lengthIn ?? "?")} x ${String(assumptions.depthIn ?? "?")} x ${String(
+    assumptions.thicknessIn ?? "?"
+  )} in`;
+  return {
+    productLabel: String(assumptions.name ?? input.scenario.name ?? "Shelf launch candidate"),
+    sku: assumptions.sku ?? null,
+    dimensionSummary: dimensions,
+    materialSummary: String(assumptions.materialCode ?? "Unknown material"),
+    edgeBandSummary: String(assumptions.edgeBandPattern ?? "No edge band pattern"),
+    packagingSummary: input.scenario.packagingRuleName ?? "Default packaging rule",
+    shippingSummary: input.scenario.shippingRuleName ?? "Default shipping rule",
+    feePresetLabel: input.scenario.amazonFeePresetName ?? "Default Amazon fee preset",
+    shippingZoneLabel: input.scenario.shippingZoneRuleName ?? "Base shipping zone",
+    launchStrategyLabel: input.scenario.launchStrategy ?? "BALANCED",
+    pricingSummary: {
+      breakEvenPriceCents: input.scenario.result.breakdown.breakEvenPriceCents,
+      minimumSellPriceCents: input.scenario.result.breakdown.recommendedMinSellPriceCents,
+      saferMarginPriceCents: input.scenario.result.breakdown.recommendedTargetSellPriceCents,
+      recommendedLaunchPriceCents: input.scenario.result.breakdown.recommendedTargetSellPriceCents
+    },
+    launchNotes: [],
+    warningNotes: [],
+    completenessFlags: {
+      hasProductLabel: Boolean(assumptions.name ?? input.scenario.name),
+      hasSku: Boolean(assumptions.sku),
+      hasDimensions: Boolean(assumptions.lengthIn && assumptions.depthIn),
+      hasMaterial: Boolean(assumptions.materialCode),
+      hasPackaging: Boolean(input.scenario.packagingRuleName),
+      hasShipping: Boolean(input.scenario.shippingRuleName),
+      hasFeePreset: Boolean(input.scenario.amazonFeePresetName),
+      hasShippingZone: Boolean(input.scenario.shippingZoneRuleName)
+    }
+  };
+}
+
+export function evaluateListingReadiness(input: {
+  scenario: ScenarioForGuardrails & {
+    amazonFeePresetName?: string | null;
+    shippingZoneRuleName?: string | null;
+    packagingRuleName?: string | null;
+    shippingRuleName?: string | null;
+    costProfileId?: string | null;
+    riskLevel?: LaunchRiskLevel | null;
+  };
+  selectedLaunchPriceCents?: number | null;
+}) {
+  const strongerAlerts = buildStrongerPriceFloorAlerts(input);
+  const marketplaceFields = buildMarketplaceFieldPrep({ scenario: input.scenario });
+  const missingFieldFlags = Object.entries(marketplaceFields.completenessFlags)
+    .filter(([, value]) => !value)
+    .map(([key]) => key);
+  const blockingWarnings = strongerAlerts.warnings.filter((warning) => warning.severity === "BLOCKING");
+  const listingReadinessStatus: ListingReadinessStatus =
+    blockingWarnings.length > 0
+      ? "BLOCKED"
+      : missingFieldFlags.length > 0 || input.scenario.riskLevel === "MEDIUM"
+        ? "NEEDS_REVIEW"
+        : "READY";
+
+  return {
+    listingReadinessStatus,
+    launchReadyBoolean: listingReadinessStatus === "READY",
+    strongerAlerts,
+    marketplaceFields,
+    listingReadinessSummary:
+      listingReadinessStatus === "READY"
+        ? "Launch candidate is packaged cleanly enough to move into listing preparation."
+        : listingReadinessStatus === "BLOCKED"
+          ? "Launch candidate still needs pricing or risk fixes before listing handoff."
+          : "Launch candidate is close, but some fields or warnings still need review.",
+    missingFieldFlags,
+    warningList: strongerAlerts.warnings
+  };
+}
+
+export function buildLaunchCandidatePackage(input: {
+  scenario: ScenarioForGuardrails & {
+    costProfileId?: string | null;
+    amazonFeePresetName?: string | null;
+    shippingZoneRuleName?: string | null;
+    packagingRuleName?: string | null;
+    shippingRuleName?: string | null;
+  };
+  listingReadiness: ReturnType<typeof evaluateListingReadiness>;
+  launchTemplateName?: string | null;
+  handoffSummary?: Record<string, unknown> | null;
+}) {
+  return {
+    scenarioId: input.scenario.id,
+    scenarioName: input.scenario.name,
+    costProfileId: input.scenario.costProfileId ?? null,
+    launchTemplateName: input.launchTemplateName ?? null,
+    listingReadinessStatus: input.listingReadiness.listingReadinessStatus,
+    launchReadyBoolean: input.listingReadiness.launchReadyBoolean,
+    marketplaceFieldSnapshot: input.listingReadiness.marketplaceFields,
+    warningSnapshot: input.listingReadiness.warningList,
+    readinessSnapshot: {
+      summary: input.listingReadiness.listingReadinessSummary,
+      missingFieldFlags: input.listingReadiness.missingFieldFlags
+    },
+    assumptionsSnapshot: input.scenario.assumptionsSnapshot,
+    resultSnapshot: input.scenario.result,
+    handoffSummary: input.handoffSummary ?? null
   };
 }

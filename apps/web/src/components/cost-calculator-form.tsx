@@ -13,6 +13,7 @@ import {
   createPackagingCostRule,
   createShippingCostRule,
   createShippingZoneRule,
+  evaluateCostComparisonListingReadiness,
   getCostComparisonSet,
   getCostComparisonSets,
   getCostProfile,
@@ -46,10 +47,13 @@ import { AmazonFeePresetEditor } from "./amazon-fee-preset-editor";
 import { CostBreakdownCard } from "./cost-breakdown-card";
 import { CostHistoryList } from "./cost-history-list";
 import { LaunchCandidateHandoffCard } from "./launch-candidate-handoff-card";
+import { LaunchExportSummaryCard } from "./launch-export-summary-card";
 import { LaunchGuardrailProfileEditor } from "./launch-guardrail-profile-editor";
+import { LaunchReadinessCard } from "./launch-readiness-card";
 import { LaunchRecommendationCard } from "./launch-recommendation-card";
 import { LaunchRiskSummaryCard } from "./launch-risk-summary-card";
 import { LaunchTemplateEditor } from "./launch-template-editor";
+import { ListingPrepFieldCard } from "./listing-prep-field-card";
 import { CostPricingRecommendationCard } from "./cost-pricing-recommendation-card";
 import { CostProfileEditor } from "./cost-profile-editor";
 import { CostScenarioBuilder } from "./cost-scenario-builder";
@@ -547,6 +551,9 @@ export function CostCalculatorForm() {
             selectedLaunchScenarioId: comparisonSet.selectedLaunchScenarioId ?? null,
             selectedLaunchSummary: comparisonSet.selectedLaunchSummary ?? null,
             riskSummary: comparisonSet.riskSummary ?? null,
+            selectedLaunchReadinessStatus: comparisonSet.selectedLaunchReadinessStatus ?? null,
+            selectedLaunchWarningSnapshot: comparisonSet.selectedLaunchWarningSnapshot ?? null,
+            selectedLaunchExportSnapshot: comparisonSet.selectedLaunchExportSnapshot ?? null,
             scenarios: comparisonSet.scenarios.map((entry, index) => ({
               id: entry.scenario.id,
               name: entry.scenario.name,
@@ -577,9 +584,14 @@ export function CostCalculatorForm() {
               guardrailProfileName: entry.scenario.guardrailProfileName,
               riskScore: entry.scenario.riskScore,
               riskLevel: entry.scenario.riskLevel,
+              listingReadinessStatus: entry.scenario.listingReadinessStatus,
               guardrailSnapshot: entry.scenario.guardrailSnapshot,
               warningSnapshot: entry.scenario.warningSnapshot,
               handoffSnapshot: entry.scenario.handoffSnapshot,
+              listingReadinessSnapshot: entry.scenario.listingReadinessSnapshot,
+              marketplaceFieldSnapshot: entry.scenario.marketplaceFieldSnapshot,
+              strongerAlertSnapshot: entry.scenario.strongerAlertSnapshot,
+              exportSnapshot: entry.scenario.exportSnapshot,
               isRecommendedLaunchScenario: entry.scenario.isRecommendedLaunchScenario,
               isLaunchApprovedCandidate: entry.scenario.isLaunchApprovedCandidate,
               riskSummary:
@@ -1024,6 +1036,25 @@ export function CostCalculatorForm() {
     });
   }
 
+  function handleEvaluateListingReadiness() {
+    const comparisonSetId = activeComparisonSetId;
+    if (!comparisonSetId) {
+      setError("Save a comparison set before evaluating listing readiness.");
+      return;
+    }
+
+    startTransition(() => {
+      void evaluateCostComparisonListingReadiness(comparisonSetId, {
+        selectedScenarioId: comparison?.selectedLaunchScenarioId ?? null
+      })
+        .then((payload) => loadComparisonSet(payload.comparisonSet.id))
+        .then(() => setSuccess("Listing readiness refreshed."))
+        .catch((caught) =>
+          setError(caught instanceof Error ? caught.message : "Failed to evaluate listing readiness.")
+        );
+    });
+  }
+
   if (loading) {
     return <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-8 text-slate-300">Loading Hugo cost engine…</div>;
   }
@@ -1089,6 +1120,7 @@ export function CostCalculatorForm() {
           <button type="button" onClick={handleSave} disabled={isPending} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Save calculation</button>
           <button type="button" onClick={handleCompare} disabled={isPending} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Compare scenarios</button>
           <button type="button" onClick={handleSaveComparisonSet} disabled={isPending} className="rounded-full border border-white/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Save comparison set</button>
+          <button type="button" onClick={handleEvaluateListingReadiness} disabled={isPending} className="rounded-full border border-sky-300/30 bg-sky-300/10 px-5 py-2 text-sm font-medium text-white disabled:opacity-60">Evaluate listing readiness</button>
         </div>
       </section>
 
@@ -1098,7 +1130,10 @@ export function CostCalculatorForm() {
           <CostPricingRecommendationCard preview={preview} result={result} />
           <LaunchRecommendationCard comparison={comparison} />
           <LaunchRiskSummaryCard comparison={comparison} />
+          <LaunchReadinessCard comparison={comparison} />
           <LaunchCandidateHandoffCard comparison={comparison} />
+          <ListingPrepFieldCard comparison={comparison} />
+          <LaunchExportSummaryCard comparison={comparison} />
           <CostScenarioBuilder
             scenarios={scenarios}
             feePresets={options.feePresets}

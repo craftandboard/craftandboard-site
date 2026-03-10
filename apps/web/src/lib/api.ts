@@ -3240,10 +3240,15 @@ export interface CostScenarioResult {
   guardrailProfileName?: string | null;
   riskScore?: number | null;
   riskLevel?: "LOW" | "MEDIUM" | "HIGH" | null;
+  listingReadinessStatus?: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
   guardrailSnapshot?: Record<string, unknown> | null;
   warningSnapshot?: Array<Record<string, unknown>> | null;
   riskSummary?: string | null;
   handoffSnapshot?: Record<string, unknown> | null;
+  listingReadinessSnapshot?: Record<string, unknown> | null;
+  marketplaceFieldSnapshot?: Record<string, unknown> | null;
+  strongerAlertSnapshot?: Record<string, unknown> | null;
+  exportSnapshot?: Record<string, unknown> | null;
   isRecommendedLaunchScenario: boolean;
   isLaunchApprovedCandidate?: boolean;
   deltas: {
@@ -3281,6 +3286,9 @@ export interface CostComparisonResult {
   selectedLaunchScenarioId?: string | null;
   selectedLaunchSummary?: Record<string, unknown> | null;
   riskSummary?: Record<string, unknown> | null;
+  selectedLaunchReadinessStatus?: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
+  selectedLaunchWarningSnapshot?: Array<Record<string, unknown>> | null;
+  selectedLaunchExportSnapshot?: Record<string, unknown> | null;
   scenarios: CostScenarioResult[];
 }
 
@@ -3305,9 +3313,14 @@ export interface CalculationScenarioRecord {
   rankingSummary: Record<string, unknown> | null;
   riskScore: number | null;
   riskLevel: "LOW" | "MEDIUM" | "HIGH" | null;
+  listingReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
   guardrailSnapshot: Record<string, unknown> | null;
   warningSnapshot: Array<Record<string, unknown>> | null;
   handoffSnapshot: Record<string, unknown> | null;
+  listingReadinessSnapshot: Record<string, unknown> | null;
+  marketplaceFieldSnapshot: Record<string, unknown> | null;
+  strongerAlertSnapshot: Record<string, unknown> | null;
+  exportSnapshot: Record<string, unknown> | null;
   isRecommendedLaunchScenario: boolean;
   isLaunchApprovedCandidate: boolean;
   assumptionsSnapshot: Record<string, unknown>;
@@ -3330,6 +3343,9 @@ export interface ComparisonSetRecord {
   comparisonSummary: Record<string, unknown> | null;
   selectedLaunchSummary: Record<string, unknown> | null;
   riskSummary: Record<string, unknown> | null;
+  selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
+  selectedLaunchWarningSnapshot: Array<Record<string, unknown>> | null;
+  selectedLaunchExportSnapshot: Record<string, unknown> | null;
   scenarios: Array<{
     id: string;
     sortOrder: number | null;
@@ -3352,6 +3368,7 @@ export interface ComparisonSetListItem {
   selectedLaunchScenarioName: string | null;
   comparisonSummary: Record<string, unknown> | null;
   riskSummary: Record<string, unknown> | null;
+  selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -3828,7 +3845,30 @@ export async function getCostComparisonHandoffSummary(comparisonSetId: string) {
     handoffSummary: Record<string, unknown> | null;
     selectedLaunchScenarioId: string | null;
     riskSummary: Record<string, unknown> | null;
+    selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
+    selectedLaunchWarningSnapshot: Array<Record<string, unknown>> | null;
+    exportSummary: Record<string, unknown> | null;
   }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/handoff-summary`);
+}
+
+export async function evaluateCostComparisonListingReadiness(
+  comparisonSetId: string,
+  input?: { selectedScenarioId?: string | null }
+) {
+  return sendJson<{ ok: true; comparisonSet: ComparisonSetRecord }>(
+    `/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/listing-readiness`,
+    { method: "POST", body: JSON.stringify(input ?? {}) }
+  );
+}
+
+export async function getCostComparisonExportSummary(comparisonSetId: string) {
+  return readJson<{
+    ok: true;
+    exportSummary: Record<string, unknown> | null;
+    selectedLaunchScenarioId: string | null;
+    selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
+    selectedLaunchWarningSnapshot: Array<Record<string, unknown>> | null;
+  }>(`/cost-comparison-sets/${encodeURIComponent(comparisonSetId)}/export-summary`);
 }
 
 export interface LeadListItem {

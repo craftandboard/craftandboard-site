@@ -647,9 +647,14 @@ export async function createCalculationScenarioRecord(input: {
   guardrailProfileId?: string | null;
   riskScore?: number | null;
   riskLevel?: "LOW" | "MEDIUM" | "HIGH" | null;
+  listingReadinessStatus?: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
   guardrailSnapshot?: unknown;
   warningSnapshot?: unknown;
   handoffSnapshot?: unknown;
+  listingReadinessSnapshot?: unknown;
+  marketplaceFieldSnapshot?: unknown;
+  strongerAlertSnapshot?: unknown;
+  exportSnapshot?: unknown;
   isRecommendedLaunchScenario?: boolean;
   isLaunchApprovedCandidate?: boolean;
   assumptionsSnapshot: unknown;
@@ -671,9 +676,14 @@ export async function createCalculationScenarioRecord(input: {
       guardrailProfileId: input.guardrailProfileId ?? undefined,
       riskScore: input.riskScore ?? undefined,
       riskLevel: input.riskLevel ?? undefined,
+      listingReadinessStatus: input.listingReadinessStatus ?? undefined,
       guardrailSnapshot: normalizeMetadata(input.guardrailSnapshot),
       warningSnapshot: normalizeMetadata(input.warningSnapshot),
       handoffSnapshot: normalizeMetadata(input.handoffSnapshot),
+      listingReadinessSnapshot: normalizeMetadata(input.listingReadinessSnapshot),
+      marketplaceFieldSnapshot: normalizeMetadata(input.marketplaceFieldSnapshot),
+      strongerAlertSnapshot: normalizeMetadata(input.strongerAlertSnapshot),
+      exportSnapshot: normalizeMetadata(input.exportSnapshot),
       isRecommendedLaunchScenario: input.isRecommendedLaunchScenario ?? false,
       isLaunchApprovedCandidate: input.isLaunchApprovedCandidate ?? false,
       assumptionsSnapshot: normalizeMetadata(input.assumptionsSnapshot),
@@ -693,6 +703,9 @@ export async function createCalculationComparisonSetRecord(input: {
   comparisonSummary?: unknown;
   selectedLaunchSummary?: unknown;
   riskSummary?: unknown;
+  selectedLaunchExportSnapshot?: unknown;
+  selectedLaunchReadinessStatus?: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null;
+  selectedLaunchWarningSnapshot?: unknown;
 }) {
   return prismaClient.calculationComparisonSet.create({
     data: {
@@ -705,7 +718,10 @@ export async function createCalculationComparisonSetRecord(input: {
       rankingSnapshot: normalizeMetadata(input.rankingSnapshot),
       comparisonSummary: normalizeMetadata(input.comparisonSummary),
       selectedLaunchSummary: normalizeMetadata(input.selectedLaunchSummary),
-      riskSummary: normalizeMetadata(input.riskSummary)
+      riskSummary: normalizeMetadata(input.riskSummary),
+      selectedLaunchExportSnapshot: normalizeMetadata(input.selectedLaunchExportSnapshot),
+      selectedLaunchReadinessStatus: input.selectedLaunchReadinessStatus ?? undefined,
+      selectedLaunchWarningSnapshot: normalizeMetadata(input.selectedLaunchWarningSnapshot)
     }
   });
 }
@@ -764,7 +780,9 @@ export async function listCalculationComparisonSetsForOrganization(organizationI
             include: {
               amazonFeePreset: true,
               shippingZoneRule: true,
-              guardrailProfile: true
+              guardrailProfile: true,
+              packagingRule: true,
+              shippingRule: true
             }
           }
         },
@@ -793,7 +811,9 @@ export async function getCalculationComparisonSetRecord(input: {
             include: {
               amazonFeePreset: true,
               shippingZoneRule: true,
-              guardrailProfile: true
+              guardrailProfile: true,
+              packagingRule: true,
+              shippingRule: true
             }
           }
         },

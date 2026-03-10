@@ -48,6 +48,8 @@ import {
   compareShelfCostScenarios,
   createLaunchGuardrailProfile,
   createLaunchTemplate,
+  evaluateComparisonSetListingReadiness,
+  getComparisonSetExportSummary,
   getShelfCostCalculation,
   listLaunchGuardrailProfiles,
   rankComparisonSet,
@@ -581,6 +583,145 @@ describe("cost engine service", () => {
 
     expect(repositoryMocks.updateCalculationComparisonSetRecord).toHaveBeenCalled();
     expect(payload.comparisonSet.recommendedScenarioId).toBe("scenario_1");
+  });
+
+  it("builds listing readiness and export snapshots for the selected launch scenario", async () => {
+    repositoryMocks.getCalculationComparisonSetRecord
+      .mockResolvedValueOnce({
+        id: "compare_1",
+        organizationId: "org_local_craft_board",
+        name: "Launch compare",
+        notes: null,
+        baseShelfSpecSnapshot: {},
+        rankingSnapshot: { recommendation: { recommendedScenarioId: "scenario_1" } },
+        comparisonSummary: { recommendedScenarioId: "scenario_1" },
+        recommendedScenarioId: "scenario_1",
+        selectedLaunchScenarioId: "scenario_1",
+        selectedLaunchSummary: null,
+        riskSummary: null,
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z"),
+        scenarios: [
+          {
+            id: "join_1",
+            sortOrder: 0,
+            createdAt: new Date("2026-03-10T00:00:00.000Z"),
+            calculationScenario: {
+              id: "scenario_1",
+              organizationId: "org_local_craft_board",
+              costProfileId: "profile_1",
+              name: "Balanced",
+              amazonFeePresetId: "preset_1",
+              amazonFeePreset: { name: "Amazon Standard" },
+              shippingZoneRuleId: "zone_1",
+              shippingZoneRule: { name: "Zone 2" },
+              packagingRuleId: "pack_1",
+              packagingRule: { packagingName: "Standard" },
+              shippingRuleId: "ship_1",
+              shippingRule: { shippingName: "Ground" },
+              shelfCostCalculationId: null,
+              launchStrategy: "BALANCED",
+              rankingScore: { toNumber: () => 51.25 },
+              rankingSummary: { recommendationNote: "Balanced" },
+              riskScore: { toNumber: () => 10 },
+              riskLevel: "LOW",
+              warningSnapshot: [],
+              handoffSnapshot: null,
+              assumptionsSnapshot: {
+                name: "Pantry shelf",
+                sku: "HUGO-SHELF-36W",
+                lengthIn: 36,
+                depthIn: 12,
+                thicknessIn: 0.75,
+                materialCode: "WHITE_MELAMINE_075",
+                edgeBandPattern: "LONG_EDGES"
+              },
+              resultSnapshot: {
+                breakdown: {
+                  subtotalCostCents: 3600,
+                  breakEvenPriceCents: 5200,
+                  recommendedMinSellPriceCents: 5800,
+                  recommendedTargetSellPriceCents: 6400,
+                  marketplaceFeeCostCents: 600,
+                  returnReserveCostCents: 80,
+                  damageReserveCostCents: 40
+                },
+                shipping: {
+                  baseCostCents: 1100,
+                  shippingBufferCostCents: 100
+                },
+                amazonFees: {
+                  closingFeeCostCents: 99,
+                  fulfillmentFeeCostCents: 450,
+                  storageAllowanceCostCents: 40,
+                  advertisingAllowanceCostCents: 120,
+                  miscMarketplaceCostCents: 20
+                }
+              },
+              createdAt: new Date("2026-03-10T00:00:00.000Z"),
+              updatedAt: new Date("2026-03-10T00:00:00.000Z")
+            }
+          }
+        ]
+      })
+      .mockResolvedValueOnce({
+        id: "compare_1",
+        organizationId: "org_local_craft_board",
+        name: "Launch compare",
+        notes: null,
+        baseShelfSpecSnapshot: {},
+        rankingSnapshot: { recommendation: { recommendedScenarioId: "scenario_1" } },
+        comparisonSummary: { recommendedScenarioId: "scenario_1" },
+        recommendedScenarioId: "scenario_1",
+        selectedLaunchScenarioId: "scenario_1",
+        selectedLaunchSummary: { scenarioId: "scenario_1" },
+        selectedLaunchExportSnapshot: { scenarioId: "scenario_1", listingReadinessStatus: "READY" },
+        selectedLaunchReadinessStatus: "READY",
+        selectedLaunchWarningSnapshot: [],
+        riskSummary: null,
+        recommendedScenario: { id: "scenario_1", name: "Balanced" },
+        selectedLaunchScenario: { id: "scenario_1", name: "Balanced" },
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z"),
+        scenarios: []
+      })
+      .mockResolvedValueOnce({
+        id: "compare_1",
+        organizationId: "org_local_craft_board",
+        name: "Launch compare",
+        notes: null,
+        selectedLaunchScenarioId: "scenario_1",
+        selectedLaunchExportSnapshot: { scenarioId: "scenario_1", listingReadinessStatus: "READY" },
+        selectedLaunchReadinessStatus: "READY",
+        selectedLaunchWarningSnapshot: [],
+        createdAt: new Date("2026-03-10T00:00:00.000Z"),
+        updatedAt: new Date("2026-03-10T00:00:00.000Z"),
+        scenarios: []
+      });
+
+    const evaluated = await evaluateComparisonSetListingReadiness({
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "compare_1",
+      selectedScenarioId: "scenario_1"
+    });
+    expect(repositoryMocks.updateCalculationScenarioRecord).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scenarioId: "scenario_1",
+        data: expect.objectContaining({
+          listingReadinessStatus: expect.any(String),
+          exportSnapshot: expect.any(Object)
+        })
+      })
+    );
+    expect(evaluated.comparisonSet.selectedLaunchReadinessStatus).toBe("READY");
+
+    const exportSummary = await getComparisonSetExportSummary({
+      organizationId: "org_local_craft_board",
+      comparisonSetId: "compare_1"
+    });
+    expect(exportSummary.exportSummary).toEqual(
+      expect.objectContaining({ scenarioId: "scenario_1", listingReadinessStatus: "READY" })
+    );
   });
 
   it("rejects missing edge band rules when the pattern requires one", async () => {

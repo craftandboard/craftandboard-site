@@ -1,8 +1,10 @@
 import { calculateShelfCost, compareScenarioResults } from "./calculator.js";
 import { resolveCostEngineAssumptions } from "./assumptions.js";
 import {
+  buildLaunchCandidatePackage,
   buildLaunchCandidateHandoff,
   buildScenarioRiskSummary,
+  evaluateListingReadiness,
   evaluateScenarioGuardrails
 } from "./guardrails.js";
 import { decimalToNumber } from "./normalization.js";
@@ -261,6 +263,56 @@ function normalizeUpdateData(input: AnyRecord) {
   return data;
 }
 
+function buildListingArtifactsForScenario(input: {
+  scenarioRecord: any;
+  launchTemplateName?: string | null;
+}) {
+  const mappedScenario = {
+    ...mapScenario(input.scenarioRecord),
+    costProfileId: input.scenarioRecord.costProfileId,
+    result: input.scenarioRecord.resultSnapshot
+  } as any;
+  const listingReadiness = evaluateListingReadiness({
+    scenario: mappedScenario
+  });
+  const handoffSummary =
+    input.scenarioRecord.handoffSnapshot ??
+    buildLaunchCandidateHandoff({
+      scenario: mappedScenario,
+      launchTemplateName: input.launchTemplateName ?? null,
+      riskSummary: {
+        riskScore: decimalToNumber(input.scenarioRecord.riskScore) ?? 0,
+        riskLevel: input.scenarioRecord.riskLevel ?? "LOW",
+        warnings: Array.isArray(input.scenarioRecord.warningSnapshot)
+          ? input.scenarioRecord.warningSnapshot
+          : [],
+        summary:
+          input.scenarioRecord.riskLevel === "HIGH"
+            ? "Selected launch candidate is still guardrail-risky."
+            : "Selected launch candidate clears the current guardrail profile."
+      }
+    });
+  const exportSnapshot = buildLaunchCandidatePackage({
+    scenario: mappedScenario,
+    listingReadiness,
+    launchTemplateName: input.launchTemplateName ?? null,
+    handoffSummary
+  });
+
+  return {
+    listingReadinessStatus: listingReadiness.listingReadinessStatus,
+    listingReadinessSnapshot: {
+      summary: listingReadiness.listingReadinessSummary,
+      launchReadyBoolean: listingReadiness.launchReadyBoolean,
+      missingFieldFlags: listingReadiness.missingFieldFlags
+    },
+    marketplaceFieldSnapshot: listingReadiness.marketplaceFields,
+    strongerAlertSnapshot: listingReadiness.strongerAlerts,
+    exportSnapshot,
+    handoffSummary
+  };
+}
+
 function mapCalculation(record: any) {
   return {
     id: record.id,
@@ -346,9 +398,14 @@ function mapScenario(record: any) {
     rankingSummary: record.rankingSummary ?? null,
     riskScore: decimalToNumber(record.riskScore),
     riskLevel: record.riskLevel ?? null,
+    listingReadinessStatus: record.listingReadinessStatus ?? null,
     guardrailSnapshot: record.guardrailSnapshot ?? null,
     warningSnapshot: record.warningSnapshot ?? null,
     handoffSnapshot: record.handoffSnapshot ?? null,
+    listingReadinessSnapshot: record.listingReadinessSnapshot ?? null,
+    marketplaceFieldSnapshot: record.marketplaceFieldSnapshot ?? null,
+    strongerAlertSnapshot: record.strongerAlertSnapshot ?? null,
+    exportSnapshot: record.exportSnapshot ?? null,
     isRecommendedLaunchScenario: Boolean(record.isRecommendedLaunchScenario),
     isLaunchApprovedCandidate: Boolean(record.isLaunchApprovedCandidate),
     assumptionsSnapshot: record.assumptionsSnapshot,
@@ -373,6 +430,9 @@ function mapComparisonSet(record: any) {
     comparisonSummary: record.comparisonSummary ?? null,
     selectedLaunchSummary: record.selectedLaunchSummary ?? null,
     riskSummary: record.riskSummary ?? null,
+    selectedLaunchExportSnapshot: record.selectedLaunchExportSnapshot ?? null,
+    selectedLaunchReadinessStatus: record.selectedLaunchReadinessStatus ?? null,
+    selectedLaunchWarningSnapshot: record.selectedLaunchWarningSnapshot ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -1351,9 +1411,14 @@ export async function saveComparisonSet(input: {
       guardrailProfileId: scenario.guardrailProfileId ?? null,
       riskScore: scenario.riskScore ?? null,
       riskLevel: scenario.riskLevel ?? null,
+      listingReadinessStatus: null,
       guardrailSnapshot: scenario.guardrailSnapshot ?? null,
       warningSnapshot: scenario.warningSnapshot ?? null,
       handoffSnapshot: scenario.handoffSnapshot ?? null,
+      listingReadinessSnapshot: null,
+      marketplaceFieldSnapshot: null,
+      strongerAlertSnapshot: null,
+      exportSnapshot: null,
       isRecommendedLaunchScenario: Boolean(scenario.isRecommendedLaunchScenario),
       isLaunchApprovedCandidate: Boolean(scenario.isLaunchApprovedCandidate),
       assumptionsSnapshot: scenario.assumptionsSnapshot,
@@ -1364,6 +1429,25 @@ export async function saveComparisonSet(input: {
 
   const recommendedScenarioRecord = scenarioRecords.find((scenario) => scenario.isRecommendedLaunchScenario);
   const selectedLaunchScenarioRecord = scenarioRecords.find((scenario) => scenario.isLaunchApprovedCandidate);
+  const selectedArtifacts = selectedLaunchScenarioRecord
+    ? buildListingArtifactsForScenario({ scenarioRecord: selectedLaunchScenarioRecord })
+    : null;
+
+  if (selectedLaunchScenarioRecord && selectedArtifacts) {
+    await updateCalculationScenarioRecord({
+      organizationId: input.organizationId,
+      scenarioId: selectedLaunchScenarioRecord.id,
+      data: normalizeUpdateData({
+        listingReadinessStatus: selectedArtifacts.listingReadinessStatus,
+        listingReadinessSnapshot: selectedArtifacts.listingReadinessSnapshot,
+        marketplaceFieldSnapshot: selectedArtifacts.marketplaceFieldSnapshot,
+        strongerAlertSnapshot: selectedArtifacts.strongerAlertSnapshot,
+        exportSnapshot: selectedArtifacts.exportSnapshot,
+        handoffSnapshot: selectedArtifacts.handoffSummary
+      })
+    });
+  }
+
   const set = await createCalculationComparisonSetRecord({
     organizationId: input.organizationId,
     name: input.name,
@@ -1373,8 +1457,12 @@ export async function saveComparisonSet(input: {
     selectedLaunchScenarioId: selectedLaunchScenarioRecord?.id ?? null,
     rankingSnapshot: comparison.comparison.ranking,
     comparisonSummary: comparison.comparison.ranking?.recommendation ?? null,
-    selectedLaunchSummary: comparison.comparison.selectedLaunchSummary ?? null,
+    selectedLaunchSummary: selectedArtifacts?.handoffSummary ?? comparison.comparison.selectedLaunchSummary ?? null,
     riskSummary: comparison.comparison.riskSummary ?? null
+    ,
+    selectedLaunchExportSnapshot: selectedArtifacts?.exportSnapshot ?? null,
+    selectedLaunchReadinessStatus: selectedArtifacts?.listingReadinessStatus ?? null,
+    selectedLaunchWarningSnapshot: selectedArtifacts?.strongerAlertSnapshot?.warnings ?? null
   });
 
   for (const [index, scenarioRecord] of scenarioRecords.entries()) {
@@ -1417,6 +1505,9 @@ export async function rankComparisonSet(input: {
   let selectedLaunchScenarioId: string | null = input.selectedScenarioId ?? null;
   let selectedLaunchSummary: AnyRecord | null = null;
   let riskSummary: AnyRecord | null = null;
+  let selectedLaunchExportSnapshot: AnyRecord | null = null;
+  let selectedLaunchReadinessStatus: "READY" | "NEEDS_REVIEW" | "BLOCKED" | null = null;
+  let selectedLaunchWarningSnapshot: AnyRecord[] | null = null;
   let guardrailProfile = null;
 
   if (input.guardrailProfileId) {
@@ -1484,30 +1575,26 @@ export async function rankComparisonSet(input: {
     )?.calculationScenario ?? null;
 
   if (selectedScenarioRecord) {
-    const warnings = Array.isArray(selectedScenarioRecord.warningSnapshot)
-      ? selectedScenarioRecord.warningSnapshot
-      : [];
-    selectedLaunchSummary = buildLaunchCandidateHandoff({
-      scenario: {
-        ...mapScenario(selectedScenarioRecord),
-        result: selectedScenarioRecord.resultSnapshot
-      } as any,
-      riskSummary: {
-        riskScore: decimalToNumber(selectedScenarioRecord.riskScore) ?? 0,
-        riskLevel: selectedScenarioRecord.riskLevel ?? "LOW",
-        warnings,
-        summary:
-          selectedScenarioRecord.riskLevel === "HIGH"
-            ? "Selected launch candidate is still guardrail-risky."
-            : "Selected launch candidate clears the current guardrail profile."
-      }
+    const selectedArtifacts = buildListingArtifactsForScenario({
+      scenarioRecord: selectedScenarioRecord
     });
+    selectedLaunchSummary = selectedArtifacts.handoffSummary;
+    selectedLaunchExportSnapshot = selectedArtifacts.exportSnapshot;
+    selectedLaunchReadinessStatus = selectedArtifacts.listingReadinessStatus;
+    selectedLaunchWarningSnapshot = Array.isArray(selectedArtifacts.strongerAlertSnapshot?.warnings)
+      ? selectedArtifacts.strongerAlertSnapshot.warnings
+      : [];
     await updateCalculationScenarioRecord({
       organizationId: input.organizationId,
       scenarioId: selectedScenarioRecord.id,
       data: {
         isLaunchApprovedCandidate: true,
-        handoffSnapshot: selectedLaunchSummary
+        handoffSnapshot: selectedLaunchSummary,
+        listingReadinessStatus: selectedLaunchReadinessStatus,
+        listingReadinessSnapshot: selectedArtifacts.listingReadinessSnapshot,
+        marketplaceFieldSnapshot: selectedArtifacts.marketplaceFieldSnapshot,
+        strongerAlertSnapshot: selectedArtifacts.strongerAlertSnapshot,
+        exportSnapshot: selectedLaunchExportSnapshot
       }
     });
   }
@@ -1537,7 +1624,10 @@ export async function rankComparisonSet(input: {
       rankingSnapshot: ranking,
       comparisonSummary: ranking.recommendation ?? undefined,
       selectedLaunchSummary: selectedLaunchSummary ?? undefined,
-      riskSummary: riskSummary ?? undefined
+      riskSummary: riskSummary ?? undefined,
+      selectedLaunchExportSnapshot: selectedLaunchExportSnapshot ?? undefined,
+      selectedLaunchReadinessStatus: selectedLaunchReadinessStatus ?? undefined,
+      selectedLaunchWarningSnapshot: selectedLaunchWarningSnapshot ?? undefined
     }
   });
 
@@ -1562,7 +1652,10 @@ export async function getComparisonSetRecommendation(input: {
         {}),
       selectedLaunchScenarioId: comparisonSet.selectedLaunchScenarioId ?? null,
       selectedLaunchSummary: comparisonSet.selectedLaunchSummary ?? null,
-      riskSummary: comparisonSet.riskSummary ?? null
+      riskSummary: comparisonSet.riskSummary ?? null,
+      selectedLaunchReadinessStatus: comparisonSet.selectedLaunchReadinessStatus ?? null,
+      selectedLaunchWarningSnapshot: comparisonSet.selectedLaunchWarningSnapshot ?? null,
+      selectedLaunchExportSnapshot: comparisonSet.selectedLaunchExportSnapshot ?? null
     }
   };
 }
@@ -1583,6 +1676,7 @@ export async function listComparisonSets(input: { organizationId: string }) {
       selectedLaunchScenarioName: record.selectedLaunchScenario?.name ?? null,
       comparisonSummary: record.comparisonSummary ?? null,
       riskSummary: record.riskSummary ?? null,
+      selectedLaunchReadinessStatus: record.selectedLaunchReadinessStatus ?? null,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString()
     }))
@@ -1637,6 +1731,86 @@ export async function getComparisonSetHandoffSummary(input: {
     ok: true,
     handoffSummary: set.selectedLaunchSummary ?? null,
     selectedLaunchScenarioId: set.selectedLaunchScenarioId ?? null,
-    riskSummary: set.riskSummary ?? null
+    riskSummary: set.riskSummary ?? null,
+    selectedLaunchReadinessStatus: set.selectedLaunchReadinessStatus ?? null,
+    selectedLaunchWarningSnapshot: set.selectedLaunchWarningSnapshot ?? null,
+    exportSummary: set.selectedLaunchExportSnapshot ?? null
+  };
+}
+
+export async function evaluateComparisonSetListingReadiness(input: {
+  organizationId: string;
+  comparisonSetId: string;
+  selectedScenarioId?: string | null;
+}) {
+  const comparisonSet = await getCalculationComparisonSetRecord(input);
+  if (!comparisonSet) {
+    throw new Error("Cost comparison set not found.");
+  }
+
+  const selectedScenarioId =
+    input.selectedScenarioId ??
+    comparisonSet.selectedLaunchScenarioId ??
+    comparisonSet.recommendedScenarioId ??
+    null;
+  if (!selectedScenarioId) {
+    throw new Error("A selected launch scenario is required before evaluating listing readiness.");
+  }
+
+  const scenarioRecord =
+    (comparisonSet.scenarios ?? []).find(
+      (entry: any) => entry.calculationScenario.id === selectedScenarioId
+    )?.calculationScenario ?? null;
+  if (!scenarioRecord) {
+    throw new Error("Selected launch scenario not found in this comparison set.");
+  }
+
+  const artifacts = buildListingArtifactsForScenario({ scenarioRecord });
+
+  await updateCalculationScenarioRecord({
+    organizationId: input.organizationId,
+    scenarioId: scenarioRecord.id,
+    data: normalizeUpdateData({
+      isLaunchApprovedCandidate: true,
+      handoffSnapshot: artifacts.handoffSummary,
+      listingReadinessStatus: artifacts.listingReadinessStatus,
+      listingReadinessSnapshot: artifacts.listingReadinessSnapshot,
+      marketplaceFieldSnapshot: artifacts.marketplaceFieldSnapshot,
+      strongerAlertSnapshot: artifacts.strongerAlertSnapshot,
+      exportSnapshot: artifacts.exportSnapshot
+    })
+  });
+
+  await updateCalculationComparisonSetRecord({
+    organizationId: input.organizationId,
+    comparisonSetId: input.comparisonSetId,
+    data: normalizeUpdateData({
+      selectedLaunchScenarioId: scenarioRecord.id,
+      selectedLaunchSummary: artifacts.handoffSummary,
+      selectedLaunchExportSnapshot: artifacts.exportSnapshot,
+      selectedLaunchReadinessStatus: artifacts.listingReadinessStatus,
+      selectedLaunchWarningSnapshot: artifacts.strongerAlertSnapshot?.warnings ?? null
+    })
+  });
+
+  const hydrated = await getCalculationComparisonSetRecord(input);
+  return { ok: true, comparisonSet: mapComparisonSet(hydrated) };
+}
+
+export async function getComparisonSetExportSummary(input: {
+  organizationId: string;
+  comparisonSetId: string;
+}) {
+  const set = await getCalculationComparisonSetRecord(input);
+  if (!set) {
+    throw new Error("Cost comparison set not found.");
+  }
+
+  return {
+    ok: true,
+    exportSummary: set.selectedLaunchExportSnapshot ?? null,
+    selectedLaunchScenarioId: set.selectedLaunchScenarioId ?? null,
+    selectedLaunchReadinessStatus: set.selectedLaunchReadinessStatus ?? null,
+    selectedLaunchWarningSnapshot: set.selectedLaunchWarningSnapshot ?? null
   };
 }

@@ -45,10 +45,14 @@
 34. Verify a ranked winner can still appear as risky
 35. Select a launch scenario explicitly from the ranking table
 36. Verify the launch handoff summary card shows chosen scenario, prices, burdens, and warnings
-37. Save the comparison set
-38. Reload the saved comparison set and confirm ranking, risk summary, selected launch candidate, and handoff summary persist
-39. Change one assumption or input and recalculate
-40. Confirm the result changes and remains explainable
+37. Click `Evaluate listing readiness`
+38. Verify the selected scenario shows a listing readiness badge with clear blocking or review warnings
+39. Verify the marketplace-prep field card shows product label, dimensions, material, packaging, shipping, fee preset, zone, and completeness flags
+40. Verify the export summary card renders a stable JSON-style launch-candidate package
+41. Save the comparison set
+42. Reload the saved comparison set and confirm ranking, risk summary, selected launch candidate, readiness status, warning snapshot, and export summary persist
+43. Change one assumption or input and recalculate
+44. Confirm the result changes and remains explainable
 
 ## Expected Pilot Behavior
 - No raw API calls or spreadsheets are required to use the calculator
@@ -58,3 +62,5 @@
 - A user can explain why one fee preset or shipping zone produces a safer or riskier launch price
 - A user can explain why the recommended launch scenario outranks the alternatives
 - A user can explain why the selected launch scenario is safe enough or still fragile before handing it into a future listing phase
+- A user can explain why a launch candidate is recommended but not yet listing-ready
+- A user can identify which marketplace-prep fields or price-floor warnings still need review before listing handoff

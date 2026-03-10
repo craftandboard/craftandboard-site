@@ -37,6 +37,12 @@ enum LaunchRiskLevel {
   HIGH
 }
 
+enum ListingReadinessStatus {
+  READY
+  NEEDS_REVIEW
+  BLOCKED
+}
+
 enum ShelfCostEdgeBandPattern {
   NONE
   LONG_EDGES
@@ -2551,9 +2557,14 @@ model CalculationScenario {
   guardrailProfileId     String?
   riskScore              Decimal?               @db.Decimal(12, 4)
   riskLevel              LaunchRiskLevel?
+  listingReadinessStatus ListingReadinessStatus?
   guardrailSnapshot      Json?
   warningSnapshot        Json?
   handoffSnapshot        Json?
+  listingReadinessSnapshot Json?
+  marketplaceFieldSnapshot Json?
+  strongerAlertSnapshot  Json?
+  exportSnapshot         Json?
   isRecommendedLaunchScenario Boolean           @default(false)
   isLaunchApprovedCandidate Boolean             @default(false)
   assumptionsSnapshot    Json
@@ -2576,6 +2587,7 @@ model CalculationScenario {
   @@index([organizationId, costProfileId])
   @@index([organizationId, rankingScore])
   @@index([organizationId, riskLevel])
+  @@index([organizationId, listingReadinessStatus])
 }
 
 model CalculationComparisonSet {
@@ -2590,6 +2602,9 @@ model CalculationComparisonSet {
   comparisonSummary    Json?
   selectedLaunchSummary Json?
   riskSummary         Json?
+  selectedLaunchExportSnapshot Json?
+  selectedLaunchReadinessStatus ListingReadinessStatus?
+  selectedLaunchWarningSnapshot Json?
   createdAt            DateTime               @default(now())
   updatedAt            DateTime               @updatedAt
   organization         Organization           @relation(fields: [organizationId], references: [id])
@@ -2600,6 +2615,7 @@ model CalculationComparisonSet {
   @@index([organizationId, createdAt])
   @@index([organizationId, recommendedScenarioId])
   @@index([organizationId, selectedLaunchScenarioId])
+  @@index([organizationId, selectedLaunchReadinessStatus])
 }
 
 model ComparisonSetScenario {

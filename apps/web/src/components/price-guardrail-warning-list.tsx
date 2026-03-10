@@ -3,16 +3,18 @@
 import { getRiskLevelLabel, getRiskLevelTone } from "../lib/cost-engine";
 
 export function PriceGuardrailWarningList({
-  warnings
+  warnings,
+  emptyMessage
 }: {
   warnings: Array<Record<string, unknown>> | null | undefined;
+  emptyMessage?: string;
 }) {
   const items = Array.isArray(warnings) ? warnings : [];
 
   if (!items.length) {
     return (
       <div className="rounded-2xl border border-dashed border-white/15 bg-slate-950/20 px-4 py-4 text-sm text-slate-300">
-        No active launch guardrail warnings for this scenario.
+        {emptyMessage ?? "No active launch guardrail warnings for this scenario."}
       </div>
     );
   }

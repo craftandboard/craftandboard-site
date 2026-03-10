@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   COST_PROFILE_STATUSES,
+  LISTING_READINESS_STATUSES,
   LAUNCH_RISK_LEVELS,
   LAUNCH_STRATEGIES,
   SHELF_COST_EDGE_BAND_PATTERNS
@@ -15,6 +16,7 @@ export const costProfileStatusSchema = z.enum(COST_PROFILE_STATUSES);
 export const shelfCostEdgeBandPatternSchema = z.enum(SHELF_COST_EDGE_BAND_PATTERNS);
 export const launchStrategySchema = z.enum(LAUNCH_STRATEGIES);
 export const launchRiskLevelSchema = z.enum(LAUNCH_RISK_LEVELS);
+export const listingReadinessStatusSchema = z.enum(LISTING_READINESS_STATUSES);
 
 export const costProfileIdParamsSchema = z.object({
   costProfileId: z.string().trim().min(1)
@@ -326,6 +328,10 @@ export const evaluateGuardrailsSchema = z.object({
 export const selectLaunchScenarioSchema = z.object({
   scenarioId: z.string().trim().min(1),
   guardrailProfileId: z.string().trim().min(1).nullable().optional()
+});
+
+export const evaluateListingReadinessSchema = z.object({
+  selectedScenarioId: z.string().trim().min(1).nullable().optional()
 });
 
 export const listShelfCostCalculationsQuerySchema = z.object({

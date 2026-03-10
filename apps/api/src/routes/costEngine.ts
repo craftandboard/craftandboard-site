@@ -22,6 +22,7 @@ import {
   createShippingZoneRule,
   getAmazonFeePreset,
   getComparisonSet,
+  getComparisonSetExportSummary,
   getComparisonSetHandoffSummary,
   getCostProfile,
   getComparisonSetRecommendation,
@@ -41,6 +42,7 @@ import {
   rankComparisonSet,
   selectLaunchScenario,
   evaluateComparisonSetGuardrails,
+  evaluateComparisonSetListingReadiness,
   updateAmazonFeePreset,
   updateCostProfile,
   updateEdgeBandCostRule,
@@ -87,10 +89,10 @@ import {
   updateShippingCostRuleSchema,
   updateShippingZoneRuleSchema,
   zoneRuleIdParamsSchema,
-  templateIdParamsSchema
-  ,
+  templateIdParamsSchema,
   guardrailProfileIdParamsSchema,
   evaluateGuardrailsSchema,
+  evaluateListingReadinessSchema,
   selectLaunchScenarioSchema
 } from "../modules/costEngine/schemas.js";
 
@@ -725,6 +727,23 @@ router.post("/cost-comparison-sets/:comparisonSetId/select-launch-scenario", asy
   }
 });
 
+router.post("/cost-comparison-sets/:comparisonSetId/listing-readiness", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    const body = evaluateListingReadinessSchema.parse(req.body ?? {});
+    res.json(
+      await evaluateComparisonSetListingReadiness({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId,
+        selectedScenarioId: body.selectedScenarioId ?? null
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.get("/cost-comparison-sets/:comparisonSetId/recommendation", async (req, res, next) => {
   try {
     const context = getCostCalculationReadContext(req);
@@ -746,6 +765,21 @@ router.get("/cost-comparison-sets/:comparisonSetId/handoff-summary", async (req,
     const params = comparisonSetIdParamsSchema.parse(req.params);
     res.json(
       await getComparisonSetHandoffSummary({
+        organizationId: context.currentOrganization.id,
+        comparisonSetId: params.comparisonSetId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/cost-comparison-sets/:comparisonSetId/export-summary", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = comparisonSetIdParamsSchema.parse(req.params);
+    res.json(
+      await getComparisonSetExportSummary({
         organizationId: context.currentOrganization.id,
         comparisonSetId: params.comparisonSetId
       })

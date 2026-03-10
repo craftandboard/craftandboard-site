@@ -197,3 +197,29 @@ export function getRiskLevelTone(level: string | null | undefined) {
       return "border-white/10 bg-white/5 text-slate-200";
   }
 }
+
+export function getListingReadinessLabel(status: string | null | undefined) {
+  switch (status) {
+    case "READY":
+      return "Launch-ready";
+    case "NEEDS_REVIEW":
+      return "Needs review";
+    case "BLOCKED":
+      return "Blocked";
+    default:
+      return "Not checked";
+  }
+}
+
+export function getListingReadinessTone(status: string | null | undefined) {
+  switch (status) {
+    case "READY":
+      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+    case "NEEDS_REVIEW":
+      return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+    case "BLOCKED":
+      return "border-rose-400/30 bg-rose-400/10 text-rose-100";
+    default:
+      return "border-white/10 bg-white/5 text-slate-200";
+  }
+}

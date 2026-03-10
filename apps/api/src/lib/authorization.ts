@@ -22,6 +22,7 @@ export type ApiCapability =
   | "proposal_acceptance_intake_read"
   | "proposal_acceptance_intake_write"
   | "proposal_acceptance_review_read"
+  | "proposal_acceptance_presentation_read"
   | "proposal_conversion_read"
   | "proposal_conversion_write"
   | "work_module_read"
@@ -77,6 +78,7 @@ const CAPABILITY_ROLES: Record<ApiCapability, Array<ApiRequestContext["membershi
   proposal_acceptance_intake_read: ["OWNER", "ADMIN"],
   proposal_acceptance_intake_write: ["OWNER", "ADMIN"],
   proposal_acceptance_review_read: ["OWNER", "ADMIN"],
+  proposal_acceptance_presentation_read: ["OWNER", "ADMIN"],
   proposal_conversion_read: ["OWNER", "ADMIN"],
   proposal_conversion_write: ["OWNER", "ADMIN"],
   work_module_read: ["OWNER", "ADMIN"],
@@ -133,6 +135,7 @@ const CAPABILITY_LABELS: Record<ApiCapability, string> = {
   proposal_acceptance_intake_read: "proposal acceptance intake access",
   proposal_acceptance_intake_write: "proposal acceptance intake management",
   proposal_acceptance_review_read: "proposal acceptance review access",
+  proposal_acceptance_presentation_read: "proposal acceptance presentation access",
   proposal_conversion_read: "proposal conversion access",
   proposal_conversion_write: "proposal conversion management",
   work_module_read: "work module access",

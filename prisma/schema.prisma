@@ -583,6 +583,22 @@ enum ProposalAcceptanceReviewOutcome {
   FAILED
 }
 
+enum ProposalAcceptancePresentationAction {
+  PRESENTATION_VIEWED
+  INSTRUCTIONS_RETURNED
+  READY_STATE_RETURNED
+  SUBMISSION_STATE_RETURNED
+  CONFIRMATION_RETURNED
+  PRESENTATION_BLOCKED
+  REQUEST_IGNORED_DUPLICATE
+}
+
+enum ProposalAcceptancePresentationOutcome {
+  APPLIED
+  SKIPPED
+  FAILED
+}
+
 enum ShelfJobStatus {
   READY
   HOLD
@@ -699,6 +715,7 @@ model Organization {
   proposalAcceptanceEvidence ProposalAcceptanceEvidence[]
   proposalAcceptanceIntakeLogs ProposalAcceptanceIntakeLog[]
   proposalAcceptanceReviewLogs ProposalAcceptanceReviewLog[]
+  proposalAcceptancePresentationLogs ProposalAcceptancePresentationLog[]
   parts     Part[]
   batches   Batch[]
   bundles   ProductionBundle[]
@@ -945,6 +962,7 @@ model Proposal {
   acceptanceEvidence ProposalAcceptanceEvidence[]
   acceptanceIntakeLogs ProposalAcceptanceIntakeLog[]
   acceptanceReviewLogs ProposalAcceptanceReviewLog[]
+  acceptancePresentationLogs ProposalAcceptancePresentationLog[]
 
   @@index([organizationId, projectId])
   @@index([organizationId, leadId])
@@ -1251,6 +1269,7 @@ model ProposalAcceptanceIntake {
   evidence              ProposalAcceptanceEvidence[]
   logs                  ProposalAcceptanceIntakeLog[]
   reviewLogs            ProposalAcceptanceReviewLog[]
+  presentationLogs      ProposalAcceptancePresentationLog[]
 
   @@index([organizationId, proposalId])
   @@index([organizationId, proposalId, status])
@@ -1304,6 +1323,24 @@ model ProposalAcceptanceReviewLog {
   organization   Organization                    @relation(fields: [organizationId], references: [id])
   proposal       Proposal                        @relation(fields: [proposalId], references: [id], onDelete: Cascade)
   intake         ProposalAcceptanceIntake        @relation(fields: [intakeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, proposalId])
+  @@index([organizationId, intakeId])
+}
+
+model ProposalAcceptancePresentationLog {
+  id             String                                @id @default(cuid())
+  organizationId String
+  proposalId     String
+  intakeId       String
+  action         ProposalAcceptancePresentationAction
+  outcome        ProposalAcceptancePresentationOutcome
+  message        String?
+  details        Json?
+  createdAt      DateTime                              @default(now())
+  organization   Organization                          @relation(fields: [organizationId], references: [id])
+  proposal       Proposal                              @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  intake         ProposalAcceptanceIntake              @relation(fields: [intakeId], references: [id], onDelete: Cascade)
 
   @@index([organizationId, proposalId])
   @@index([organizationId, intakeId])

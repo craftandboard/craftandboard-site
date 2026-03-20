@@ -12,7 +12,7 @@ export function CurrentContextChip({
     return (
       <a
         href={appUrl("/login")}
-        className="rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300 transition hover:border-emerald-300/40 hover:text-white"
+        className="rounded-full border border-[#dccfc1] bg-[#fffaf4] px-4 py-3 text-xs text-[#5d5044] transition hover:border-[#c6b6a5] hover:text-[#2c221b]"
       >
         Sign In
       </a>
@@ -20,15 +20,15 @@ export function CurrentContextChip({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-3 rounded-3xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-slate-300">
+    <div className="flex flex-wrap items-center gap-3 rounded-[1.5rem] border border-[#e2d6c9] bg-[#fffaf4] px-4 py-3 text-xs text-[#6f5f51]">
       <div>
-        <span className="text-white">{context.user.name ?? context.user.email}</span>
-        <span className="ml-2 text-emerald-300">{context.membership.role}</span>
+        <span className="text-[#2c221b]">{context.user.name ?? context.user.email}</span>
+        <span className="ml-2 text-[#6b7550]">{context.membership.role}</span>
       </div>
-      <div className="h-4 w-px bg-white/10" />
+      <div className="h-4 w-px bg-[#e2d6c9]" />
       <div>
-        <span className="text-white">{context.organization.name}</span>
-        <span className="ml-2 text-slate-400">{context.organization.slug}</span>
+        <span className="text-[#2c221b]">{context.organization.name}</span>
+        <span className="ml-2 text-[#8a7869]">{context.organization.slug}</span>
       </div>
       <OrgSwitcher currentSlug={context.organization.slug} organizations={context.organizations} />
       <LogoutButton />

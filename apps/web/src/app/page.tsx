@@ -31,8 +31,8 @@ export async function generateMetadata(): Promise<Metadata> {
   }
 
   return {
-    title: "FieldMetriq App",
-    description: "FieldMetriq app for operations, production, labels, costing, and inventory workflows.",
+    title: "Craft & Board Admin",
+    description: "Craft & Board admin for operations, production review, and marketing workflows.",
     alternates: {
       canonical: "/"
     }
@@ -97,21 +97,21 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <section className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
         <div className="rounded-[2rem] border border-[var(--panel-border)] bg-[var(--panel)] p-8">
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-300">Unified Operations</p>
+          <p className="text-sm uppercase tracking-[0.3em] text-[#6b7550]">Craft &amp; Board Operations</p>
           <h2 className="mt-4 text-5xl font-semibold leading-tight text-white">
-            One canonical operations surface for FieldMetriq.
+            One private workspace for orders, production, and shelf launch activity.
           </h2>
           <p className="mt-4 max-w-2xl text-base text-[var(--muted)]">
-            This dashboard favors canonical FieldMetriq entities first:
+            This dashboard favors the core operating records first:
             `SalesOrder`, `ShelfJob`, `ManufacturingPacket`,
             `ManufacturingBatch`, and `ManufacturingPart`. Transitional tools
-            remain available, but daily operations can start from here.
+            remain available, but the live Craft &amp; Board workflow can start from here.
           </p>
         </div>
-        <div className="rounded-[2rem] border border-[var(--panel-border)] bg-emerald-500/10 p-8">
-          <p className="text-sm uppercase tracking-[0.3em] text-emerald-200">Today</p>
+        <div className="rounded-[2rem] border border-[var(--panel-border)] bg-[#eef1e4] p-8">
+          <p className="text-sm uppercase tracking-[0.3em] text-[#6b7550]">Today</p>
           <p className="mt-4 text-3xl font-semibold text-white">{packets.length} packets</p>
-          <p className="mt-3 text-sm text-emerald-50/80">
+          <p className="mt-3 text-sm text-[#6f5f51]">
             {batches.length} manufacturing batches, {machineCandidates.length} machine candidates,
             {sessions.length} active container sessions, and {remnants.length} tracked remnants.
           </p>

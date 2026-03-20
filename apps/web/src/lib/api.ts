@@ -1,3 +1,10 @@
+import type { FloatingShelfConfig } from "./storefront/floatingShelf";
+import type { FloatingMantelConfig } from "./storefront/floatingMantel";
+import type { FloatingMantelOrderDraft, FloatingShelfOrderDraft } from "./storefront/order";
+import type {
+  ConfigurableProductQuoteResult,
+  StorefrontShippingDestination
+} from "./storefront/shipping/types";
 import { API_BASE_URL } from "./site-config";
 
 const ORG_COOKIE = "cb_org_slug";
@@ -3561,6 +3568,16 @@ export interface ListingPrepPackageRecord {
   closeoutVersion: string | null;
   completedArtifactSummarySnapshot: Record<string, unknown> | null;
   entryCompletionState: string | null;
+  postCompletionReviewSnapshot: Record<string, unknown> | null;
+  postCompletionReviewAt: string | null;
+  postCompletionReviewedByMembershipId: string | null;
+  postCompletionReviewNote: string | null;
+  artifactSupersessionStatus: string | null;
+  artifactSupersessionSummarySnapshot: Record<string, unknown> | null;
+  supersededAt: string | null;
+  supersededByListingPrepPackageId: string | null;
+  supersededByListingPrepPackageName: string | null;
+  supersessionVersion: string | null;
   currentApprovedArtifact: boolean;
   notes: string | null;
   approvedAt: string | null;
@@ -4269,6 +4286,16 @@ export async function confirmCostListingEntryComplete(
   );
 }
 
+export async function recordCostPostCompletionReview(
+  listingPrepPackageId: string,
+  input: { reviewNote?: string | null }
+) {
+  return sendJson<{ ok: true; listingPrepPackage: ListingPrepPackageRecord }>(
+    `/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/post-completion-review`,
+    { method: "POST", body: JSON.stringify(input) }
+  );
+}
+
 export async function getListingPrepManualAmazonExport(listingPrepPackageId: string) {
   return readJson<{
     ok: true;
@@ -4276,6 +4303,21 @@ export async function getListingPrepManualAmazonExport(listingPrepPackageId: str
     approvalState: string;
     currentApprovedArtifact: boolean;
   }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/manual-amazon-export`);
+}
+
+export async function getListingPrepSupersessionSummary(listingPrepPackageId: string) {
+  return readJson<{
+    ok: true;
+    artifactSupersessionStatus: string | null;
+    supersessionSummary: Record<string, unknown> | null;
+    postCompletionReview: Record<string, unknown> | null;
+    supersededAt: string | null;
+    supersededByListingPrepPackageId: string | null;
+    supersededByListingPrepPackageName: string | null;
+    supersessionVersion: string | null;
+    currentApprovedArtifact: boolean;
+    entryCompletionConfirmed: boolean;
+  }>(`/listing-prep-packages/${encodeURIComponent(listingPrepPackageId)}/supersession-summary`);
 }
 
 export async function getListingPrepManualWorksheet(listingPrepPackageId: string) {
@@ -5368,4 +5410,1708 @@ export async function updatePilotFeedback(
       body: JSON.stringify(input)
     }
   );
+}
+
+export type FloatingShelfConfiguration = FloatingShelfConfig;
+export type FloatingMantelConfiguration = FloatingMantelConfig;
+
+export interface FloatingShelfPriceComponent {
+  code: "material" | "fabrication" | "mounting" | "packaging" | "margin";
+  label: string;
+  amountCents: number;
+}
+
+export interface FloatingShelfPricingResult {
+  productFamily: "floating-shelves";
+  productSlug: "classic-floating-shelf";
+  currencyCode: "USD";
+  priceState: "instant" | "estimate" | "consult";
+  instantPriceEligible: boolean;
+  reviewRequired: boolean;
+  consultRequired: boolean;
+  quantity: number;
+  unitPriceCents: number;
+  totalPriceCents: number;
+  quantityTotalCents: number;
+  estimatedSubtotalCents: number;
+  depositEligible: boolean;
+  shippingProfileHint: "parcel-ready" | "oversize-home-delivery" | "review-required";
+  leadTimeText: string;
+  pricingBasisVersion: string;
+  warnings: string[];
+  customerMessage: string;
+  components: FloatingShelfPriceComponent[];
+}
+
+export interface FloatingMantelPricingResult {
+  productFamily: "floating-mantels";
+  productSlug: "classic-floating-mantel";
+  currencyCode: "USD";
+  priceState: "instant" | "estimate" | "consult";
+  instantPriceEligible: boolean;
+  reviewRequired: boolean;
+  consultRequired: boolean;
+  quantity: number;
+  unitPriceCents: number;
+  totalPriceCents: number;
+  quantityTotalCents: number;
+  estimatedSubtotalCents: number;
+  depositEligible: boolean;
+  shippingProfileHint: "parcel-ready" | "oversize-home-delivery" | "review-required";
+  leadTimeText: string;
+  pricingBasisVersion: string;
+  warnings: string[];
+  customerMessage: string;
+  components: FloatingShelfPriceComponent[];
+}
+
+export interface CraftBoardStorefrontOrderSubmission {
+  sourcePath?: string | null;
+  draft: FloatingShelfOrderDraft | FloatingMantelOrderDraft;
+}
+
+export interface CraftBoardStorefrontSeoAttributionAttempt {
+  attemptId: string;
+  createdAt: string;
+  sourcePath: string;
+  productFamily: string;
+  paymentStatus:
+    | "NOT_STARTED"
+    | "SESSION_CREATED"
+    | "PAYMENT_IN_PROGRESS"
+    | "PAID"
+    | "PAYMENT_FAILED"
+    | "CANCELLED"
+    | "EXPIRED";
+  paidAt?: string | null;
+}
+
+export interface CraftBoardStorefrontOrderAttemptSummary {
+  id: string;
+  requestId: string;
+  status: "RECEIVED" | "LIVE_SUBMITTED" | "FALLBACK_CAPTURED" | "REVIEW_REQUIRED";
+  paymentStatus:
+    | "NOT_STARTED"
+    | "SESSION_CREATED"
+    | "PAYMENT_IN_PROGRESS"
+    | "PAID"
+    | "PAYMENT_FAILED"
+    | "CANCELLED"
+    | "EXPIRED";
+  paymentMode: "DEPOSIT_REQUEST" | "FULL_PAYMENT_LATER" | "PAY_NOW_PLACEHOLDER";
+  instantPriceEligible: boolean;
+  consultRequired: boolean;
+  shippingMode?: "PARCEL" | "OVERSIZE_PARCEL" | "LTL_FREIGHT" | "LOCAL_DELIVERY" | "PICKUP" | "REVIEW_REQUIRED" | null;
+  packagingProfile?: "long_shelf_box" | "mantel_box" | "long_oversize_box" | "mantel_crate" | "freight_pallet" | null;
+  shippingCostCents?: number | null;
+  shippingReviewRequired?: boolean;
+  estimatedTransitDays?: number | null;
+  destinationZone?: string | null;
+  shippingBasisVersion?: string | null;
+  shippingQuoteSource?: "LIVE_PROVIDER" | "ESTIMATE_RULES" | "MANUAL_REVIEW" | null;
+  shippingCarrierName?: string | null;
+  shippingServiceLevel?: string | null;
+  shippingQuoteReference?: string | null;
+  shippingQuoteExpiresAt?: string | null;
+  shippingQuoteGeneratedAt?: string | null;
+  shippingFallbackUsed?: boolean;
+  taxAmountCents?: number | null;
+  taxableSubtotalCents?: number | null;
+  taxableShippingCents?: number | null;
+  taxReviewRequired?: boolean;
+  taxQuoteSource?: "LIVE_PROVIDER" | "ESTIMATE_RULES" | "NOT_APPLICABLE" | "MANUAL_REVIEW" | null;
+  taxRateBasisPoints?: number | null;
+  taxBasisVersion?: string | null;
+  taxQuoteGeneratedAt?: string | null;
+  taxQuoteExpiresAt?: string | null;
+  taxFallbackUsed?: boolean;
+  depositPercentBasisPoints?: number | null;
+  depositAmountCents?: number | null;
+  remainingBalanceAmountCents?: number | null;
+  paymentProvider?: string | null;
+  paymentProviderSessionId?: string | null;
+  paymentProviderIntentId?: string | null;
+  paymentInitiatedAt?: string | null;
+  paidAt?: string | null;
+  cancelledAt?: string | null;
+  paymentFailureReason?: string | null;
+  confirmationCode?: string | null;
+  customerStatusToken?: string | null;
+  fieldMetriqSubmissionStatus:
+    | "NOT_ATTEMPTED"
+    | "SUBMITTING"
+    | "RETRY_PENDING"
+    | "DISABLED"
+    | "SUCCEEDED"
+    | "FAILED"
+    | "SKIPPED"
+    | "REVIEW_REQUIRED";
+  fieldMetriqSubmissionAttemptedAt?: string | null;
+  fieldMetriqSubmissionSucceededAt?: string | null;
+  fieldMetriqSubmissionReference?: string | null;
+  fieldMetriqSubmissionError?: string | null;
+  fieldMetriqSubmissionRetryCount?: number;
+  fieldMetriqSubmittedAt?: string | null;
+  fieldMetriqFulfillmentClass?:
+    | "STANDARD_PARCEL_BUILD"
+    | "OVERSIZE_PARCEL_BUILD"
+    | "FREIGHT_BUILD"
+    | "MANUAL_REVIEW_BUILD"
+    | null;
+  fieldMetriqProductionProfile?:
+    | "FLOATING_SHELF_STANDARD"
+    | "FLOATING_MANTEL_STANDARD"
+    | null;
+  latestCustomerOrderStatus?:
+    | "PAYMENT_RECEIVED"
+    | "ORDER_RECEIVED"
+    | "IN_REVIEW"
+    | "IN_PRODUCTION"
+    | "PREPARING_TO_SHIP"
+    | "SHIPPED"
+    | "DELIVERED"
+    | "NEEDS_ATTENTION"
+    | null;
+  latestCustomerOrderStatusLabel?: string | null;
+  latestCustomerStatusUpdatedAt?: string | null;
+  fieldMetriqOrderReference?: string | null;
+  fieldMetriqLastStatusSyncAt?: string | null;
+  orderConfirmationEmailSentAt?: string | null;
+  paymentReceiptEmailSentAt?: string | null;
+  lastCustomerStatusEmailed?:
+    | "PAYMENT_RECEIVED"
+    | "ORDER_RECEIVED"
+    | "IN_REVIEW"
+    | "IN_PRODUCTION"
+    | "PREPARING_TO_SHIP"
+    | "SHIPPED"
+    | "DELIVERED"
+    | "NEEDS_ATTENTION"
+    | null;
+  lastCustomerStatusEmailedAt?: string | null;
+  configuration: Record<string, unknown>;
+  pricing: Record<string, unknown>;
+  shippingEstimate?: Record<string, unknown> | null;
+  shippingWarnings?: string[];
+  taxJurisdictionSummary?: Record<string, unknown> | null;
+  taxWarnings?: string[];
+  taxReasonCodes?: string[];
+  customer: Record<string, unknown>;
+  shipping: Record<string, unknown>;
+}
+
+export type CraftBoardStorefrontQuoteResult =
+  | ConfigurableProductQuoteResult<FloatingShelfPricingResult>
+  | ConfigurableProductQuoteResult<FloatingMantelPricingResult>;
+
+export async function getFloatingShelfPricing(input: { configuration: FloatingShelfConfiguration }) {
+  return sendJson<{ ok: true; pricing: FloatingShelfPricingResult }>(
+    "/public/craft-board/pricing/floating-shelves",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function getFloatingMantelPricing(input: { configuration: FloatingMantelConfiguration }) {
+  return sendJson<{ ok: true; pricing: FloatingMantelPricingResult }>(
+    "/public/craft-board/storefront/floating-mantels/price",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function getCraftBoardStorefrontQuote(input: {
+  configuration: FloatingShelfConfiguration | FloatingMantelConfiguration;
+  destination: StorefrontShippingDestination;
+}) {
+  return sendJson<{ ok: true; quote: CraftBoardStorefrontQuoteResult }>(
+    "/public/craft-board/storefront/products/quote",
+    {
+      method: "POST",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function submitCraftBoardStorefrontOrder(input: CraftBoardStorefrontOrderSubmission) {
+  return sendJson<{
+    ok: true;
+    requestId: string;
+    attemptId: string;
+    mode: "payment-required" | "live-submitted" | "fallback-captured" | "review-required";
+    pricing: FloatingShelfPricingResult | FloatingMantelPricingResult;
+    quote?: CraftBoardStorefrontQuoteResult;
+    orderAttempt: CraftBoardStorefrontOrderAttemptSummary;
+    inquiry?: CraftBoardInquiryItem;
+    submissionReference?: string | null;
+    message: string;
+  }>("/public/craft-board/storefront/orders", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createCraftBoardStorefrontPaymentSession(
+  attemptId: string,
+  input?: {
+    successPath?: string | null;
+    cancelPath?: string | null;
+  }
+) {
+  return sendJson<{
+    ok: true;
+    paymentSession: {
+      attemptId: string;
+      redirectUrl: string;
+      simulated: boolean;
+      paymentProvider: "STRIPE";
+      shippingCostCents: number | null;
+      shippingQuoteSource: "LIVE_PROVIDER" | "ESTIMATE_RULES" | "MANUAL_REVIEW" | null;
+      taxAmountCents: number | null;
+      taxQuoteSource: "LIVE_PROVIDER" | "ESTIMATE_RULES" | "NOT_APPLICABLE" | "MANUAL_REVIEW" | null;
+      depositAmountCents: number | null;
+      remainingBalanceAmountCents: number | null;
+      confirmationCode: string | null;
+      successUrl: string;
+      cancelUrl: string;
+    };
+  }>(`/public/craft-board/storefront/orders/${encodeURIComponent(attemptId)}/payment-session`, {
+    method: "POST",
+    body: JSON.stringify(input ?? {})
+  });
+}
+
+export async function getCraftBoardStorefrontSeoAttributionSummary(input?: {
+  lookbackDays?: number;
+}) {
+  const params = new URLSearchParams();
+
+  if (input?.lookbackDays) {
+    params.set("lookbackDays", String(input.lookbackDays));
+  }
+
+  return readJson<{
+    ok: true;
+    lookbackDays: number;
+    attempts: CraftBoardStorefrontSeoAttributionAttempt[];
+  }>(`/craft-board/storefront/seo-attribution${params.toString() ? `?${params.toString()}` : ""}`);
+}
+
+export interface CraftBoardOutreachSeedTargetInput {
+  sourceKey: string;
+  domain: string;
+  siteName: string;
+  targetType: string;
+  authorityTier: string;
+  topicCluster: string;
+  fitNotes: string;
+  preferredAssetTypes: string[];
+  preferredCampaignKeys: string[];
+  contactMethod: string | null;
+  notes: string | null;
+}
+
+export interface CraftBoardOutreachWorkspaceResponse {
+  ok: true;
+  summary: {
+    totalTargets: number;
+    qualifiedTargets: number;
+    contactedTargets: number;
+    followUpsDue: number;
+    linksWon: number;
+    rejectedTargets: number;
+    activeCampaigns: number;
+  };
+  targets: Array<{
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    domain: string;
+    siteName: string;
+    targetType: string;
+    authorityTier: string;
+    topicCluster: string;
+    fitNotes: string;
+    preferredAssetTypes: string[];
+    preferredCampaignKeys: string[];
+    topCampaignKey: string | null;
+    status: string;
+    primaryContactName: string | null;
+    primaryContactEmail: string | null;
+    contactMethod: string | null;
+    lastContactedAt: string | null;
+    nextFollowUpAt: string | null;
+    lastResponseAt: string | null;
+    notes: string | null;
+    source: string;
+    isSeeded: boolean;
+    latestActivityNote: string | null;
+    latestActivityAt: string | null;
+    followUpDue: boolean;
+  }>;
+  followUpsDue: Array<{
+    id: string;
+    siteName: string;
+    domain: string;
+    campaignKey: string | null;
+    nextFollowUpAt: string | null;
+    lastContactedAt: string | null;
+    notes: string | null;
+  }>;
+  campaignProgress: Array<{
+    campaignKey: string;
+    assignedCount: number;
+    contactedCount: number;
+    followUpDueCount: number;
+    wonCount: number;
+    rejectedCount: number;
+  }>;
+  recentActivities: Array<{
+    id: string;
+    createdAt: string;
+    activityType: string;
+    campaignKey: string | null;
+    assetPageKey: string | null;
+    note: string;
+    outcome: string | null;
+    nextFollowUpAt: string | null;
+    target: {
+      id: string;
+      siteName: string;
+      domain: string;
+    };
+  }>;
+  selectedTarget: {
+    id: string;
+    createdAt: string;
+    updatedAt: string;
+    domain: string;
+    siteName: string;
+    targetType: string;
+    authorityTier: string;
+    topicCluster: string;
+    fitNotes: string;
+    preferredAssetTypes: string[];
+    preferredCampaignKeys: string[];
+    status: string;
+    primaryContactName: string | null;
+    primaryContactEmail: string | null;
+    contactMethod: string | null;
+    lastContactedAt: string | null;
+    nextFollowUpAt: string | null;
+    lastResponseAt: string | null;
+    notes: string | null;
+    source: string;
+    isSeeded: boolean;
+    activities: Array<{
+      id: string;
+      createdAt: string;
+      activityType: string;
+      campaignKey: string | null;
+      assetPageKey: string | null;
+      note: string;
+      outcome: string | null;
+      nextFollowUpAt: string | null;
+    }>;
+  } | null;
+}
+
+export async function syncCraftBoardOutreachSeedTargets(input: {
+  targets: CraftBoardOutreachSeedTargetInput[];
+}) {
+  return sendJson<{
+    ok: true;
+    targetCount: number;
+  }>("/craft-board/outreach/targets/sync-seeds", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getCraftBoardOutreachWorkspace(input?: {
+  status?: string;
+  targetType?: string;
+  campaignKey?: string;
+  authorityTier?: string;
+  targetId?: string;
+}) {
+  const params = new URLSearchParams();
+
+  if (input?.status) {
+    params.set("status", input.status);
+  }
+  if (input?.targetType) {
+    params.set("targetType", input.targetType);
+  }
+  if (input?.campaignKey) {
+    params.set("campaignKey", input.campaignKey);
+  }
+  if (input?.authorityTier) {
+    params.set("authorityTier", input.authorityTier);
+  }
+  if (input?.targetId) {
+    params.set("targetId", input.targetId);
+  }
+
+  return readJson<CraftBoardOutreachWorkspaceResponse>(
+    `/craft-board/outreach/workspace${params.toString() ? `?${params.toString()}` : ""}`
+  );
+}
+
+export async function createCraftBoardOutreachTarget(input: {
+  siteName: string;
+  domain: string;
+  targetType: string;
+  authorityTier: string;
+  topicCluster: string;
+  fitNotes: string;
+  preferredAssetTypes?: string[];
+  preferredCampaignKeys?: string[];
+  primaryContactName?: string | null;
+  primaryContactEmail?: string | null;
+  contactMethod?: string | null;
+  notes?: string | null;
+}) {
+  return sendJson<{
+    ok: true;
+    targetId: string;
+  }>("/craft-board/outreach/targets", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateCraftBoardOutreachTarget(input: {
+  targetId: string;
+  siteName?: string;
+  domain?: string;
+  targetType?: string;
+  authorityTier?: string;
+  topicCluster?: string;
+  fitNotes?: string;
+  preferredAssetTypes?: string[];
+  preferredCampaignKeys?: string[];
+  status?: string;
+  primaryContactName?: string | null;
+  primaryContactEmail?: string | null;
+  contactMethod?: string | null;
+  lastContactedAt?: string | null;
+  nextFollowUpAt?: string | null;
+  lastResponseAt?: string | null;
+  notes?: string | null;
+}) {
+  const { targetId, ...body } = input;
+  return sendJson<{
+    ok: true;
+  }>(`/craft-board/outreach/targets/${targetId}`, {
+    method: "PATCH",
+    body: JSON.stringify(body)
+  });
+}
+
+export async function createCraftBoardOutreachActivity(input: {
+  targetId: string;
+  activityType: string;
+  campaignKey?: string | null;
+  assetPageKey?: string | null;
+  note: string;
+  outcome?: string | null;
+  nextFollowUpAt?: string | null;
+  status?: string | null;
+}) {
+  const { targetId, ...body } = input;
+  return sendJson<{
+    ok: true;
+  }>(`/craft-board/outreach/targets/${targetId}/activities`, {
+    method: "POST",
+    body: JSON.stringify(body)
+  });
+}
+
+export async function getCraftBoardStorefrontOrderConfirmation(attemptId: string) {
+  return sendJson<{
+    ok: true;
+    orderAttempt: CraftBoardStorefrontOrderAttemptSummary;
+    confirmation: {
+      requestId: string;
+      confirmationCode: string | null;
+      customerStatusToken: string | null;
+      paymentMode: "DEPOSIT_REQUEST" | "FULL_PAYMENT_LATER" | "PAY_NOW_PLACEHOLDER";
+      paymentStatus:
+        | "NOT_STARTED"
+        | "SESSION_CREATED"
+        | "PAYMENT_IN_PROGRESS"
+        | "PAID"
+        | "PAYMENT_FAILED"
+        | "CANCELLED"
+        | "EXPIRED";
+      shippingMode:
+        | "PARCEL"
+        | "OVERSIZE_PARCEL"
+        | "LTL_FREIGHT"
+        | "LOCAL_DELIVERY"
+        | "PICKUP"
+        | "REVIEW_REQUIRED"
+        | null;
+      packagingProfile:
+        | "long_shelf_box"
+        | "mantel_box"
+        | "long_oversize_box"
+        | "mantel_crate"
+        | "freight_pallet"
+        | null;
+      shippingCostCents: number | null;
+      shippingReviewRequired: boolean;
+      estimatedTransitDays: number | null;
+      destinationZone: string | null;
+      shippingQuoteSource: "LIVE_PROVIDER" | "ESTIMATE_RULES" | "MANUAL_REVIEW" | null;
+      shippingCarrierName: string | null;
+      shippingServiceLevel: string | null;
+      shippingQuoteReference: string | null;
+      shippingQuoteExpiresAt: string | null;
+      shippingQuoteGeneratedAt: string | null;
+      shippingFallbackUsed: boolean;
+      taxAmountCents: number | null;
+      taxReviewRequired: boolean;
+      taxQuoteSource: "LIVE_PROVIDER" | "ESTIMATE_RULES" | "NOT_APPLICABLE" | "MANUAL_REVIEW" | null;
+      taxRateBasisPoints: number | null;
+      taxQuoteGeneratedAt: string | null;
+      taxQuoteExpiresAt: string | null;
+      taxFallbackUsed: boolean;
+      depositAmountCents: number | null;
+      remainingBalanceAmountCents: number | null;
+      paidAt: string | null;
+      submissionReference: string | null;
+      fieldMetriqSubmissionStatus:
+        | "NOT_ATTEMPTED"
+        | "SUBMITTING"
+        | "RETRY_PENDING"
+        | "DISABLED"
+        | "SUCCEEDED"
+        | "FAILED"
+        | "SKIPPED"
+        | "REVIEW_REQUIRED";
+      fieldMetriqSubmissionError: string | null;
+      fieldMetriqSubmissionRetryCount: number;
+      fieldMetriqFulfillmentClass:
+        | "STANDARD_PARCEL_BUILD"
+        | "OVERSIZE_PARCEL_BUILD"
+        | "FREIGHT_BUILD"
+        | "MANUAL_REVIEW_BUILD"
+        | null;
+      fieldMetriqProductionProfile:
+        | "FLOATING_SHELF_STANDARD"
+        | "FLOATING_MANTEL_STANDARD"
+        | null;
+      orderConfirmationEmailSentAt: string | null;
+    };
+  }>(`/public/craft-board/storefront/orders/${encodeURIComponent(attemptId)}/confirmation`);
+}
+
+export async function getCraftBoardStorefrontOrderStatus(publicToken: string) {
+  return sendJson<{
+    ok: true;
+    status: {
+      orderReference: string;
+      statusTokenSafe: string;
+      currentStatus:
+        | "PAYMENT_RECEIVED"
+        | "ORDER_RECEIVED"
+        | "IN_REVIEW"
+        | "IN_PRODUCTION"
+        | "PREPARING_TO_SHIP"
+        | "SHIPPED"
+        | "DELIVERED"
+        | "NEEDS_ATTENTION";
+      currentStatusLabel: string;
+      currentStatusDescription: string;
+      lastUpdatedAt: string | null;
+      orderPlacedAt: string;
+      paidAt: string | null;
+      amountPaidCents: number | null;
+      totalAmountCents: number;
+      productSummary: {
+        productDisplayName: string;
+        summaryLines: string[];
+        quantity: number;
+      };
+      shippingSummary: {
+        shippingMode: string | null;
+        packagingProfile: string | null;
+        carrierName: string | null;
+        serviceLevel: string | null;
+        estimatedTransitDays: number | null;
+        shippingCostCents: number | null;
+        trackingNumber: string | null;
+        trackingUrl: string | null;
+        customerMessage: string | null;
+      };
+      changeRequestEligible: boolean;
+      changeRequestMessage: string | null;
+      changeRequests: Array<{
+        id: string;
+        requestType:
+          | "UPDATE_DIMENSIONS"
+          | "UPDATE_MATERIAL_OR_FINISH"
+          | "UPDATE_MOUNTING"
+          | "UPDATE_SHIPPING_ADDRESS"
+          | "HOLD_ORDER"
+          | "CANCEL_REQUEST"
+          | "GENERAL_CHANGE_REQUEST";
+        requestTypeLabel: string;
+        customerSafeStatus:
+          | "REQUEST_RECEIVED"
+          | "UNDER_REVIEW"
+          | "NEEDS_MORE_INFORMATION"
+          | "APPROVED"
+          | "DECLINED"
+          | "RESOLVED";
+        customerSafeStatusLabel: string;
+        customerSafeSummary: string;
+        createdAt: string;
+        lastUpdatedAt: string;
+        resolutionCustomerMessage: string | null;
+      }>;
+      issueReportEligible: boolean;
+      issueReportMessage: string | null;
+      issues: Array<{
+        id: string;
+        issueType:
+          | "SHIPPING_DAMAGE"
+          | "MISSING_PARTS_OR_HARDWARE"
+          | "WRONG_ITEM_RECEIVED"
+          | "FINISH_OR_QUALITY_ISSUE"
+          | "DELIVERY_PROBLEM"
+          | "RETURN_REQUEST"
+          | "GENERAL_ORDER_ISSUE";
+        issueTypeLabel: string;
+        customerSafeStatus:
+          | "ISSUE_RECEIVED"
+          | "UNDER_REVIEW"
+          | "NEEDS_MORE_INFORMATION"
+          | "APPROVED_FOR_ACTION"
+          | "DECLINED"
+          | "RESOLVED";
+        customerSafeStatusLabel: string;
+        customerSafeSummary: string;
+        createdAt: string;
+        lastUpdatedAt: string;
+        resolutionCustomerMessage: string | null;
+      }>;
+      timeline: Array<{
+        statusCode:
+          | "PAYMENT_RECEIVED"
+          | "ORDER_RECEIVED"
+          | "IN_REVIEW"
+          | "IN_PRODUCTION"
+          | "PREPARING_TO_SHIP"
+          | "SHIPPED"
+          | "DELIVERED"
+          | "NEEDS_ATTENTION";
+        statusLabel: string;
+        description: string;
+        occurredAt: string | null;
+        isCurrent: boolean;
+        isComplete: boolean;
+      }>;
+      supportMessage: string | null;
+    };
+  }>(`/public/craft-board/storefront/order-status/${encodeURIComponent(publicToken)}`);
+}
+
+export async function createCraftBoardStorefrontChangeRequest(
+  publicToken: string,
+  input: {
+    requestType:
+      | "UPDATE_DIMENSIONS"
+      | "UPDATE_MATERIAL_OR_FINISH"
+      | "UPDATE_MOUNTING"
+      | "UPDATE_SHIPPING_ADDRESS"
+      | "HOLD_ORDER"
+      | "CANCEL_REQUEST"
+      | "GENERAL_CHANGE_REQUEST";
+    requestedByName: string;
+    requestedByEmail: string;
+    requestedByPhone?: string | null;
+    customerMessage: string;
+    requestedChanges: {
+      proposedDimensions?: {
+        width?: number | null;
+        depth?: number | null;
+        thickness?: number | null;
+        length?: number | null;
+        height?: number | null;
+        unit?: "IN" | null;
+      } | null;
+      requestedMaterialOrFinish?: string | null;
+      requestedMounting?: string | null;
+      requestedShippingAddress?: {
+        fullName: string;
+        address1: string;
+        address2?: string | null;
+        city: string;
+        state: string;
+        postalCode: string;
+        country: string;
+      } | null;
+      holdReason?: string | null;
+      cancelReason?: string | null;
+      generalNotes?: string | null;
+    };
+  }
+) {
+  return sendJson<{
+    ok: true;
+    changeRequest: {
+      id: string;
+      requestType: string;
+      requestTypeLabel: string;
+      customerSafeStatus: string;
+      customerSafeStatusLabel: string;
+      customerSafeSummary: string;
+      createdAt: string;
+      lastUpdatedAt: string;
+      resolutionCustomerMessage: string | null;
+    };
+    message: string;
+  }>(`/public/craft-board/storefront/order-status/${encodeURIComponent(publicToken)}/change-requests`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function createCraftBoardStorefrontOrderIssue(
+  publicToken: string,
+  input: {
+    issueType:
+      | "SHIPPING_DAMAGE"
+      | "MISSING_PARTS_OR_HARDWARE"
+      | "WRONG_ITEM_RECEIVED"
+      | "FINISH_OR_QUALITY_ISSUE"
+      | "DELIVERY_PROBLEM"
+      | "RETURN_REQUEST"
+      | "GENERAL_ORDER_ISSUE";
+    reportedByName: string;
+    reportedByEmail: string;
+    reportedByPhone?: string | null;
+    customerMessage: string;
+    issueDetails: {
+      damageDescription?: string | null;
+      packageConditionDescription?: string | null;
+      missingItems?: string | null;
+      expectedItemDetails?: string | null;
+      receivedItemDetails?: string | null;
+      qualityIssueDescription?: string | null;
+      deliveryProblemDescription?: string | null;
+      returnReason?: string | null;
+      generalNotes?: string | null;
+      customerAttachmentSummary?: {
+        attachmentCount?: number | null;
+        note?: string | null;
+      } | null;
+    };
+  }
+) {
+  return sendJson<{
+    ok: true;
+    issue: {
+      id: string;
+      issueType: string;
+      issueTypeLabel: string;
+      customerSafeStatus: string;
+      customerSafeStatusLabel: string;
+      customerSafeSummary: string;
+      createdAt: string;
+      lastUpdatedAt: string;
+      resolutionCustomerMessage: string | null;
+    };
+    message: string;
+  }>(`/public/craft-board/storefront/order-status/${encodeURIComponent(publicToken)}/issues`, {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function completeCraftBoardStorefrontTestPayment(attemptId: string) {
+  return sendJson<{
+    ok: true;
+    orderAttempt: CraftBoardStorefrontOrderAttemptSummary;
+    submissionReference?: string | null;
+  }>(`/public/craft-board/storefront/orders/${encodeURIComponent(attemptId)}/dev-complete-payment`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
+export async function cancelCraftBoardStorefrontPayment(attemptId: string) {
+  return sendJson<{
+    ok: true;
+    orderAttempt: CraftBoardStorefrontOrderAttemptSummary;
+  }>(`/public/craft-board/storefront/orders/${encodeURIComponent(attemptId)}/payment-cancel`, {
+    method: "POST",
+    body: JSON.stringify({})
+  });
+}
+
+export interface CraftBoardInquiryItem {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  status: "NEW" | "REVIEWED" | "QUOTE_IN_PROGRESS" | "QUOTED" | "CLOSED" | "LOST";
+  reviewedAt?: string | null;
+  quotedAt?: string | null;
+  source: string;
+  sourcePath?: string | null;
+  productFamily: string;
+  productSlug?: string | null;
+  productName: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string | null;
+  widthValue?: number | null;
+  widthUnit?: string | null;
+  depthValue?: number | null;
+  depthUnit?: string | null;
+  thicknessValue?: number | null;
+  thicknessUnit?: string | null;
+  quantity: number;
+  materialCode?: string | null;
+  materialLabel?: string | null;
+  mountingCode?: string | null;
+  mountingLabel?: string | null;
+  notes?: string | null;
+  configurationJson: Record<string, unknown>;
+  internalNotes?: string | null;
+  followUpNotes?: string | null;
+  reviewedWidthValue?: number | null;
+  reviewedDepthValue?: number | null;
+  reviewedThicknessValue?: number | null;
+  reviewedQuantity?: number | null;
+  reviewedMaterialCode?: string | null;
+  reviewedMaterialLabel?: string | null;
+  reviewedMountingCode?: string | null;
+  reviewedMountingLabel?: string | null;
+  estimateBaseAmountCents?: number | null;
+  estimateLowAmountCents?: number | null;
+  estimateHighAmountCents?: number | null;
+  estimateCurrencyCode?: string | null;
+  estimateLeadTimeText?: string | null;
+  estimateSummaryJson?: Record<string, unknown> | null;
+  quotePreparedBy?: string | null;
+  quoteReferenceCode?: string | null;
+  leadId?: string | null;
+  assignedToUserId?: string | null;
+  assignedToUser?: {
+    id: string;
+    name: string | null;
+    email: string;
+  } | null;
+  proposal?: {
+    id: string;
+    proposalNumber: string;
+    status: string;
+    publicToken: string;
+    totalAmountCents: number;
+    sharedAt?: string | null;
+    customerViewedAt?: string | null;
+    customerApprovedAt?: string | null;
+    customerDeclinedAt?: string | null;
+  } | null;
+  hasEstimate: boolean;
+  estimateState: "has-estimate" | "needs-estimate";
+}
+
+export async function createCraftBoardInquiry(input: {
+  source: string;
+  sourcePath?: string | null;
+  productFamily: string;
+  productSlug?: string | null;
+  productName: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone?: string | null;
+  widthValue: number;
+  widthUnit: string;
+  depthValue: number;
+  depthUnit: string;
+  thicknessValue: number;
+  thicknessUnit: string;
+  quantity: number;
+  materialCode?: string | null;
+  materialLabel: string;
+  mountingCode?: string | null;
+  mountingLabel: string;
+  notes?: string | null;
+  configurationJson: Record<string, unknown>;
+}) {
+  return sendJson<{ ok: true; inquiry: CraftBoardInquiryItem }>("/craft-board/inquiries", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function getCraftBoardInquiries(filters?: {
+  status?: "NEW" | "REVIEWED" | "QUOTE_IN_PROGRESS" | "QUOTED" | "CLOSED" | "LOST";
+  q?: string;
+  productFamily?: string;
+  assignedToUserId?: string;
+  estimateState?: "has-estimate" | "needs-estimate";
+}) {
+  const params = new URLSearchParams();
+  if (filters?.status) {
+    params.set("status", filters.status);
+  }
+  if (filters?.q) {
+    params.set("q", filters.q);
+  }
+  if (filters?.productFamily) {
+    params.set("productFamily", filters.productFamily);
+  }
+  if (filters?.assignedToUserId) {
+    params.set("assignedToUserId", filters.assignedToUserId);
+  }
+  if (filters?.estimateState) {
+    params.set("estimateState", filters.estimateState);
+  }
+
+  return readJson<{ ok: true; inquiries: CraftBoardInquiryItem[] }>(
+    `/craft-board/inquiries${params.toString() ? `?${params.toString()}` : ""}`
+  );
+}
+
+export async function getCraftBoardInquiry(id: string) {
+  return readJson<{ ok: true; inquiry: CraftBoardInquiryItem }>(
+    `/craft-board/inquiries/${encodeURIComponent(id)}`
+  );
+}
+
+export async function updateCraftBoardInquiry(
+  id: string,
+  input: {
+    status?: "NEW" | "REVIEWED" | "QUOTE_IN_PROGRESS" | "QUOTED" | "CLOSED" | "LOST";
+    assignedToUserId?: string | null;
+    internalNotes?: string | null;
+    followUpNotes?: string | null;
+    reviewedWidthValue?: number | null;
+    reviewedDepthValue?: number | null;
+    reviewedThicknessValue?: number | null;
+    reviewedQuantity?: number | null;
+    reviewedMaterialCode?: string | null;
+    reviewedMaterialLabel?: string | null;
+    reviewedMountingCode?: string | null;
+    reviewedMountingLabel?: string | null;
+    estimateBaseAmountCents?: number | null;
+    estimateLowAmountCents?: number | null;
+    estimateHighAmountCents?: number | null;
+    estimateCurrencyCode?: string | null;
+    estimateLeadTimeText?: string | null;
+    estimateSummaryJson?: Record<string, unknown> | null;
+    quotePreparedBy?: string | null;
+    quoteReferenceCode?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; inquiry: CraftBoardInquiryItem }>(
+    `/craft-board/inquiries/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export interface CraftBoardProposalLineItem {
+  id: string;
+  sortOrder: number;
+  label: string;
+  description?: string | null;
+  quantity: number;
+  unitLabel?: string | null;
+  unitAmountCents: number;
+  lineTotalAmountCents: number;
+  itemType?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CraftBoardOrderItem {
+  id: string;
+  organizationId: string;
+  inquiryId: string;
+  proposalId: string;
+  depositRequestId: string;
+  createdAt: string;
+  updatedAt: string;
+  orderNumber: string;
+  status:
+    | "RELEASED"
+    | "PREP_IN_PROGRESS"
+    | "READY_FOR_PRODUCTION"
+    | "IN_PRODUCTION"
+    | "READY_TO_FULFILL"
+    | "FULFILLED"
+    | "CLOSED"
+    | "CANCELLED";
+  releasedAt: string;
+  releasedBy?: string | null;
+  customerNameSnapshot: string;
+  customerEmailSnapshot: string;
+  customerPhoneSnapshot?: string | null;
+  productFamily: string;
+  productName: string;
+  reviewedWidthValue?: number | null;
+  reviewedWidthUnit: string;
+  reviewedDepthValue?: number | null;
+  reviewedDepthUnit: string;
+  reviewedThicknessValue?: number | null;
+  reviewedThicknessUnit: string;
+  reviewedQuantity: number;
+  reviewedMaterialCode?: string | null;
+  reviewedMaterialLabel?: string | null;
+  reviewedMountingCode?: string | null;
+  reviewedMountingLabel?: string | null;
+  proposalSubtotalAmountCents: number;
+  proposalDiscountAmountCents: number;
+  proposalShippingAmountCents: number;
+  proposalTotalAmountCents: number;
+  depositAmountPaidCents: number;
+  remainingBalanceAmountCents: number;
+  currencyCode: string;
+  leadTimeText?: string | null;
+  scopeSummary?: string | null;
+  customerNotesSnapshot?: string | null;
+  internalReleaseNotes?: string | null;
+  productionPrepNotes?: string | null;
+  fulfillmentNotes?: string | null;
+  requestedShipDate?: string | null;
+  targetCompletionDate?: string | null;
+  readyForProductionAt?: string | null;
+  productionReleasedAt?: string | null;
+  closedAt?: string | null;
+  orderSummaryJson?: Record<string, unknown> | null;
+  commercialSnapshotJson?: Record<string, unknown> | null;
+  configurationSnapshotJson?: Record<string, unknown> | null;
+  inquiry?: {
+    id: string;
+    status: string;
+  };
+  proposal?: {
+    id: string;
+    proposalNumber: string;
+    status: string;
+  };
+  depositRequest?: {
+    id: string;
+    depositNumber: string;
+    status: string;
+    paidAt?: string | null;
+  };
+  linkedProductionJob?: {
+    id: string;
+    productionJobNumber: string;
+    status: string;
+    stage?: string;
+    releasedFromOrderAt?: string | null;
+  } | null;
+}
+
+export interface CraftBoardProductionJobItem {
+  id: string;
+  organizationId: string;
+  createdAt: string;
+  updatedAt: string;
+  productionJobNumber: string;
+  productionJobCode: string;
+  productionJobScanCode: string;
+  status:
+    | "RELEASED"
+    | "PREP_IN_PROGRESS"
+    | "READY_FOR_BUILD"
+    | "IN_BUILD"
+    | "BUILD_COMPLETE"
+    | "READY_FOR_FULFILLMENT"
+    | "FULFILLED"
+    | "CANCELLED";
+  stage:
+    | "PREP"
+    | "READY_TO_BUILD"
+    | "IN_BUILD"
+    | "BUILD_COMPLETE"
+    | "READY_TO_FULFILL"
+    | "FULFILLED"
+    | "CANCELLED";
+  boardSortOrder?: number | null;
+  orderId: string;
+  inquiryId: string;
+  proposalId: string;
+  depositRequestId: string;
+  releasedFromOrderAt: string;
+  createdBy?: string | null;
+  startedAt?: string | null;
+  readyForBuildAt?: string | null;
+  buildStartedAt?: string | null;
+  buildCompletedAt?: string | null;
+  readyForFulfillmentAt?: string | null;
+  fulfilledAt?: string | null;
+  cancelledAt?: string | null;
+  customerNameSnapshot: string;
+  productFamily: string;
+  productName: string;
+  reviewedWidthValue?: number | null;
+  reviewedWidthUnit: string;
+  reviewedDepthValue?: number | null;
+  reviewedDepthUnit: string;
+  reviewedThicknessValue?: number | null;
+  reviewedThicknessUnit: string;
+  reviewedQuantity: number;
+  reviewedMaterialCode?: string | null;
+  reviewedMaterialLabel?: string | null;
+  reviewedMountingCode?: string | null;
+  reviewedMountingLabel?: string | null;
+  leadTimeText?: string | null;
+  targetCompletionDate?: string | null;
+  requestedShipDate?: string | null;
+  productionPrepNotes?: string | null;
+  shopNotes?: string | null;
+  fulfillmentNotes?: string | null;
+  cutPrepNotes?: string | null;
+  materialPrepNotes?: string | null;
+  packagingPrepNotes?: string | null;
+  labelPayloadJson?: Record<string, unknown> | null;
+  checklistDimensionsConfirmed: boolean;
+  checklistMaterialConfirmed: boolean;
+  checklistMountingConfirmed: boolean;
+  checklistDepositVerified: boolean;
+  checklistScopeConfirmed: boolean;
+  checklistReadyForBuild: boolean;
+  lastStageChangedAt?: string | null;
+  lastStageChangedBy?: string | null;
+  barcodeLabelPrintedAt?: string | null;
+  archivedFromBoardAt?: string | null;
+  internalSummaryJson?: Record<string, unknown> | null;
+  configurationSnapshotJson?: Record<string, unknown> | null;
+  commercialReferenceJson?: Record<string, unknown> | null;
+  order?: { id: string; orderNumber: string; status: string } | null;
+  inquiry?: { id: string; status: string } | null;
+  proposal?: { id: string; proposalNumber: string; status: string } | null;
+  depositRequest?: {
+    id: string;
+    depositNumber: string;
+    status: string;
+    paidAt?: string | null;
+  } | null;
+}
+
+export interface CraftBoardProposalItem {
+  id: string;
+  organizationId: string;
+  inquiryId: string;
+  createdAt: string;
+  updatedAt: string;
+  status: "DRAFT" | "READY" | "SHARED" | "VIEWED" | "APPROVED" | "DECLINED" | "EXPIRED" | "ARCHIVED";
+  proposalNumber: string;
+  title: string;
+  customerNameSnapshot: string;
+  customerEmailSnapshot: string;
+  customerPhoneSnapshot?: string | null;
+  productFamily: string;
+  productName: string;
+  reviewedWidthValue?: number | null;
+  reviewedDepthValue?: number | null;
+  reviewedThicknessValue?: number | null;
+  reviewedQuantity: number;
+  reviewedMaterialCode?: string | null;
+  reviewedMaterialLabel?: string | null;
+  reviewedMountingCode?: string | null;
+  reviewedMountingLabel?: string | null;
+  subtotalAmountCents: number;
+  discountAmountCents: number;
+  shippingAmountCents: number;
+  totalAmountCents: number;
+  currencyCode: string;
+  leadTimeText?: string | null;
+  scopeSummary: string;
+  inclusionsText?: string | null;
+  exclusionsText?: string | null;
+  notesForCustomer?: string | null;
+  internalNotes?: string | null;
+  publicToken?: string;
+  sharedAt?: string | null;
+  customerViewedAt?: string | null;
+  customerApprovedAt?: string | null;
+  customerDeclinedAt?: string | null;
+  expirationDate?: string | null;
+  preparedBy?: string | null;
+  referenceCode?: string | null;
+  lineItems: CraftBoardProposalLineItem[];
+  inquiry?: {
+    id: string;
+    status: string;
+    customerName: string;
+    customerEmail: string;
+    productFamily: string;
+    productName: string;
+  };
+  latestDepositRequest?: {
+    id: string;
+    depositNumber: string;
+    status: string;
+    depositAmountCents: number;
+    paidAt?: string | null;
+    sharedAt?: string | null;
+  } | null;
+  linkedOrder?: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    releasedAt?: string | null;
+  } | null;
+  hasCustomerResponse: boolean;
+}
+
+export async function createCraftBoardProposalFromInquiry(inquiryId: string) {
+  return sendJson<{ ok: true; proposal: CraftBoardProposalItem }>(
+    `/craft-board/inquiries/${encodeURIComponent(inquiryId)}/proposal`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export async function getCraftBoardProposals(filters?: {
+  status?: CraftBoardProposalItem["status"];
+  q?: string;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.status) {
+    params.set("status", filters.status);
+  }
+  if (filters?.q) {
+    params.set("q", filters.q);
+  }
+
+  return readJson<{ ok: true; proposals: CraftBoardProposalItem[] }>(
+    `/craft-board/proposals${params.toString() ? `?${params.toString()}` : ""}`
+  );
+}
+
+export async function getCraftBoardProposal(id: string) {
+  return readJson<{ ok: true; proposal: CraftBoardProposalItem }>(
+    `/craft-board/proposals/${encodeURIComponent(id)}`
+  );
+}
+
+export async function updateCraftBoardProposal(
+  id: string,
+  input: {
+    status?: CraftBoardProposalItem["status"];
+    title?: string;
+    customerNameSnapshot?: string;
+    customerEmailSnapshot?: string;
+    customerPhoneSnapshot?: string | null;
+    productFamily?: string;
+    productName?: string;
+    reviewedWidthValue?: number | null;
+    reviewedDepthValue?: number | null;
+    reviewedThicknessValue?: number | null;
+    reviewedQuantity?: number;
+    reviewedMaterialCode?: string | null;
+    reviewedMaterialLabel?: string | null;
+    reviewedMountingCode?: string | null;
+    reviewedMountingLabel?: string | null;
+    discountAmountCents?: number;
+    shippingAmountCents?: number;
+    currencyCode?: string;
+    leadTimeText?: string | null;
+    scopeSummary?: string;
+    inclusionsText?: string | null;
+    exclusionsText?: string | null;
+    notesForCustomer?: string | null;
+    internalNotes?: string | null;
+    expirationDate?: string | null;
+    preparedBy?: string | null;
+    referenceCode?: string | null;
+    lineItems?: Array<{
+      id?: string;
+      sortOrder?: number;
+      label: string;
+      description?: string | null;
+      quantity: number;
+      unitLabel?: string | null;
+      unitAmountCents: number;
+      itemType?: string | null;
+    }>;
+  }
+) {
+  return sendJson<{ ok: true; proposal: CraftBoardProposalItem }>(
+    `/craft-board/proposals/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function getPublicCraftBoardProposal(publicToken: string) {
+  return readJson<{ ok: true; proposal: CraftBoardProposalItem }>(
+    `/public/craft-board/proposals/${encodeURIComponent(publicToken)}`
+  );
+}
+
+export async function createCraftBoardOrderFromProposal(
+  proposalId: string,
+  input?: {
+    internalReleaseNotes?: string | null;
+    productionPrepNotes?: string | null;
+    fulfillmentNotes?: string | null;
+    requestedShipDate?: string | null;
+    targetCompletionDate?: string | null;
+    overrideEligibility?: boolean;
+  }
+) {
+  return sendJson<{ ok: true; order: CraftBoardOrderItem }>(
+    `/craft-board/proposals/${encodeURIComponent(proposalId)}/order`,
+    {
+      method: "POST",
+      body: JSON.stringify(input ?? {})
+    }
+  );
+}
+
+export async function getCraftBoardOrders(filters?: {
+  status?: CraftBoardOrderItem["status"];
+  q?: string;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.status) {
+    params.set("status", filters.status);
+  }
+  if (filters?.q) {
+    params.set("q", filters.q);
+  }
+
+  return readJson<{ ok: true; orders: CraftBoardOrderItem[] }>(
+    `/craft-board/orders${params.toString() ? `?${params.toString()}` : ""}`
+  );
+}
+
+export async function getCraftBoardOrder(id: string) {
+  return readJson<{ ok: true; order: CraftBoardOrderItem }>(
+    `/craft-board/orders/${encodeURIComponent(id)}`
+  );
+}
+
+export async function updateCraftBoardOrder(
+  id: string,
+  input: {
+    status?: CraftBoardOrderItem["status"];
+    internalReleaseNotes?: string | null;
+    productionPrepNotes?: string | null;
+    fulfillmentNotes?: string | null;
+    requestedShipDate?: string | null;
+    targetCompletionDate?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; order: CraftBoardOrderItem }>(
+    `/craft-board/orders/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function createCraftBoardProductionJobFromOrder(
+  orderId: string,
+  input?: {
+    productionPrepNotes?: string | null;
+    shopNotes?: string | null;
+    fulfillmentNotes?: string | null;
+    cutPrepNotes?: string | null;
+    materialPrepNotes?: string | null;
+    packagingPrepNotes?: string | null;
+    targetCompletionDate?: string | null;
+    requestedShipDate?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; productionJob: CraftBoardProductionJobItem }>(
+    `/craft-board/orders/${encodeURIComponent(orderId)}/production-job`,
+    {
+      method: "POST",
+      body: JSON.stringify(input ?? {})
+    }
+  );
+}
+
+export async function getCraftBoardProductionJobs(filters?: {
+  status?: CraftBoardProductionJobItem["status"];
+  stage?: CraftBoardProductionJobItem["stage"];
+  includeFulfilled?: boolean;
+  includeCancelled?: boolean;
+  q?: string;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.status) {
+    params.set("status", filters.status);
+  }
+  if (filters?.stage) {
+    params.set("stage", filters.stage);
+  }
+  if (filters?.includeFulfilled !== undefined) {
+    params.set("includeFulfilled", String(filters.includeFulfilled));
+  }
+  if (filters?.includeCancelled !== undefined) {
+    params.set("includeCancelled", String(filters.includeCancelled));
+  }
+  if (filters?.q) {
+    params.set("q", filters.q);
+  }
+
+  return readJson<{ ok: true; productionJobs: CraftBoardProductionJobItem[] }>(
+    `/craft-board/production-jobs${params.toString() ? `?${params.toString()}` : ""}`
+  );
+}
+
+export async function getCraftBoardProductionJob(id: string) {
+  return readJson<{ ok: true; productionJob: CraftBoardProductionJobItem }>(
+    `/craft-board/production-jobs/${encodeURIComponent(id)}`
+  );
+}
+
+export async function updateCraftBoardProductionJob(
+  id: string,
+  input: {
+    status?: CraftBoardProductionJobItem["status"];
+    stage?: CraftBoardProductionJobItem["stage"];
+    targetCompletionDate?: string | null;
+    requestedShipDate?: string | null;
+    productionPrepNotes?: string | null;
+    shopNotes?: string | null;
+    fulfillmentNotes?: string | null;
+    cutPrepNotes?: string | null;
+    materialPrepNotes?: string | null;
+    packagingPrepNotes?: string | null;
+    checklistDimensionsConfirmed?: boolean;
+    checklistMaterialConfirmed?: boolean;
+    checklistMountingConfirmed?: boolean;
+    checklistDepositVerified?: boolean;
+    checklistScopeConfirmed?: boolean;
+    checklistReadyForBuild?: boolean;
+  }
+) {
+  return sendJson<{ ok: true; productionJob: CraftBoardProductionJobItem }>(
+    `/craft-board/production-jobs/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function getCraftBoardProductionBoard(filters?: {
+  q?: string;
+  includeFulfilled?: boolean;
+  includeCancelled?: boolean;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.q) {
+    params.set("q", filters.q);
+  }
+  if (filters?.includeFulfilled !== undefined) {
+    params.set("includeFulfilled", String(filters.includeFulfilled));
+  }
+  if (filters?.includeCancelled !== undefined) {
+    params.set("includeCancelled", String(filters.includeCancelled));
+  }
+
+  return readJson<{ ok: true; productionJobs: CraftBoardProductionJobItem[] }>(
+    `/craft-board/production-board${params.toString() ? `?${params.toString()}` : ""}`
+  );
+}
+
+export async function markCraftBoardProposalViewed(publicToken: string) {
+  return sendJson<{ ok: true; proposal: CraftBoardProposalItem }>(
+    `/public/craft-board/proposals/${encodeURIComponent(publicToken)}/view`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export async function respondToCraftBoardProposal(
+  publicToken: string,
+  action: "approve" | "decline"
+) {
+  return sendJson<{ ok: true; proposal: CraftBoardProposalItem }>(
+    `/public/craft-board/proposals/${encodeURIComponent(publicToken)}/respond`,
+    {
+      method: "POST",
+      body: JSON.stringify({ action })
+    }
+  );
+}
+
+export interface CraftBoardDepositRequestItem {
+  id: string;
+  organizationId: string;
+  proposalId: string;
+  createdAt: string;
+  updatedAt: string;
+  status: "DRAFT" | "READY" | "SHARED" | "VIEWED" | "PAYMENT_INITIATED" | "PAID" | "CANCELLED" | "EXPIRED";
+  depositNumber: string;
+  publicToken?: string;
+  title: string;
+  customerNameSnapshot: string;
+  customerEmailSnapshot: string;
+  customerPhoneSnapshot?: string | null;
+  currencyCode: string;
+  proposalTotalAmountCents: number;
+  depositType: "FIXED_AMOUNT" | "PERCENTAGE";
+  depositPercentBasisPoints?: number | null;
+  depositAmountCents: number;
+  remainingBalanceAmountCents?: number | null;
+  descriptionText?: string | null;
+  customerInstructionsText?: string | null;
+  dueDate?: string | null;
+  sharedAt?: string | null;
+  customerViewedAt?: string | null;
+  paymentInitiatedAt?: string | null;
+  paidAt?: string | null;
+  cancelledAt?: string | null;
+  expiredAt?: string | null;
+  paymentProvider?: string | null;
+  paymentProviderReference?: string | null;
+  paymentIntentId?: string | null;
+  checkoutSessionId?: string | null;
+  paymentReceiptReference?: string | null;
+  internalNotes?: string | null;
+  createdBy?: string | null;
+  proposal?: {
+    id: string;
+    proposalNumber: string;
+    title: string;
+    status: string;
+    totalAmountCents: number;
+    customerApprovedAt?: string | null;
+    productName: string;
+    reviewedQuantity: number;
+    reviewedMaterialLabel?: string | null;
+    reviewedMountingLabel?: string | null;
+  };
+  linkedOrder?: {
+    id: string;
+    orderNumber: string;
+    status: string;
+    releasedAt?: string | null;
+  } | null;
+}
+
+export async function createCraftBoardDepositRequestFromProposal(
+  proposalId: string,
+  input?: {
+    depositType?: "FIXED_AMOUNT" | "PERCENTAGE";
+    depositPercentBasisPoints?: number | null;
+    depositAmountCents?: number | null;
+    title?: string | null;
+    descriptionText?: string | null;
+    customerInstructionsText?: string | null;
+    dueDate?: string | null;
+    internalNotes?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; depositRequest: CraftBoardDepositRequestItem }>(
+    `/craft-board/proposals/${encodeURIComponent(proposalId)}/deposit`,
+    {
+      method: "POST",
+      body: JSON.stringify(input ?? {})
+    }
+  );
+}
+
+export async function getCraftBoardDeposits(filters?: {
+  status?: CraftBoardDepositRequestItem["status"];
+  q?: string;
+}) {
+  const params = new URLSearchParams();
+  if (filters?.status) {
+    params.set("status", filters.status);
+  }
+  if (filters?.q) {
+    params.set("q", filters.q);
+  }
+
+  return readJson<{ ok: true; depositRequests: CraftBoardDepositRequestItem[] }>(
+    `/craft-board/deposits${params.toString() ? `?${params.toString()}` : ""}`
+  );
+}
+
+export async function getCraftBoardDeposit(id: string) {
+  return readJson<{ ok: true; depositRequest: CraftBoardDepositRequestItem }>(
+    `/craft-board/deposits/${encodeURIComponent(id)}`
+  );
+}
+
+export async function updateCraftBoardDeposit(
+  id: string,
+  input: {
+    status?: CraftBoardDepositRequestItem["status"];
+    title?: string;
+    customerNameSnapshot?: string;
+    customerEmailSnapshot?: string;
+    customerPhoneSnapshot?: string | null;
+    currencyCode?: string;
+    depositType?: "FIXED_AMOUNT" | "PERCENTAGE";
+    depositPercentBasisPoints?: number | null;
+    depositAmountCents?: number | null;
+    descriptionText?: string | null;
+    customerInstructionsText?: string | null;
+    dueDate?: string | null;
+    internalNotes?: string | null;
+    paymentReceiptReference?: string | null;
+    paymentProvider?: string | null;
+    paymentProviderReference?: string | null;
+    paymentIntentId?: string | null;
+    checkoutSessionId?: string | null;
+  }
+) {
+  return sendJson<{ ok: true; depositRequest: CraftBoardDepositRequestItem }>(
+    `/craft-board/deposits/${encodeURIComponent(id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(input)
+    }
+  );
+}
+
+export async function getPublicCraftBoardDeposit(publicToken: string) {
+  return readJson<{ ok: true; depositRequest: CraftBoardDepositRequestItem }>(
+    `/public/craft-board/deposits/${encodeURIComponent(publicToken)}`
+  );
+}
+
+export async function markCraftBoardDepositViewed(publicToken: string) {
+  return sendJson<{ ok: true; depositRequest: CraftBoardDepositRequestItem }>(
+    `/public/craft-board/deposits/${encodeURIComponent(publicToken)}/view`,
+    {
+      method: "POST"
+    }
+  );
+}
+
+export async function initiateCraftBoardDepositPayment(publicToken: string) {
+  return sendJson<{
+    ok: true;
+    depositRequest: CraftBoardDepositRequestItem;
+    paymentSession?: {
+      provider?: string | null;
+      checkoutSessionId?: string | null;
+      paymentIntentId?: string | null;
+      status: string;
+    };
+  }>(`/public/craft-board/deposits/${encodeURIComponent(publicToken)}/payment-init`, {
+    method: "POST"
+  });
 }

@@ -25,6 +25,18 @@ const sections = [
       { href: "/costing", label: "Costing" },
       { href: "/machines", label: "Machines" },
       { href: "/inventory", label: "Inventory" },
+      { href: "/admin/craft-board/inquiries", label: "Inquiries" },
+      { href: "/admin/craft-board/proposals", label: "Proposals" },
+      { href: "/admin/craft-board/deposits", label: "Deposits" },
+      { href: "/admin/craft-board/orders", label: "Craft Orders" },
+      { href: "/admin/craft-board/dashboard", label: "Marketing Dashboard" },
+      { href: "/admin/craft-board/cabinet-shelves/launch", label: "Cabinet Shelf Launch" },
+      { href: "/admin/craft-board/seo", label: "SEO Ops" },
+      { href: "/admin/craft-board/seo/pinterest", label: "Pinterest Ops" },
+      { href: "/admin/craft-board/seo/backlinks", label: "Backlink Ops" },
+      { href: "/admin/craft-board/outreach", label: "Outreach Workspace" },
+      { href: "/admin/craft-board/production-board", label: "Production Board" },
+      { href: "/admin/craft-board/production-jobs", label: "Production Jobs" },
       { href: "/settings", label: "Settings" }
     ]
   },

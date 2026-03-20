@@ -25,6 +25,8 @@ import {
   buildFinalRunbookSnapshot,
   buildFinalHandoffPacketSnapshot,
   buildCloseoutSummarySnapshot,
+  buildPostCompletionReviewSnapshot,
+  buildArtifactSupersessionSummarySnapshot,
   buildArtifactHandoffSummarySnapshot,
   buildInternalShareSummarySnapshot,
   buildLastStepChecklistSnapshot,
@@ -297,6 +299,10 @@ function mapChannelMappingPreset(record: any) {
     completionConfirmationPromptSnapshot:
       record.completionConfirmationPromptSnapshot ?? null,
     closeoutSummaryFormatSnapshot: record.closeoutSummaryFormatSnapshot ?? null,
+    postCompletionReviewPromptSnapshot:
+      record.postCompletionReviewPromptSnapshot ?? null,
+    supersessionSummaryFormatSnapshot:
+      record.supersessionSummaryFormatSnapshot ?? null,
     notes: record.notes ?? null,
     presetSnapshot: record.presetSnapshot ?? null
   };
@@ -394,6 +400,136 @@ function normalizeUpdateData(input: AnyRecord) {
     }
   }
   return data;
+}
+
+async function findSupersedingArtifact(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+  comparisonSetId?: string | null;
+  calculationScenarioId: string;
+}) {
+  const packages = await listListingPrepPackagesForOrganization({
+    organizationId: input.organizationId
+  });
+
+  return (
+    packages.find((candidate: any) => {
+      if (candidate.id === input.listingPrepPackageId) return false;
+      const sameScope =
+        (input.comparisonSetId && candidate.comparisonSetId === input.comparisonSetId) ||
+        candidate.calculationScenarioId === input.calculationScenarioId;
+      if (!sameScope) return false;
+      if (!candidate.currentApprovedArtifact) return false;
+      if (candidate.approvalState !== "APPROVED" && candidate.approvalState !== "APPROVED_WITH_OVERRIDE") {
+        return false;
+      }
+      return true;
+    }) ?? null
+  );
+}
+
+async function buildSupersessionArtifacts(input: {
+  organizationId: string;
+  record: any;
+}) {
+  const supersedingPackage = await findSupersedingArtifact({
+    organizationId: input.organizationId,
+    listingPrepPackageId: input.record.id,
+    comparisonSetId: input.record.comparisonSetId ?? null,
+    calculationScenarioId: input.record.calculationScenarioId
+  });
+
+  const snapshot = buildArtifactSupersessionSummarySnapshot({
+    packageId: input.record.id,
+    packageName: input.record.name,
+    currentApprovedArtifact: Boolean(input.record.currentApprovedArtifact),
+    entryCompletionConfirmed: Boolean(input.record.entryCompletionConfirmed),
+    entryCompletionState: input.record.entryCompletionState ?? null,
+    supersedingPackage: supersedingPackage
+      ? {
+          id: supersedingPackage.id,
+          name: supersedingPackage.name ?? null,
+          approvalState: supersedingPackage.approvalState ?? null,
+          currentApprovedArtifact: Boolean(supersedingPackage.currentApprovedArtifact),
+          updatedAt: supersedingPackage.updatedAt
+        }
+      : null,
+    preset: input.record.channelMappingPreset
+      ? {
+          supersessionSummaryFormatSnapshot:
+            input.record.channelMappingPreset.supersessionSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
+
+  return {
+    artifactSupersessionStatus: snapshot.artifactSupersessionStatus,
+    artifactSupersessionSummarySnapshot: snapshot,
+    supersededAt: snapshot.supersededAt ? new Date(String(snapshot.supersededAt)) : null,
+    supersededByListingPrepPackageId: snapshot.supersededByListingPrepPackageId ?? null,
+    supersessionVersion: snapshot.supersessionVersion ?? "supersession-v1"
+  };
+}
+
+async function syncSupersessionForScope(input: {
+  organizationId: string;
+  currentRecord: any;
+}) {
+  const packages = await listListingPrepPackagesForOrganization({
+    organizationId: input.organizationId
+  });
+
+  const sameScopePackages = packages.filter((candidate: any) => {
+    if (candidate.id === input.currentRecord.id) return false;
+    return (
+      (input.currentRecord.comparisonSetId && candidate.comparisonSetId === input.currentRecord.comparisonSetId) ||
+      candidate.calculationScenarioId === input.currentRecord.calculationScenarioId
+    );
+  });
+
+  for (const candidate of sameScopePackages) {
+    const snapshot = buildArtifactSupersessionSummarySnapshot({
+      packageId: candidate.id,
+      packageName: candidate.name,
+      currentApprovedArtifact: Boolean(candidate.currentApprovedArtifact),
+      entryCompletionConfirmed: Boolean(candidate.entryCompletionConfirmed),
+      entryCompletionState: candidate.entryCompletionState ?? null,
+      supersedingPackage: {
+        id: input.currentRecord.id,
+        name: input.currentRecord.name ?? null,
+        approvalState: input.currentRecord.approvalState ?? null,
+        currentApprovedArtifact: Boolean(input.currentRecord.currentApprovedArtifact),
+        updatedAt: input.currentRecord.updatedAt ?? new Date()
+      },
+      preset: candidate.channelMappingPreset
+        ? {
+            supersessionSummaryFormatSnapshot:
+              candidate.channelMappingPreset.supersessionSummaryFormatSnapshot ?? null
+          }
+        : null
+    });
+
+    const shouldReferenceCurrent =
+      Boolean(candidate.entryCompletionConfirmed) &&
+      (input.currentRecord.approvalState === "APPROVED" ||
+        input.currentRecord.approvalState === "APPROVED_WITH_OVERRIDE");
+
+    await updateListingPrepPackageRecord({
+      organizationId: input.organizationId,
+      listingPrepPackageId: candidate.id,
+      data: normalizeUpdateData({
+        artifactSupersessionStatus: shouldReferenceCurrent
+          ? snapshot.artifactSupersessionStatus
+          : candidate.artifactSupersessionStatus ?? "HISTORICAL",
+        artifactSupersessionSummarySnapshot: snapshot,
+        supersededAt: shouldReferenceCurrent && snapshot.supersededAt ? new Date(String(snapshot.supersededAt)) : null,
+        supersededByListingPrepPackageId: shouldReferenceCurrent
+          ? input.currentRecord.id
+          : null,
+        supersessionVersion: snapshot.supersessionVersion ?? "supersession-v1"
+      })
+    });
+  }
 }
 
 function buildListingArtifactsForScenario(input: {
@@ -1203,6 +1339,8 @@ function mapScenario(record: any) {
     latestHandoffPacketSummarySnapshot:
       record.latestHandoffPacketSummarySnapshot ?? null,
     latestCloseoutSummarySnapshot: record.latestCloseoutSummarySnapshot ?? null,
+    latestSupersessionSummarySnapshot:
+      record.latestSupersessionSummarySnapshot ?? null,
     assumptionsSnapshot: record.assumptionsSnapshot,
     resultSnapshot: record.resultSnapshot,
     createdAt: record.createdAt.toISOString(),
@@ -1258,6 +1396,9 @@ function mapComparisonSet(record: any) {
     selectedCloseoutVersion: record.selectedCloseoutVersion ?? null,
     selectedCloseoutSummarySnapshot:
       record.selectedCloseoutSummarySnapshot ?? null,
+    selectedSupersessionVersion: record.selectedSupersessionVersion ?? null,
+    selectedSupersessionSummarySnapshot:
+      record.selectedSupersessionSummarySnapshot ?? null,
     scenarios: (record.scenarios ?? []).map((entry: any) => ({
       id: entry.id,
       sortOrder: entry.sortOrder ?? null,
@@ -1345,6 +1486,19 @@ function mapListingPrepPackage(record: any) {
     completedArtifactSummarySnapshot:
       record.completedArtifactSummarySnapshot ?? null,
     entryCompletionState: record.entryCompletionState ?? null,
+    postCompletionReviewSnapshot: record.postCompletionReviewSnapshot ?? null,
+    postCompletionReviewAt: record.postCompletionReviewAt?.toISOString() ?? null,
+    postCompletionReviewedByMembershipId:
+      record.postCompletionReviewedByMembershipId ?? null,
+    postCompletionReviewNote: record.postCompletionReviewNote ?? null,
+    artifactSupersessionStatus: record.artifactSupersessionStatus ?? null,
+    artifactSupersessionSummarySnapshot:
+      record.artifactSupersessionSummarySnapshot ?? null,
+    supersededAt: record.supersededAt?.toISOString() ?? null,
+    supersededByListingPrepPackageId: record.supersededByListingPrepPackageId ?? null,
+    supersededByListingPrepPackageName:
+      record.supersededByListingPrepPackage?.name ?? null,
+    supersessionVersion: record.supersessionVersion ?? null,
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
     notes: record.notes ?? null,
     approvedAt: record.approvedAt?.toISOString() ?? null,
@@ -3329,6 +3483,10 @@ export async function refreshListingPrepPackage(input: {
     entryCompletedByMembershipId: record.entryCompletedByMembershipId ?? null,
     entryCompletionNote: record.entryCompletionNote ?? null
   });
+  const supersessionArtifacts = await buildSupersessionArtifacts({
+    organizationId: input.organizationId,
+    record
+  });
 
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -3397,6 +3555,11 @@ export async function refreshListingPrepPackage(input: {
       closeoutSummarySnapshot: artifacts.closeoutSummarySnapshot,
       closeoutVersion: artifacts.closeoutVersion,
       completedArtifactSummarySnapshot: artifacts.completedArtifactSummarySnapshot,
+      artifactSupersessionStatus: supersessionArtifacts.artifactSupersessionStatus,
+      artifactSupersessionSummarySnapshot: supersessionArtifacts.artifactSupersessionSummarySnapshot,
+      supersededAt: supersessionArtifacts.supersededAt,
+      supersededByListingPrepPackageId: supersessionArtifacts.supersededByListingPrepPackageId,
+      supersessionVersion: supersessionArtifacts.supersessionVersion,
       channelMappingPresetId: presetResolution.preset?.id ?? null,
       currentApprovedArtifact: false,
       notes: input.notes ?? record.notes ?? null,
@@ -5058,6 +5221,17 @@ export async function approveListingPrepPackage(input: {
     })
   });
 
+  const approvedRecordForScope = {
+    ...record,
+    currentApprovedArtifact: true,
+    approvalState: approval.approvalState,
+    updatedAt: approvedAt
+  };
+  await syncSupersessionForScope({
+    organizationId: input.organizationId,
+    currentRecord: approvedRecordForScope
+  });
+
   await updateCalculationScenarioRecord({
     organizationId: input.organizationId,
     scenarioId: record.calculationScenarioId,
@@ -5104,6 +5278,18 @@ export async function approveListingPrepPackage(input: {
       })
     });
   }
+
+  await syncSupersessionForScope({
+    organizationId: input.organizationId,
+    currentRecord: {
+      ...record,
+      currentApprovedArtifact: true,
+      entryCompletionConfirmed: true,
+      entryCompletionState,
+      approvalState: record.approvalState,
+      updatedAt: completedAt
+    }
+  });
 
   const refreshed = await getListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -5207,6 +5393,20 @@ export async function confirmEntryComplete(input: {
     overrideSnapshot,
     versions
   });
+  const supersessionSnapshot = buildArtifactSupersessionSummarySnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
+    entryCompletionConfirmed: true,
+    entryCompletionState,
+    supersedingPackage: null,
+    preset: record.channelMappingPreset
+      ? {
+          supersessionSummaryFormatSnapshot:
+            record.channelMappingPreset.supersessionSummaryFormatSnapshot ?? null
+        }
+      : null
+  });
 
   await updateListingPrepPackageRecord({
     organizationId: input.organizationId,
@@ -5222,7 +5422,12 @@ export async function confirmEntryComplete(input: {
       entryCompletionSummarySnapshot,
       closeoutSummarySnapshot,
       closeoutVersion: versions.closeoutVersion,
-      completedArtifactSummarySnapshot
+      completedArtifactSummarySnapshot,
+      artifactSupersessionStatus: supersessionSnapshot.artifactSupersessionStatus,
+      artifactSupersessionSummarySnapshot: supersessionSnapshot,
+      supersededAt: null,
+      supersededByListingPrepPackageId: null,
+      supersessionVersion: supersessionSnapshot.supersessionVersion ?? "supersession-v1"
     })
   });
 
@@ -5230,7 +5435,8 @@ export async function confirmEntryComplete(input: {
     organizationId: input.organizationId,
     scenarioId: record.calculationScenarioId,
     data: normalizeUpdateData({
-      latestCloseoutSummarySnapshot: closeoutSummarySnapshot
+      latestCloseoutSummarySnapshot: closeoutSummarySnapshot,
+      latestSupersessionSummarySnapshot: supersessionSnapshot
     })
   });
 
@@ -5240,7 +5446,9 @@ export async function confirmEntryComplete(input: {
       comparisonSetId: record.comparisonSetId,
       data: normalizeUpdateData({
         selectedCloseoutVersion: versions.closeoutVersion,
-        selectedCloseoutSummarySnapshot: closeoutSummarySnapshot
+        selectedCloseoutSummarySnapshot: closeoutSummarySnapshot,
+        selectedSupersessionVersion: supersessionSnapshot.supersessionVersion ?? "supersession-v1",
+        selectedSupersessionSummarySnapshot: supersessionSnapshot
       })
     });
   }
@@ -5569,6 +5777,108 @@ export async function getCloseoutSummary(input: {
     closeoutVersion: record.closeoutVersion ?? null,
     approvalState: record.approvalState ?? "DRAFT",
     currentApprovedArtifact: Boolean(record.currentApprovedArtifact)
+  };
+}
+
+export async function recordPostCompletionReview(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+  reviewNote?: string | null;
+  reviewedByMembershipId?: string | null;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  if (!record.entryCompletionConfirmed) {
+    throw new Error("Entry must be completed before recording post-completion review.");
+  }
+
+  const reviewedAt = new Date();
+  const supersessionArtifacts = await buildSupersessionArtifacts({
+    organizationId: input.organizationId,
+    record
+  });
+  const postCompletionReviewSnapshot = buildPostCompletionReviewSnapshot({
+    packageId: record.id,
+    packageName: record.name,
+    reviewNote: input.reviewNote ?? null,
+    reviewedAt,
+    reviewedByMembershipId: input.reviewedByMembershipId ?? null,
+    warningSnapshot: Array.isArray(record.warningSnapshot) ? (record.warningSnapshot as any) : [],
+    overrideSnapshot: (record.overrideSnapshot ?? null) as Record<string, unknown> | null,
+    completedArtifactSummarySnapshot:
+      (record.completedArtifactSummarySnapshot ?? null) as Record<string, unknown> | null,
+    preset: record.channelMappingPreset
+      ? {
+          postCompletionReviewPromptSnapshot:
+            record.channelMappingPreset.postCompletionReviewPromptSnapshot ?? null
+        }
+      : null
+  });
+
+  await updateListingPrepPackageRecord({
+    organizationId: input.organizationId,
+    listingPrepPackageId: record.id,
+    data: normalizeUpdateData({
+      postCompletionReviewSnapshot,
+      postCompletionReviewAt: reviewedAt,
+      postCompletionReviewedByMembershipId: input.reviewedByMembershipId ?? null,
+      postCompletionReviewNote: input.reviewNote ?? null,
+      artifactSupersessionStatus: supersessionArtifacts.artifactSupersessionStatus,
+      artifactSupersessionSummarySnapshot: supersessionArtifacts.artifactSupersessionSummarySnapshot,
+      supersededAt: supersessionArtifacts.supersededAt,
+      supersededByListingPrepPackageId: supersessionArtifacts.supersededByListingPrepPackageId,
+      supersessionVersion: supersessionArtifacts.supersessionVersion
+    })
+  });
+
+  await updateCalculationScenarioRecord({
+    organizationId: input.organizationId,
+    scenarioId: record.calculationScenarioId,
+    data: normalizeUpdateData({
+      latestSupersessionSummarySnapshot: supersessionArtifacts.artifactSupersessionSummarySnapshot
+    })
+  });
+
+  if (record.comparisonSetId) {
+    await updateCalculationComparisonSetRecord({
+      organizationId: input.organizationId,
+      comparisonSetId: record.comparisonSetId,
+      data: normalizeUpdateData({
+        selectedSupersessionVersion: supersessionArtifacts.supersessionVersion,
+        selectedSupersessionSummarySnapshot:
+          supersessionArtifacts.artifactSupersessionSummarySnapshot
+      })
+    });
+  }
+
+  const refreshed = await getListingPrepPackageRecord({
+    organizationId: input.organizationId,
+    listingPrepPackageId: record.id
+  });
+  return { ok: true, listingPrepPackage: mapListingPrepPackage(refreshed) };
+}
+
+export async function getSupersessionSummary(input: {
+  organizationId: string;
+  listingPrepPackageId: string;
+}) {
+  const record = await getListingPrepPackageRecord(input);
+  if (!record) {
+    throw new Error("Listing prep package not found.");
+  }
+  return {
+    ok: true,
+    artifactSupersessionStatus: record.artifactSupersessionStatus ?? null,
+    supersessionSummary: record.artifactSupersessionSummarySnapshot ?? null,
+    postCompletionReview: record.postCompletionReviewSnapshot ?? null,
+    supersededAt: record.supersededAt?.toISOString() ?? null,
+    supersededByListingPrepPackageId: record.supersededByListingPrepPackageId ?? null,
+    supersededByListingPrepPackageName: record.supersededByListingPrepPackage?.name ?? null,
+    supersessionVersion: record.supersessionVersion ?? null,
+    currentApprovedArtifact: Boolean(record.currentApprovedArtifact),
+    entryCompletionConfirmed: Boolean(record.entryCompletionConfirmed)
   };
 }
 

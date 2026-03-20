@@ -274,6 +274,12 @@ export async function requestContextMiddleware(req: Request, res: Response, next
   try {
     const isPublicRoute =
       req.path === "/health" ||
+      req.method === "POST" && req.path === "/craft-board/inquiries" ||
+      req.path.startsWith("/public/craft-board/pricing/") ||
+      req.path.startsWith("/public/craft-board/storefront/") ||
+      req.path.startsWith("/public/craft-board/storefront-orders/") ||
+      req.path.startsWith("/public/craft-board/deposits/") ||
+      req.path.startsWith("/public/craft-board/proposals/") ||
       req.path.startsWith("/auth/login") ||
       req.path.startsWith("/auth/logout") ||
       req.path.startsWith("/auth/activate") ||
@@ -292,6 +298,12 @@ export async function requestContextMiddleware(req: Request, res: Response, next
     if (error instanceof RequestAuthenticationError) {
       const isPublicRoute =
         req.path === "/health" ||
+        req.method === "POST" && req.path === "/craft-board/inquiries" ||
+        req.path.startsWith("/public/craft-board/pricing/") ||
+        req.path.startsWith("/public/craft-board/storefront/") ||
+        req.path.startsWith("/public/craft-board/storefront-orders/") ||
+        req.path.startsWith("/public/craft-board/deposits/") ||
+        req.path.startsWith("/public/craft-board/proposals/") ||
         req.path.startsWith("/auth/login") ||
         req.path.startsWith("/auth/logout") ||
         req.path.startsWith("/auth/activate") ||

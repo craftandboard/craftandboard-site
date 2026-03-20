@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
-:root {
+body {
+  min-height: 100vh;
+  margin: 0;
+}
+
+body.app-shell {
   --background: #08130d;
   --foreground: #effaf1;
   --panel: rgba(14, 34, 23, 0.82);
@@ -8,16 +13,18 @@
   --muted: #9eb7a4;
   --accent: #68d391;
   --accent-strong: #1f7a42;
-}
-
-body {
-  min-height: 100vh;
   background:
     radial-gradient(circle at top left, rgba(77, 179, 111, 0.18), transparent 30%),
     radial-gradient(circle at top right, rgba(104, 211, 145, 0.12), transparent 25%),
     linear-gradient(180deg, #0b1710 0%, #08130d 100%);
-  color: var(--foreground);
   font-family: Georgia, "Times New Roman", serif;
+}
+
+body.storefront-shell {
+  background:
+    linear-gradient(180deg, #f6f0e8 0%, #fbf8f3 35%, #f5efe6 100%);
+  color: #261d17;
+  font-family: "Times New Roman", Georgia, serif;
 }
 
 a {

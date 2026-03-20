@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { MarketingHome } from "../components/marketing-home";
+import { generatePageSEO } from "../lib/seo/metadata";
+import { StorefrontHomePage } from "../components/storefront/StorefrontHomePage";
+import { StorefrontShell } from "../components/storefront/StorefrontShell";
 import {
   getActiveContainerSessions,
   getCanonicalManufacturingBatches,
@@ -15,19 +17,18 @@ import {
   getScanEvents
 } from "../lib/api";
 import { getRequestSiteContext } from "../lib/request-site";
-import { appUrl } from "../lib/site-config";
+import { getHomePageKey } from "../lib/seo/overrides";
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getRequestSiteContext();
 
   if (site.isMarketingHost) {
-    return {
-      title: "FieldMetriq",
-      description: "FieldMetriq is the operating system for field and shop workflows.",
-      alternates: {
-        canonical: "/"
-      }
-    };
+    return generatePageSEO({
+      title: "Craft & Board | Custom Floating Shelves Built to Your Dimensions",
+      description: "Craft & Board creates custom floating shelves and made-to-order architectural wood products.",
+      pathname: "/",
+      pageKey: getHomePageKey()
+    });
   }
 
   return {
@@ -43,7 +44,11 @@ export default async function DashboardPage() {
   const site = await getRequestSiteContext();
 
   if (site.isMarketingHost) {
-    return <MarketingHome appHomeHref={appUrl("/")} signInHref={appUrl("/login")} />;
+    return (
+      <StorefrontShell>
+        <StorefrontHomePage />
+      </StorefrontShell>
+    );
   }
 
   const [

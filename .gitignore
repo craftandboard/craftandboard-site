@@ -19,3 +19,5 @@ services/*/.venv
 prisma/dev.db
 prisma/dev.db-journal
 .turbo
+.vercel
+.deploy-trigger

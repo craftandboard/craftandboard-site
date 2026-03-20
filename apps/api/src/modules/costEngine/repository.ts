@@ -983,15 +983,6 @@ export async function createListingPrepPackageRecord(input: {
   closeoutVersion?: string | null;
   completedArtifactSummarySnapshot?: unknown;
   entryCompletionState?: string | null;
-  postCompletionReviewSnapshot?: unknown;
-  postCompletionReviewAt?: Date | null;
-  postCompletionReviewedByMembershipId?: string | null;
-  postCompletionReviewNote?: string | null;
-  artifactSupersessionStatus?: string | null;
-  artifactSupersessionSummarySnapshot?: unknown;
-  supersededAt?: Date | null;
-  supersededByListingPrepPackageId?: string | null;
-  supersessionVersion?: string | null;
   currentApprovedArtifact?: boolean;
   notes?: string | null;
   approvedAt?: Date | null;
@@ -1068,15 +1059,6 @@ export async function createListingPrepPackageRecord(input: {
       closeoutVersion: input.closeoutVersion ?? undefined,
       completedArtifactSummarySnapshot: normalizeMetadata(input.completedArtifactSummarySnapshot),
       entryCompletionState: input.entryCompletionState ?? undefined,
-      postCompletionReviewSnapshot: normalizeMetadata(input.postCompletionReviewSnapshot),
-      postCompletionReviewAt: input.postCompletionReviewAt ?? null,
-      postCompletionReviewedByMembershipId: input.postCompletionReviewedByMembershipId ?? null,
-      postCompletionReviewNote: input.postCompletionReviewNote ?? null,
-      artifactSupersessionStatus: input.artifactSupersessionStatus ?? undefined,
-      artifactSupersessionSummarySnapshot: normalizeMetadata(input.artifactSupersessionSummarySnapshot),
-      supersededAt: input.supersededAt ?? null,
-      supersededByListingPrepPackageId: input.supersededByListingPrepPackageId ?? null,
-      supersessionVersion: input.supersessionVersion ?? undefined,
       currentApprovedArtifact: input.currentApprovedArtifact ?? false,
       notes: input.notes ?? null,
       approvedAt: input.approvedAt ?? null,
@@ -1168,8 +1150,7 @@ export async function getListingPrepPackageRecord(input: {
       },
       comparisonSet: true,
       marketplaceMappingTemplate: true,
-      channelMappingPreset: true,
-      supersededByListingPrepPackage: true
+      channelMappingPreset: true
     }
   });
 }
@@ -1250,8 +1231,6 @@ export async function createChannelMappingPresetRecord(input: {
   handoffPacketFormatSnapshot?: unknown;
   completionConfirmationPromptSnapshot?: unknown;
   closeoutSummaryFormatSnapshot?: unknown;
-  postCompletionReviewPromptSnapshot?: unknown;
-  supersessionSummaryFormatSnapshot?: unknown;
   notes?: string | null;
   presetSnapshot?: unknown;
 }) {
@@ -1298,8 +1277,6 @@ export async function createChannelMappingPresetRecord(input: {
         input.completionConfirmationPromptSnapshot
       ),
       closeoutSummaryFormatSnapshot: normalizeMetadata(input.closeoutSummaryFormatSnapshot),
-      postCompletionReviewPromptSnapshot: normalizeMetadata(input.postCompletionReviewPromptSnapshot),
-      supersessionSummaryFormatSnapshot: normalizeMetadata(input.supersessionSummaryFormatSnapshot),
       notes: input.notes ?? null,
       presetSnapshot: normalizeMetadata(input.presetSnapshot)
     }

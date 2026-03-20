@@ -53,7 +53,6 @@ const serviceMocks = vi.hoisted(() => ({
   getListingPrepPackage: vi.fn(),
   getListingPrepManualAmazonExport: vi.fn(),
   getCloseoutSummary: vi.fn(),
-  getSupersessionSummary: vi.fn(),
   getMarketplaceMappingTemplate: vi.fn(),
   getComparisonSetRecommendation: vi.fn(),
   getComparisonSetHandoffSummary: vi.fn(),
@@ -80,7 +79,6 @@ const serviceMocks = vi.hoisted(() => ({
   applyChannelMappingPresetToPackage: vi.fn(),
   approveListingPrepPackage: vi.fn(),
   confirmEntryComplete: vi.fn(),
-  recordPostCompletionReview: vi.fn(),
   requestPriceFloorOverride: vi.fn(),
   refreshListingPrepPackage: vi.fn(),
   saveShelfCostCalculation: vi.fn(),
@@ -145,7 +143,6 @@ beforeEach(async () => {
   serviceMocks.getListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.getListingPrepManualAmazonExport.mockResolvedValue({ ok: true, manualAmazonExport: { exportContractVersion: "manual-amazon-v1" }, approvalState: "APPROVED", currentApprovedArtifact: true });
   serviceMocks.getCloseoutSummary.mockResolvedValue({ ok: true, closeoutSummary: { closeoutVersion: "closeout-v1" }, completedArtifactSummary: { completedArtifactState: "COMPLETED" }, entryCompletionState: "ENTRY_COMPLETE", entryCompletedAt: "2026-03-10T00:00:00.000Z", entryCompletionConfirmed: true, closeoutVersion: "closeout-v1", approvalState: "APPROVED", currentApprovedArtifact: true });
-  serviceMocks.getSupersessionSummary.mockResolvedValue({ ok: true, artifactSupersessionStatus: "CURRENT_COMPLETED", supersessionSummary: { supersessionVersion: "supersession-v1" }, postCompletionReview: null, supersededAt: null, supersededByListingPrepPackageId: null, supersededByListingPrepPackageName: null, supersessionVersion: "supersession-v1", currentApprovedArtifact: true, entryCompletionConfirmed: true });
   serviceMocks.getMarketplaceMappingTemplate.mockResolvedValue({ ok: true, marketplaceMappingTemplate: { id: "mapping_1" } });
   serviceMocks.getComparisonSetRecommendation.mockResolvedValue({ ok: true, recommendation: null });
   serviceMocks.getComparisonSetHandoffSummary.mockResolvedValue({ ok: true, handoffSummary: null, selectedLaunchScenarioId: null, riskSummary: null, selectedLaunchReadinessStatus: null, selectedLaunchWarningSnapshot: null, exportSummary: null });
@@ -172,7 +169,6 @@ beforeEach(async () => {
   serviceMocks.applyChannelMappingPresetToPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.approveListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.confirmEntryComplete.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
-  serviceMocks.recordPostCompletionReview.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.requestPriceFloorOverride.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.refreshListingPrepPackage.mockResolvedValue({ ok: true, listingPrepPackage: { id: "package_1" } });
   serviceMocks.saveShelfCostCalculation.mockResolvedValue({ ok: true, calculation: { id: "calc_1" } });
@@ -576,30 +572,6 @@ describe("cost engine routes", () => {
     const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/closeout-summary`);
     expect(response.status).toBe(200);
     expect(serviceMocks.getCloseoutSummary).toHaveBeenCalledWith({
-      organizationId: "org_local_craft_board",
-      listingPrepPackageId: "package_1"
-    });
-  });
-
-  it("records post-completion review for a listing-prep package", async () => {
-    const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/post-completion-review`, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ reviewNote: "Replacement package is now the preferred source of truth." })
-    });
-    expect(response.status).toBe(200);
-    expect(serviceMocks.recordPostCompletionReview).toHaveBeenCalledWith({
-      organizationId: "org_local_craft_board",
-      listingPrepPackageId: "package_1",
-      reviewNote: "Replacement package is now the preferred source of truth.",
-      reviewedByMembershipId: "membership_local_brandon"
-    });
-  });
-
-  it("returns the supersession summary for a listing-prep package", async () => {
-    const response = await fetch(`${baseUrl}/listing-prep-packages/package_1/supersession-summary`);
-    expect(response.status).toBe(200);
-    expect(serviceMocks.getSupersessionSummary).toHaveBeenCalledWith({
       organizationId: "org_local_craft_board",
       listingPrepPackageId: "package_1"
     });

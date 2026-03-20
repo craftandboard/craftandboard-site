@@ -2,14 +2,6 @@ const DEFAULT_APP_URL = "http://localhost:3000";
 const DEFAULT_MARKETING_URL = "http://localhost:3000";
 const DEFAULT_API_BASE_URL = "http://localhost:4000";
 
-function hostnameFromUrl(value: string) {
-  try {
-    return new URL(value).hostname.toLowerCase();
-  } catch {
-    return "";
-  }
-}
-
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
 }
@@ -58,16 +50,5 @@ export function normalizeHostname(host: string | null | undefined) {
 
 export function isMarketingHostname(host: string | null | undefined) {
   const normalized = normalizeHostname(host);
-  const configuredMarketingHost = hostnameFromUrl(MARKETING_URL);
-  const configuredAppHost = hostnameFromUrl(APP_URL);
-
-  if (!normalized) {
-    return false;
-  }
-
-  if (configuredMarketingHost && configuredMarketingHost !== configuredAppHost) {
-    return normalized === configuredMarketingHost;
-  }
-
   return normalized === "fieldmetriq.com" || normalized === "www.fieldmetriq.com";
 }

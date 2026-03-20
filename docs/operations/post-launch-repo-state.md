@@ -39,8 +39,3 @@
 - Vercel checks the Git author on `HEAD` for production deploy eligibility.
 - The current Vercel team setup does not allow adding new team members on the Hobby plan.
 - Future production deploys must use an already-authorized Git identity, or the Vercel team setup must change.
-
-## Post-Launch Snapshot
-- Snapshot branch: `safety/post-launch-worktree-snapshot`
-- Snapshot date: `2026-03-19`
-- Snapshot reason: preserve the full local post-launch worktree before any more cleanup or feature work

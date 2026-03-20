@@ -66,7 +66,6 @@ import {
   buildListingPrepPackage,
   approveListingPrepPackage,
   confirmEntryComplete,
-  recordPostCompletionReview,
   applyChannelMappingPresetToPackage,
   evaluateMarketplaceFieldValidation,
   evaluateComparisonSetListingReadiness,
@@ -74,7 +73,6 @@ import {
   getChannelMappingPreset,
   getListingPrepPackage,
   getCloseoutSummary,
-  getSupersessionSummary,
   getListingPrepManualAmazonExport,
   getMarketplaceMappingTemplate,
   getShelfCostCalculation,
@@ -1161,94 +1159,6 @@ describe("cost engine service", () => {
     );
     expect(payload.listingPrepPackage.entryCompletionConfirmed).toBe(true);
     expect(payload.listingPrepPackage.entryCompletionState).toBe("ENTRY_COMPLETE");
-  });
-
-  it("records post-completion review and supersession summary", async () => {
-    const listingPrepPackageRecord = {
-      id: "package_1",
-      organizationId: "org_local_craft_board",
-      calculationScenarioId: "scenario_1",
-      comparisonSetId: "compare_1",
-      name: "Balanced listing prep",
-      approvalState: "APPROVED",
-      entryCompletionConfirmed: true,
-      entryCompletionState: "ENTRY_COMPLETE",
-      currentApprovedArtifact: false,
-      warningSnapshot: [{ code: "WATCH_PRICE", severity: "WARNING", message: "Watch price drift." }],
-      overrideSnapshot: { overrideApproved: false },
-      completedArtifactSummarySnapshot: { completedArtifactState: "COMPLETED" },
-      channelMappingPreset: {
-        postCompletionReviewPromptSnapshot: { prompts: ["Confirm whether this package is still the one to reference."] },
-        supersessionSummaryFormatSnapshot: { notes: ["Keep a concise replacement summary."] }
-      },
-      createdAt: new Date("2026-03-10T00:00:00.000Z"),
-      updatedAt: new Date("2026-03-11T00:00:00.000Z")
-    };
-
-    repositoryMocks.getListingPrepPackageRecord
-      .mockResolvedValueOnce(listingPrepPackageRecord)
-      .mockResolvedValueOnce({
-        ...listingPrepPackageRecord,
-        artifactSupersessionStatus: "SUPERSEDED_COMPLETED",
-        artifactSupersessionSummarySnapshot: { supersessionVersion: "supersession-v1" },
-        postCompletionReviewSnapshot: { reviewVersion: "post-completion-review-v1" }
-      });
-    repositoryMocks.listListingPrepPackagesForOrganization.mockResolvedValue([
-      listingPrepPackageRecord,
-      {
-        id: "package_2",
-        comparisonSetId: "compare_1",
-        calculationScenarioId: "scenario_2",
-        name: "Balanced listing prep v2",
-        approvalState: "APPROVED",
-        currentApprovedArtifact: true,
-        updatedAt: new Date("2026-03-12T00:00:00.000Z")
-      }
-    ]);
-    repositoryMocks.updateListingPrepPackageRecord.mockResolvedValue({ count: 1 });
-    repositoryMocks.updateCalculationScenarioRecord.mockResolvedValue({ count: 1 });
-    repositoryMocks.updateCalculationComparisonSetRecord.mockResolvedValue({ count: 1 });
-
-    const payload = await recordPostCompletionReview({
-      organizationId: "org_local_craft_board",
-      listingPrepPackageId: "package_1",
-      reviewNote: "Package v2 superseded the original completed entry artifact."
-    });
-
-    expect(repositoryMocks.updateListingPrepPackageRecord).toHaveBeenCalledWith(
-      expect.objectContaining({
-        listingPrepPackageId: "package_1",
-        data: expect.objectContaining({
-          postCompletionReviewNote: "Package v2 superseded the original completed entry artifact.",
-          artifactSupersessionStatus: "SUPERSEDED_COMPLETED"
-        })
-      })
-    );
-    expect(payload.listingPrepPackage.artifactSupersessionStatus).toBe("SUPERSEDED_COMPLETED");
-  });
-
-  it("returns supersession summary for a listing-prep package", async () => {
-    repositoryMocks.getListingPrepPackageRecord.mockResolvedValue({
-      id: "package_1",
-      organizationId: "org_local_craft_board",
-      artifactSupersessionStatus: "CURRENT_COMPLETED",
-      artifactSupersessionSummarySnapshot: { supersessionVersion: "supersession-v1" },
-      postCompletionReviewSnapshot: { reviewVersion: "post-completion-review-v1" },
-      supersededAt: null,
-      supersededByListingPrepPackageId: null,
-      supersededByListingPrepPackage: null,
-      supersessionVersion: "supersession-v1",
-      currentApprovedArtifact: true,
-      entryCompletionConfirmed: true
-    });
-
-    const payload = await getSupersessionSummary({
-      organizationId: "org_local_craft_board",
-      listingPrepPackageId: "package_1"
-    });
-
-    expect(payload.artifactSupersessionStatus).toBe("CURRENT_COMPLETED");
-    expect((payload.supersessionSummary as Record<string, unknown>).supersessionVersion).toBe("supersession-v1");
   });
 
   it("reranks a saved comparison set and updates the recommendation snapshot", async () => {

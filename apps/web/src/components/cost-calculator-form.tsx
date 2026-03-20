@@ -20,7 +20,6 @@ import {
   createShippingCostRule,
   createShippingZoneRule,
   confirmCostListingEntryComplete,
-  recordCostPostCompletionReview,
   evaluateCostComparisonListingReadiness,
   getListingPrepPackage,
   refreshListingPrepPackage,
@@ -95,9 +94,6 @@ import { FinalRunbookCard } from "./final-runbook-card";
 import { FinalHandoffPacketCard } from "./final-handoff-packet-card";
 import { CloseoutSummaryCard } from "./closeout-summary-card";
 import { CompletedArtifactCard } from "./completed-artifact-card";
-import { PostCompletionReviewCard } from "./post-completion-review-card";
-import { ArtifactSupersessionCard } from "./artifact-supersession-card";
-import { CurrentVsSupersededCard } from "./current-vs-superseded-card";
 import { InternalShareSummaryCard } from "./internal-share-summary-card";
 import { LastChangeSummaryCard } from "./last-change-summary-card";
 import { LastStepChecklistCard } from "./last-step-checklist-card";
@@ -1559,31 +1555,6 @@ export function CostCalculatorForm() {
     });
   }
 
-  function handlePostCompletionReview(formData: FormData) {
-    if (!listingPrepPackage) {
-      setError("Complete entry before recording post-completion review.");
-      return;
-    }
-
-    const reviewNote = String(formData.get("reviewNote") ?? "").trim();
-
-    startTransition(() => {
-      void recordCostPostCompletionReview(listingPrepPackage.id, {
-        reviewNote: reviewNote.length ? reviewNote : null
-      })
-        .then((payload) => {
-          setListingPrepPackage(payload.listingPrepPackage);
-          if (activeComparisonSetId) {
-            return loadComparisonSet(activeComparisonSetId);
-          }
-        })
-        .then(() => setSuccess("Post-completion review and supersession summary saved."))
-        .catch((caught) =>
-          setError(caught instanceof Error ? caught.message : "Failed to save post-completion review.")
-        );
-    });
-  }
-
   if (loading) {
     return <div className="rounded-[1.75rem] border border-white/10 bg-white/5 p-8 text-slate-300">Loading Hugo cost engine…</div>;
   }
@@ -1715,13 +1686,6 @@ export function CostCalculatorForm() {
           <EntryCompletionSummaryCard listingPrepPackage={listingPrepPackage} />
           <CloseoutSummaryCard listingPrepPackage={listingPrepPackage} />
           <CompletedArtifactCard listingPrepPackage={listingPrepPackage} />
-          <PostCompletionReviewCard
-            listingPrepPackage={listingPrepPackage}
-            onSubmit={handlePostCompletionReview}
-            busy={isPending}
-          />
-          <ArtifactSupersessionCard listingPrepPackage={listingPrepPackage} />
-          <CurrentVsSupersededCard listingPrepPackage={listingPrepPackage} />
           <ShareCopyPackagingCard listingPrepPackage={listingPrepPackage} />
           <LastStepChecklistCard listingPrepPackage={listingPrepPackage} />
           <ManualListingCopyBlockCard listingPrepPackage={listingPrepPackage} />

@@ -69,8 +69,10 @@ import {
   applyDefaultChannelMappingPreset,
   approveListingPrepPackage,
   confirmEntryComplete,
+  recordPostCompletionReview,
   saveComparisonSet,
   saveShelfCostCalculation,
+  getSupersessionSummary,
   rankComparisonSet,
   selectLaunchScenario,
   evaluateComparisonSetGuardrails,
@@ -125,6 +127,7 @@ import {
   applyDefaultChannelPresetSchema,
   approveListingPrepPackageSchema,
   confirmEntryCompleteSchema,
+  postCompletionReviewSchema,
   saveComparisonSetSchema,
   saveShelfCostCalculationSchema,
   shippingRuleIdParamsSchema,
@@ -1078,6 +1081,25 @@ router.post("/listing-prep-packages/:listingPrepPackageId/confirm-entry-complete
   }
 });
 
+router.post("/listing-prep-packages/:listingPrepPackageId/post-completion-review", async (req, res, next) => {
+  try {
+    const context = getCostCalculationWriteContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    const body = postCompletionReviewSchema.parse(req.body ?? {});
+    res.json(
+      await recordPostCompletionReview({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId,
+        reviewNote: body.reviewNote ?? null,
+        reviewedByMembershipId:
+          body.reviewedByMembershipId ?? (context as any).currentMembership?.id ?? null
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
 router.get("/listing-prep-packages", async (req, res, next) => {
   try {
     const context = getCostCalculationReadContext(req);
@@ -1309,6 +1331,21 @@ router.get("/listing-prep-packages/:listingPrepPackageId/closeout-summary", asyn
     const params = listingPrepPackageIdParamsSchema.parse(req.params);
     res.json(
       await getCloseoutSummary({
+        organizationId: context.currentOrganization.id,
+        listingPrepPackageId: params.listingPrepPackageId
+      })
+    );
+  } catch (error) {
+    handleCostEngineRouteError(error, res, next);
+  }
+});
+
+router.get("/listing-prep-packages/:listingPrepPackageId/supersession-summary", async (req, res, next) => {
+  try {
+    const context = getCostCalculationReadContext(req);
+    const params = listingPrepPackageIdParamsSchema.parse(req.params);
+    res.json(
+      await getSupersessionSummary({
         organizationId: context.currentOrganization.id,
         listingPrepPackageId: params.listingPrepPackageId
       })

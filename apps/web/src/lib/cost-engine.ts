@@ -264,6 +264,36 @@ export function getListingPrepPackageStatusTone(status: string | null | undefine
   }
 }
 
+export function getArtifactSupersessionLabel(status: string | null | undefined) {
+  switch (status) {
+    case "CURRENT_COMPLETED":
+      return "Current completed";
+    case "SUPERSEDED_COMPLETED":
+      return "Superseded completed";
+    case "COMPLETED_NO_REPLACEMENT":
+      return "Completed, no replacement";
+    case "HISTORICAL":
+      return "Historical";
+    default:
+      return "Not reviewed";
+  }
+}
+
+export function getArtifactSupersessionTone(status: string | null | undefined) {
+  switch (status) {
+    case "CURRENT_COMPLETED":
+      return "border-emerald-400/30 bg-emerald-400/10 text-emerald-100";
+    case "SUPERSEDED_COMPLETED":
+      return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+    case "COMPLETED_NO_REPLACEMENT":
+      return "border-cyan-400/30 bg-cyan-400/10 text-cyan-100";
+    case "HISTORICAL":
+      return "border-white/10 bg-white/5 text-slate-200";
+    default:
+      return "border-white/10 bg-white/5 text-slate-200";
+  }
+}
+
 export function getApprovalStateLabel(status: string | null | undefined) {
   return getListingPrepPackageStatusLabel(status);
 }

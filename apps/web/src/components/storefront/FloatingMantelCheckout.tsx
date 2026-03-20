@@ -338,7 +338,7 @@ export function FloatingMantelCheckout({
             This mantel needs the review path instead of standard checkout.
           </h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-[#5c4a3d]">
-            Craft & Board can price this mantel directionally, but the current configuration needs span or support review before a standard purchase submission moves into FieldMetriq.
+            Craft & Board can price this mantel directionally, but the current configuration needs span or support review before a standard purchase submission moves into production review.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link href={inquiryHref} className="rounded-full bg-[#2b1d16] px-5 py-3 text-sm font-medium text-[#f7efe5]">

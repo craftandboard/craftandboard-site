@@ -20,6 +20,18 @@ export type CabinetShelfFaqItem = {
   answer: string;
 };
 
+export type CabinetShelfFinishComparison = {
+  slug: CabinetShelfProduct["slug"];
+  title: string;
+  shortSummary: string;
+  visualStyle: string;
+  practicalPositioning: string;
+  bestForLine: string;
+  chooseThisIf: string;
+  confidenceBullets: string[];
+  href: string;
+};
+
 export const cabinetShelfCategory = {
   slug: "cabinet-shelves",
   title: "Replacement Cabinet Shelves",
@@ -61,6 +73,88 @@ export const cabinetShelfSupportContent = {
   guideReminderTitle: "Need help measuring?",
   guideReminderBody:
     "Reopen the cabinet shelf measurement guide any time if you want a quick reminder on inside width, depth, and 1/8 inch clearance guidance."
+} as const;
+
+export const cabinetShelfHomepageContent = {
+  hero: {
+    eyebrow: "Replacement Cabinet Shelves",
+    title: "Replacement cabinet shelves made simple for real homeowners.",
+    body:
+      "Craft & Board focuses on one thing: replacement cabinet shelves that fit the cabinet you already have. Start with the measurement guide, choose white or maple melamine, and enter your shelf size in simple 1/8 inch increments.",
+    primaryLabel: "Measure Your Shelf",
+    primaryHref: "/guides/how-to-measure-cabinet-shelves",
+    secondaryLabel: "Shop Cabinet Shelves",
+    secondaryHref: "/shop/cabinet-shelves"
+  },
+  howItWorks: [
+    {
+      title: "Measure your cabinet opening",
+      body: "Use the inside width and shelf depth, then leave a simple 1/8 inch clearance for fit."
+    },
+    {
+      title: "Choose your finish",
+      body: "Pick white melamine for a bright clean cabinet interior or maple melamine for a warmer wood-look direction."
+    },
+    {
+      title: "Enter your dimensions",
+      body: "Use the shelf configurator with whole inches and 1/8 inch increments only."
+    },
+    {
+      title: "Start your order",
+      body: "Submit the shelf details and Craft & Board reviews the order if anything needs a closer look."
+    }
+  ],
+  whyCraftBoard: {
+    title: "Built around replacement cabinet shelves, not a giant catalog.",
+    body:
+      "The buying path stays intentionally narrow so the first-time homeowner knows exactly what to do next: measure, choose a finish, enter the shelf size, and start the order with confidence."
+  },
+  finishComparison: {
+    eyebrow: "Choose the Right Cabinet Shelf Finish",
+    title: "White or maple? Pick the cabinet look that fits the room.",
+    body:
+      "Both shelves use the same measuring process, the same 1/8 inch increments, and the same fit guidance. The real decision is whether you want a bright, crisp cabinet interior or a warmer, more finished wood-look direction."
+  },
+  useCases: [
+    {
+      title: "Kitchen cabinets",
+      body: "A clean replacement path for worn, missing, or damaged everyday kitchen shelves."
+    },
+    {
+      title: "Pantry cabinets",
+      body: "Simple made-to-fit shelf replacements for pantry storage that needs the right depth and width."
+    },
+    {
+      title: "Laundry and utility cabinets",
+      body: "Practical melamine shelves that hold up well in hard-working spaces."
+    },
+    {
+      title: "Bathroom and storage cabinets",
+      body: "A straightforward way to replace shelves in smaller built-in storage areas."
+    }
+  ],
+  finalCta: {
+    eyebrow: "Start Here",
+    title: "Measure first, then choose the finish that fits your cabinet.",
+    body:
+      "If you are unsure about your numbers, start with the measurement guide. If you already have the size, go straight to the cabinet shelf collection.",
+    primaryLabel: "Read the Measurement Guide",
+    primaryHref: "/guides/how-to-measure-cabinet-shelves",
+    secondaryLabel: "Shop Cabinet Shelves",
+    secondaryHref: "/shop/cabinet-shelves"
+  }
+} as const;
+
+export const cabinetShelfCategoryContent = {
+  comparisonEyebrow: "White vs Maple",
+  comparisonTitle: "Same measuring process. Two finish directions.",
+  comparisonBody:
+    "Both live replacement shelf products use the same guide, the same configurator, and the same 1/8 inch fit process. Choose the finish that looks right inside the cabinet you already have.",
+  decisionAidTitle: "Which one is right for me?",
+  decisionAidChoices: [
+    "Choose White Melamine if you want a bright, crisp, practical replacement look.",
+    "Choose Maple Melamine if you want a warmer, more finished cabinet appearance."
+  ]
 } as const;
 
 export const cabinetShelfFaqs: CabinetShelfFaqItem[] = [
@@ -154,6 +248,49 @@ export const cabinetShelfProducts: CabinetShelfProduct[] = [
   }
 ];
 
+export const cabinetShelfFinishComparisons: CabinetShelfFinishComparison[] = [
+  {
+    slug: "white-melamine-cabinet-shelf",
+    title: "White Melamine Cabinet Shelf",
+    shortSummary: "Bright, clean, practical replacement shelf for everyday cabinets.",
+    visualStyle: "Crisp white finish that keeps cabinet interiors bright and neutral.",
+    practicalPositioning: "Easy choice for common kitchen, laundry, pantry, and utility cabinet replacements.",
+    bestForLine: "Best for bright cabinets, painted interiors, and homeowners who want a clean practical shelf look.",
+    chooseThisIf: "Choose this if you want the simplest, brightest replacement option without a wood-look finish.",
+    confidenceBullets: [
+      "Bright, clean cabinet look",
+      "Easy-to-understand choice for everyday cabinets",
+      "Great for kitchens, utility, and laundry storage",
+      "Uses the same 1/8 inch measurement system as maple"
+    ],
+    href: "/shop/cabinet-shelves/white-melamine-cabinet-shelf"
+  },
+  {
+    slug: "maple-melamine-cabinet-shelf",
+    title: "Maple Melamine Cabinet Shelf",
+    shortSummary: "Warmer wood-look replacement shelf for a more finished cabinet interior.",
+    visualStyle: "Softer maple-look finish that brings a warmer cabinet appearance than white melamine.",
+    practicalPositioning: "Stronger fit when the cabinet interior would look too stark or too plain with bright white.",
+    bestForLine: "Best for warmer kitchens, pantry cabinets, and storage areas that need a more finished cabinet feel.",
+    chooseThisIf: "Choose this if you want a warmer, more furniture-like cabinet interior without changing the measurement process.",
+    confidenceBullets: [
+      "Warmer wood-look appearance",
+      "Better for a more finished cabinet interior",
+      "Great when you want a softer, less stark shelf look",
+      "Uses the same 1/8 inch measurement system as white"
+    ],
+    href: "/shop/cabinet-shelves/maple-melamine-cabinet-shelf"
+  }
+];
+
 export function getCabinetShelfProduct(slug: string) {
   return cabinetShelfProducts.find((product) => product.slug === slug);
+}
+
+export function getCabinetShelfFinishComparison(slug: string) {
+  return cabinetShelfFinishComparisons.find((entry) => entry.slug === slug);
+}
+
+export function getAlternateCabinetShelfFinish(slug: string) {
+  return cabinetShelfFinishComparisons.find((entry) => entry.slug !== slug);
 }

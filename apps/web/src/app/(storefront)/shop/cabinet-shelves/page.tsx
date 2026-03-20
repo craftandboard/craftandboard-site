@@ -5,7 +5,14 @@ import { Container } from "../../../../components/storefront/Container";
 import { Hero } from "../../../../components/storefront/Hero";
 import { Section } from "../../../../components/storefront/Section";
 import { SectionIntro } from "../../../../components/storefront/SectionIntro";
-import { cabinetShelfCategory, cabinetShelfProducts } from "../../../../content/cabinetShelves";
+import { CabinetShelfFinishComparison } from "../../../../components/storefront/cabinet-shelves/CabinetShelfFinishComparison";
+import {
+  cabinetShelfCategory,
+  cabinetShelfCategoryContent,
+  cabinetShelfFinishComparisons,
+  cabinetShelfProducts,
+  cabinetShelfSupportContent
+} from "../../../../content/cabinetShelves";
 import { generatePageSEO } from "../../../../lib/seo/metadata";
 import { getCategoryPageKey } from "../../../../lib/seo/overrides";
 
@@ -22,50 +29,92 @@ export default function CabinetShelvesCategoryPage() {
     <>
       <Hero
         eyebrow="Replacement Cabinet Shelves"
-        title="Replacement cabinet shelves built around simple, accurate measuring."
+        title="Choose the replacement cabinet shelf finish that fits your cabinet."
         body={cabinetShelfCategory.intro}
-        primaryCta={{ href: "/guides/how-to-measure-cabinet-shelves", label: "Use the Measurement Guide" }}
+        primaryCta={{ href: "/guides/how-to-measure-cabinet-shelves", label: "Measure Your Shelf" }}
         secondaryCta={{ href: cabinetShelfProducts[0]?.href ?? "/contact", label: "Shop White Melamine" }}
       />
       <Section>
         <Container>
-          <SectionIntro
-            eyebrow="Choose a Finish"
-            title="Start with the shelf finish that fits the cabinet interior."
-            body="These first MVP replacement shelves keep the choice simple: a bright white melamine option and a warmer maple melamine option. Both use the same measurement-first ordering path."
+          <CabinetShelfFinishComparison
+            eyebrow={cabinetShelfCategoryContent.comparisonEyebrow}
+            title={cabinetShelfCategoryContent.comparisonTitle}
+            body={cabinetShelfCategoryContent.comparisonBody}
+            finishes={cabinetShelfFinishComparisons}
+            showDecisionAid
+            decisionAidTitle={cabinetShelfCategoryContent.decisionAidTitle}
+            decisionAidChoices={cabinetShelfCategoryContent.decisionAidChoices}
           />
-          <div className="mt-10 grid gap-6 lg:grid-cols-2">
-            {cabinetShelfProducts.map((product) => (
-              <article key={product.slug} className="rounded-[2rem] border border-[#dbcab9] bg-[#fffaf4] p-8">
-                <p className="text-xs uppercase tracking-[0.35em] text-[#8d6b4f]">{product.materialLabel}</p>
-                <h2 className="mt-3 font-[family-name:var(--font-cormorant)] text-4xl text-[#281a13]">{product.title}</h2>
-                <p className="mt-4 text-base leading-7 text-[#5c4a3d]">{product.description}</p>
-                <ul className="mt-5 space-y-3 text-sm leading-6 text-[#5c4a3d]">
-                  {product.bullets.map((bullet) => (
-                    <li key={bullet}>• {bullet}</li>
-                  ))}
-                </ul>
-                <div className="mt-6 flex flex-wrap gap-3">
-                  <Link href={product.href} className="rounded-full bg-[#2b1d16] px-5 py-3 text-sm font-medium text-[#f7f0e7] transition hover:bg-[#4a3529]">
-                    View Product
-                  </Link>
-                  <Link href="/guides/how-to-measure-cabinet-shelves" className="rounded-full border border-[#dbcab9] px-5 py-3 text-sm font-medium text-[#2b1d16] transition hover:bg-white">
-                    How to Measure
-                  </Link>
-                </div>
-              </article>
-            ))}
-          </div>
         </Container>
       </Section>
       <Section tone="tinted">
         <Container>
+          <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
+            <SectionIntro
+              eyebrow="Measurement Help"
+              title="Most customers should measure before choosing the shelf."
+              body="If you are not fully confident in the width or depth yet, start with the measurement guide first. It covers inside width, depth, 1/8 inch increments, and the simple clearance rule."
+            />
+            <div className="rounded-[2rem] border border-[#dbcab9] bg-[#fffaf4] p-8">
+              <p className="text-xs uppercase tracking-[0.3em] text-[#8d6b4f]">Quick fit reminder</p>
+              <p className="mt-4 text-sm leading-7 text-[#5c4a3d]">{cabinetShelfSupportContent.confidenceBody}</p>
+              <div className="mt-5 rounded-[1rem] border border-[#ded1c4] bg-[#f8efe5] p-4 text-sm text-[#4f3f33]">
+                {cabinetShelfSupportContent.confidenceExample}
+              </div>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href="/guides/how-to-measure-cabinet-shelves" className="rounded-full bg-[#2b1d16] px-5 py-3 text-sm font-medium text-[#f7efe5]">
+                  Read the Measurement Guide
+                </Link>
+                <Link href={cabinetShelfProducts[1]?.href ?? "/contact"} className="rounded-full border border-[#cdb59e] px-5 py-3 text-sm font-medium text-[#4f3f33]">
+                  View Maple Melamine
+                </Link>
+              </div>
+            </div>
+          </div>
+        </Container>
+      </Section>
+      <Section>
+        <Container>
+          <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
+            <article className="rounded-[2rem] border border-[#dbcab9] bg-[#fffaf4] p-8">
+              <p className="text-xs uppercase tracking-[0.3em] text-[#8d6b4f]">Why Craft &amp; Board</p>
+              <h2 className="mt-3 font-[family-name:var(--font-cormorant)] text-4xl text-[#281a13]">
+                A replacement shelf specialist, not a giant shelf catalog.
+              </h2>
+              <div className="mt-5 space-y-3 text-sm leading-7 text-[#5c4a3d]">
+                {cabinetShelfSupportContent.trustPoints.map((point) => (
+                  <p key={point}>{point}</p>
+                ))}
+              </div>
+            </article>
+            <article className="rounded-[2rem] border border-[#dbcab9] bg-[#f8eee2] p-8">
+              <p className="text-xs uppercase tracking-[0.3em] text-[#8d6b4f]">Category CTA</p>
+              <h2 className="mt-3 font-[family-name:var(--font-cormorant)] text-4xl text-[#281a13]">
+                Ready to pick the finish or still need the guide first?
+              </h2>
+              <p className="mt-4 text-base leading-7 text-[#5c4a3d]">
+                Move into the product page that matches your cabinet interior, or reopen the guide if you want one more measuring check before starting the order.
+              </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link href={cabinetShelfProducts[0]?.href ?? "/contact"} className="rounded-full bg-[#2b1d16] px-5 py-3 text-sm font-medium text-[#f7efe5]">
+                  Shop White Melamine
+                </Link>
+                <Link href="/guides/how-to-measure-cabinet-shelves" className="rounded-full border border-[#cdb59e] px-5 py-3 text-sm font-medium text-[#4f3f33]">
+                  Measure First
+                </Link>
+              </div>
+            </article>
+          </div>
+        </Container>
+      </Section>
+      <Section>
+        <Container>
           <CTA
-            eyebrow="Measure First"
-            title="Use the guide before you order."
-            body="The easiest way to get the right replacement shelf is to measure the inside cabinet width, note the depth, and order in the correct 1/8 inch increment."
-            primary={{ href: "/guides/how-to-measure-cabinet-shelves", label: "Read the Measurement Guide" }}
-            secondary={{ href: cabinetShelfProducts[1]?.href ?? "/contact", label: "View Maple Melamine" }}
+            eyebrow="Next Step"
+            title="Measure if you need help. Shop if you already know the size."
+            body="The cabinet shelf flow stays simple on purpose: guide first for confidence, product page second for finish choice, configurator third for dimensions and quantity."
+            primary={{ href: "/guides/how-to-measure-cabinet-shelves", label: "Use the Measurement Guide" }}
+            secondary={{ href: "/shop/cabinet-shelves", label: "Shop Cabinet Shelves" }}
           />
         </Container>
       </Section>

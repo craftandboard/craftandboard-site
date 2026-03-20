@@ -20,7 +20,7 @@ export function Header() {
 
           <nav className="hidden items-center gap-7 lg:flex">
             {storefrontConfig.navigation.map((item) => {
-              const active = pathname === item.href || (item.href !== "/" && pathname.startsWith(item.href));
+              const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}
@@ -40,7 +40,7 @@ export function Header() {
               href={storefrontConfig.primaryCtaHref}
               className="rounded-full bg-[#2b1d16] px-5 py-3 text-sm font-medium text-[#f7efe5]"
             >
-              Start Your Project
+              {storefrontConfig.primaryCtaLabel}
             </Link>
           </div>
 
@@ -77,7 +77,7 @@ export function Header() {
               onClick={() => setOpen(false)}
               className="mt-2 block rounded-full bg-[#2b1d16] px-5 py-3 text-center text-sm font-medium text-[#f7efe5]"
             >
-              Start Your Project
+              {storefrontConfig.primaryCtaLabel}
             </Link>
           </div>
         ) : null}

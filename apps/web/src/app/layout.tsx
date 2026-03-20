@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { CurrentContextChip } from "../components/current-context-chip";
-import { Nav } from "../components/nav";
 import { SeoAttributionTracker } from "../components/storefront/SeoAttributionTracker";
 import { StructuredDataScript } from "../components/storefront/StructuredDataScript";
 import { getViewerContext } from "../lib/api";
@@ -14,10 +13,10 @@ import "./globals.css";
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getRequestSiteContext();
-  const title = site.isMarketingHost ? "Craft & Board" : "FieldMetriq App";
+  const title = site.isMarketingHost ? "Craft & Board" : "Craft & Board Admin";
   const description = site.isMarketingHost
-    ? "Craft & Board creates custom floating shelves and made-to-order architectural wood products."
-    : "FieldMetriq app for operations, production, labels, inventory, and machine workflows.";
+    ? "Craft & Board creates replacement cabinet shelves and made-to-order wood shelving with a calm, guided ordering experience."
+    : "Craft & Board admin for orders, marketing, outreach, and cabinet shelf operations.";
 
   const baseMetadata = site.isMarketingHost
     ? generatePageSEO({
@@ -44,10 +43,10 @@ export async function generateMetadata(): Promise<Metadata> {
     ...baseMetadata,
     ...(site.isMarketingHost ? getSiteVerificationMetadata() : {}),
     metadataBase: new URL(site.resolvedOrigin),
-    applicationName: site.isMarketingHost ? "Craft & Board" : "FieldMetriq",
+    applicationName: site.isMarketingHost ? "Craft & Board" : "Craft & Board Admin",
     title: {
       default: title,
-      template: site.isMarketingHost ? "%s" : "%s | FieldMetriq"
+      template: site.isMarketingHost ? "%s" : "%s | Craft & Board Admin"
     }
   };
 }
@@ -66,25 +65,26 @@ export default async function RootLayout({
         {site.isMarketingHost ? (
           children
         ) : (
-          <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8">
-            <header className="mb-10 rounded-[2rem] border border-white/10 bg-[var(--panel)] p-6 shadow-2xl shadow-emerald-950/20 backdrop-blur">
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-                <div className="space-y-3">
-                  <p className="text-sm uppercase tracking-[0.35em] text-emerald-300">fieldmetriq app</p>
-                  <div>
-                    <h1 className="text-4xl font-semibold tracking-tight text-white">FieldMetriq</h1>
-                    <p className="mt-2 max-w-2xl text-sm text-[var(--muted)]">
-                      Operating system for field and shop workflows, with orders, costing, manufacturing, telemetry, scans, containers, and inventory in one app shell.
-                    </p>
+          <div className="cb-admin-report min-h-screen">
+            <div className="mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-8">
+              <header className="mb-8 rounded-[2rem] border border-[#e2d6c9] bg-[#fffaf4]/95 p-6 shadow-[0_18px_48px_rgba(73,50,33,0.08)] backdrop-blur">
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="space-y-3">
+                    <p className="text-sm uppercase tracking-[0.35em] text-[#6b7550]">Craft &amp; Board Admin</p>
+                    <div>
+                      <h1 className="text-4xl font-semibold tracking-tight text-[#2c221b]">Private workspace for Craft &amp; Board</h1>
+                      <p className="mt-2 max-w-2xl text-sm text-[#6f5f51]">
+                        Orders, marketing, SEO, outreach, and cabinet shelf operations in one locked-down internal workspace.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-start gap-4 lg:items-end">
+                    <CurrentContextChip context={await contextPromise} />
                   </div>
                 </div>
-                <div className="flex flex-col items-start gap-4 lg:items-end">
-                  <CurrentContextChip context={await contextPromise} />
-                  <Nav />
-                </div>
-              </div>
-            </header>
-            <main className="flex-1">{children}</main>
+              </header>
+              <main className="flex-1">{children}</main>
+            </div>
           </div>
         )}
       </body>

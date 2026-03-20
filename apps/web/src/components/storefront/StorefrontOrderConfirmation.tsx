@@ -292,7 +292,7 @@ export function StorefrontOrderConfirmation({
             Downstream intake: {humanizeToken(confirmation.fieldMetriqSubmissionStatus)}
           </p>
           {confirmation.submissionReference ? (
-            <p className="mt-2">FieldMetriq reference: {confirmation.submissionReference}</p>
+            <p className="mt-2">Production reference: {confirmation.submissionReference}</p>
           ) : null}
           {confirmation.fieldMetriqFulfillmentClass ? (
             <p className="mt-2">

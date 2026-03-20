@@ -25,7 +25,7 @@ export function Footer() {
             href={storefrontConfig.primaryCtaHref}
             className="mt-4 inline-flex rounded-full bg-[#2b1d16] px-5 py-3 text-sm font-medium text-[#f7efe5]"
           >
-            Start a Custom Order
+            {storefrontConfig.primaryCtaLabel}
           </Link>
         </div>
       </Container>

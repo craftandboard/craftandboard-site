@@ -5,9 +5,18 @@ import { Container } from "../../../../../components/storefront/Container";
 import { Section } from "../../../../../components/storefront/Section";
 import { SectionIntro } from "../../../../../components/storefront/SectionIntro";
 import { StructuredDataScript } from "../../../../../components/storefront/StructuredDataScript";
-import { cabinetShelfFaqs, cabinetShelfProducts, getCabinetShelfProduct } from "../../../../../content/cabinetShelves";
+import {
+  cabinetShelfFaqs,
+  cabinetShelfFinishComparisons,
+  cabinetShelfProducts,
+  getAlternateCabinetShelfFinish,
+  getCabinetShelfFinishComparison,
+  getCabinetShelfProduct
+} from "../../../../../content/cabinetShelves";
+import { CabinetShelfAlternateFinishLink } from "../../../../../components/storefront/cabinet-shelves/CabinetShelfAlternateFinishLink";
 import { CabinetShelfConfidenceBlock } from "../../../../../components/storefront/cabinet-shelves/CabinetShelfConfidenceBlock";
 import { CabinetShelfFaq } from "../../../../../components/storefront/cabinet-shelves/CabinetShelfFaq";
+import { CabinetShelfFinishComparison } from "../../../../../components/storefront/cabinet-shelves/CabinetShelfFinishComparison";
 import { CabinetShelfMeasurementHelp } from "../../../../../components/storefront/cabinet-shelves/CabinetShelfMeasurementHelp";
 import { CabinetShelfNextSteps } from "../../../../../components/storefront/cabinet-shelves/CabinetShelfNextSteps";
 import { CabinetShelfReviewChecklist } from "../../../../../components/storefront/cabinet-shelves/CabinetShelfReviewChecklist";
@@ -90,6 +99,8 @@ export default async function CabinetShelfProductPage({
     { name: "Replacement Cabinet Shelves", path: "/shop/cabinet-shelves" },
     { name: product.title, path: product.href }
   ]);
+  const currentFinish = getCabinetShelfFinishComparison(product.slug);
+  const alternateFinish = getAlternateCabinetShelfFinish(product.slug);
 
   return (
     <Section>
@@ -105,7 +116,7 @@ export default async function CabinetShelfProductPage({
 
         <div className="grid gap-6 lg:grid-cols-[0.78fr_1.22fr]">
           <article className="rounded-[2rem] border border-[#dbcab9] bg-[#fffaf4] p-8">
-            <p className="text-xs uppercase tracking-[0.35em] text-[#8d6b4f]">Why This Shelf</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-[#8d6b4f]">Best For</p>
             <h2 className="mt-3 font-[family-name:var(--font-cormorant)] text-4xl text-[#281a13]">{product.summary}</h2>
             <p className="mt-4 text-base leading-7 text-[#5c4a3d]">{product.finishDirection}</p>
             <p className="mt-4 text-sm leading-7 text-[#6f5847]">{product.bestFor}</p>
@@ -114,6 +125,12 @@ export default async function CabinetShelfProductPage({
                 <li key={bullet}>• {bullet}</li>
               ))}
             </ul>
+            {currentFinish ? (
+              <div className="mt-6 rounded-[1.25rem] border border-[#e0d2c4] bg-[#fbf5ee] p-4 text-sm leading-6 text-[#4f3f33]">
+                <p className="text-xs uppercase tracking-[0.22em] text-[#8d6b4f]">Choose this if</p>
+                <p className="mt-2">{currentFinish.chooseThisIf}</p>
+              </div>
+            ) : null}
           </article>
 
           <article className="rounded-[2rem] border border-[#dbcab9] bg-[#f8eee2] p-8">
@@ -125,6 +142,19 @@ export default async function CabinetShelfProductPage({
               <p>4. Enter the shelf width and depth below in 1/8 inch increments only.</p>
             </div>
           </article>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <CabinetShelfAlternateFinishLink currentFinishTitle={product.shortTitle} alternateFinish={alternateFinish} />
+          <div className="rounded-[1.5rem] border border-[#dbcab9] bg-[#fffaf4] p-6">
+            <p className="text-xs uppercase tracking-[0.3em] text-[#8d6b4f]">Same measuring process</p>
+            <h3 className="mt-3 font-[family-name:var(--font-cormorant)] text-3xl text-[#281a13]">
+              White and maple use the same fit rules.
+            </h3>
+            <p className="mt-3 text-sm leading-7 text-[#5c4a3d]">
+              Both finishes use the same measurement guide, the same 1/8 inch increments, and the same simple clearance rule. Finish is the main style decision in this MVP.
+            </p>
+          </div>
         </div>
 
         <CabinetShelfConfigurator product={product} />
@@ -146,6 +176,15 @@ export default async function CabinetShelfProductPage({
         </div>
 
         <CabinetShelfMeasurementHelp />
+
+        <div className="max-w-5xl">
+          <CabinetShelfFinishComparison
+            eyebrow="Compare Finishes"
+            title="Still deciding between white and maple?"
+            body="The measuring steps stay the same either way. The real choice is whether your cabinet looks better with a brighter practical white shelf or a warmer wood-look maple shelf."
+            finishes={cabinetShelfFinishComparisons}
+          />
+        </div>
 
         <div className="max-w-5xl">
           <SectionIntro

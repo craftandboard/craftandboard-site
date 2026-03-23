@@ -92,20 +92,20 @@ export function ResetPasswordForm({ token }: { token: string }) {
   }
 
   if (validating) {
-    return <p className="text-sm text-slate-300">Validating reset token...</p>;
+    return <p className="text-sm text-[#6f5f51]">Checking your reset link...</p>;
   }
 
   return (
-    <form className="space-y-4" onSubmit={handleSubmit}>
+    <form className="space-y-4 rounded-[1.5rem] border border-[#eadfd3] bg-[#fcf7f1] p-5" onSubmit={handleSubmit}>
       {validatedEmail ? (
-        <div className="rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
-          Resetting password for <span className="text-white">{validatedEmail}</span>
+        <div className="rounded-2xl border border-[#e2d6c9] bg-[#fffdf9] px-4 py-3 text-sm text-[#6f5f51]">
+          Resetting password for <span className="text-[#2c221b]">{validatedEmail}</span>
         </div>
       ) : null}
       <div className="space-y-2">
-        <label className="text-sm text-slate-300">New Password</label>
+        <label className="text-sm text-[#5e5043]">New Password</label>
         <input
-          className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
+          className="w-full rounded-2xl border border-[#e2d6c9] bg-[#fffdf9] px-4 py-3 text-[#2c221b]"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
           type="password"
@@ -113,9 +113,9 @@ export function ResetPasswordForm({ token }: { token: string }) {
         />
       </div>
       <div className="space-y-2">
-        <label className="text-sm text-slate-300">Confirm Password</label>
+        <label className="text-sm text-[#5e5043]">Confirm Password</label>
         <input
-          className="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white"
+          className="w-full rounded-2xl border border-[#e2d6c9] bg-[#fffdf9] px-4 py-3 text-[#2c221b]"
           value={confirmPassword}
           onChange={(event) => setConfirmPassword(event.target.value)}
           type="password"
@@ -123,19 +123,19 @@ export function ResetPasswordForm({ token }: { token: string }) {
         />
       </div>
       {error ? (
-        <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-2xl border border-rose-300/40 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
       {success ? (
-        <div className="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+        <div className="rounded-2xl border border-[#d7dfc7] bg-[#eef1e4] px-4 py-3 text-sm text-[#4f5a3a]">
           {success}
         </div>
       ) : null}
       <button
         type="submit"
         disabled={submitting || !validatedEmail}
-        className="rounded-full bg-emerald-400 px-5 py-3 text-sm font-medium text-emerald-950 disabled:opacity-60"
+        className="rounded-full bg-[#2c221b] px-5 py-3 text-sm font-medium text-[#f7efe5] disabled:opacity-60"
       >
         {submitting ? "Resetting..." : "Set New Password"}
       </button>

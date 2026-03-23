@@ -1,8 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import { AuthShell } from "../../components/auth-shell";
 import { ResetPasswordForm } from "../../components/reset-password-form";
-import { getAppRedirectUrl } from "../../lib/request-site";
 
 export const metadata: Metadata = {
   title: "Reset Password",
@@ -15,25 +14,20 @@ export default async function ResetPasswordPage(props: {
   }>;
 }) {
   const searchParams = await props.searchParams;
-  const redirectUrl = await getAppRedirectUrl(
-    "/reset-password",
-    new URLSearchParams(searchParams.token ? { token: searchParams.token } : {})
-  );
-
-  if (redirectUrl) {
-    redirect(redirectUrl);
-  }
-
   const token = searchParams.token?.trim() ?? "";
 
   return (
-    <section className="mx-auto max-w-lg rounded-[2rem] border border-[#e2d6c9] bg-[#fffaf4] p-8 shadow-[0_18px_40px_rgba(73,50,33,0.08)]">
-      <p className="text-sm uppercase tracking-[0.3em] text-[#6b7550]">Craft &amp; Board Admin</p>
-      <h1 className="mt-3 text-3xl font-semibold text-[#2c221b]">Set a new password</h1>
-      <p className="mt-3 text-sm text-[#6f5f51]">
-        Use your reset token to set a new password and start a fresh session.
-      </p>
-      <div className="mt-8">
+    <AuthShell
+      eyebrow="Craft & Board Admin"
+      title="Set a new password"
+      body="Use your reset link to regain access to the private Craft & Board admin workspace."
+      footer={
+        <Link href="/login" className="text-sm text-[#6b7550] underline underline-offset-4">
+          Back to sign in
+        </Link>
+      }
+    >
+      <div>
         {token ? (
           <ResetPasswordForm token={token} />
         ) : (
@@ -45,6 +39,6 @@ export default async function ResetPasswordPage(props: {
           </div>
         )}
       </div>
-    </section>
+    </AuthShell>
   );
 }

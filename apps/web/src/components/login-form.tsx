@@ -13,7 +13,7 @@ export function LoginForm() {
 
   return (
     <form
-      className="space-y-4"
+      className="space-y-4 rounded-[1.5rem] border border-[#eadfd3] bg-[#fcf7f1] p-5"
       onSubmit={async (event) => {
         event.preventDefault();
         setSubmitting(true);
@@ -38,6 +38,12 @@ export function LoginForm() {
         }
       }}
     >
+      <div className="space-y-1">
+        <p className="text-xs uppercase tracking-[0.22em] text-[#8a7869]">Fallback sign-in</p>
+        <p className="text-sm text-[#6f5f51]">
+          Use email and password only if your team is still on the password-based internal login.
+        </p>
+      </div>
       <div className="space-y-2">
         <label className="text-sm text-[#5e5043]">Email</label>
         <input
@@ -60,7 +66,7 @@ export function LoginForm() {
         />
       </div>
       {error ? (
-        <div className="rounded-2xl border border-rose-400/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+        <div className="rounded-2xl border border-rose-300/40 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           {error}
         </div>
       ) : null}
@@ -72,7 +78,7 @@ export function LoginForm() {
         {submitting ? "Signing in..." : "Sign In"}
       </button>
       <p className="text-xs text-[#7d6c5e]">
-        Use an authorized admin account. Demo credentials may still be enabled in non-production environments.
+        For internal team access only. This is not a customer order portal.
       </p>
     </form>
   );

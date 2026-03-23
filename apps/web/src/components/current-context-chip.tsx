@@ -1,6 +1,5 @@
 import { OrgSwitcher } from "./org-switcher";
 import type { ViewerContextResponse } from "../lib/api";
-import { appUrl } from "../lib/site-config";
 import { LogoutButton } from "./logout-button";
 
 export function CurrentContextChip({
@@ -11,7 +10,7 @@ export function CurrentContextChip({
   if (!context) {
     return (
       <a
-        href={appUrl("/login")}
+        href="/login"
         className="rounded-full border border-[#dccfc1] bg-[#fffaf4] px-4 py-3 text-xs text-[#5d5044] transition hover:border-[#c6b6a5] hover:text-[#2c221b]"
       >
         Sign In

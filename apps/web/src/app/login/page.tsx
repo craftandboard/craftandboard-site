@@ -1,36 +1,79 @@
-import Link from "next/link";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import { AuthShell } from "../../components/auth-shell";
+import { GoogleSignInButton } from "../../components/google-sign-in-button";
 import { LoginForm } from "../../components/login-form";
-import { getAppRedirectUrl } from "../../lib/request-site";
 
 export const metadata: Metadata = {
-  title: "Sign In",
-  description: "Sign in to Craft & Board admin."
+  title: "Sign in to Craft & Board Admin",
+  description: "Private Craft & Board admin sign-in for orders, production, marketing, and cabinet shelf operations."
 };
 
-export default async function LoginPage() {
-  const redirectUrl = await getAppRedirectUrl("/login");
+function googleNotice(searchParams: Record<string, string | string[] | undefined>) {
+  const raw = searchParams.google;
+  const code = Array.isArray(raw) ? raw[0] : raw;
 
-  if (redirectUrl) {
-    redirect(redirectUrl);
+  switch (code) {
+    case "not-configured":
+      return "Google sign-in is wired, but this environment still needs GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.";
+    case "denied":
+      return "Google sign-in was cancelled before access was granted.";
+    case "state":
+      return "Google sign-in could not be verified. Start again from the button below.";
+    case "failed":
+      return "Google sign-in could not be completed for this account.";
+    case "unauthorized":
+      return "This Google account is not authorized for Craft & Board Admin.";
+    default:
+      return null;
   }
+}
+
+export default async function LoginPage(props: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const searchParams = await props.searchParams;
+  const googleConfigured = Boolean(
+    process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim()
+  );
+  const notice = googleNotice(searchParams);
 
   return (
-    <section className="mx-auto max-w-lg rounded-[2rem] border border-[#e2d6c9] bg-[#fffaf4] p-8 shadow-[0_18px_40px_rgba(73,50,33,0.08)]">
-      <p className="text-sm uppercase tracking-[0.3em] text-[#6b7550]">Craft &amp; Board Admin</p>
-      <h1 className="mt-3 text-3xl font-semibold text-[#2c221b]">Sign in to the private workspace</h1>
-      <p className="mt-3 text-sm text-[#6f5f51]">
-        Use an authorized admin account to open orders, marketing, and cabinet shelf operations.
-      </p>
-      <div className="mt-8">
+    <AuthShell
+      eyebrow="Craft & Board Admin"
+      title="Sign in to Craft & Board Admin"
+      body="Private workspace for orders, production, marketing, and cabinet shelf operations."
+      notice={
+        notice ? (
+          <div className="rounded-2xl border border-[#e6d9c8] bg-[#f7f0e7] px-4 py-3 text-sm text-[#5d5044]">
+            {notice}
+          </div>
+        ) : null
+      }
+      footer={
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-[#7d6c5e]">
+          <Link href="/forgot-password" className="text-[#6b7550] underline underline-offset-4">
+            Forgot password?
+          </Link>
+          <span>For internal team access only.</span>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        <div className="space-y-3">
+          <p className="text-xs uppercase tracking-[0.22em] text-[#8a7869]">Primary sign-in</p>
+          <GoogleSignInButton
+            href="/auth/google/start"
+            disabled={!googleConfigured}
+            reason={
+              googleConfigured
+                ? null
+                : "Google sign-in will work once GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set for this deployment."
+            }
+          />
+        </div>
         <LoginForm />
       </div>
-      <div className="mt-6 text-sm text-[#7d6c5e]">
-        <Link href="/forgot-password" className="text-[#6b7550] underline underline-offset-4">
-          Forgot password?
-        </Link>
-      </div>
-    </section>
+    </AuthShell>
   );
 }

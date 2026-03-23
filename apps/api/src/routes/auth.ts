@@ -6,13 +6,16 @@ import {
   activateAccount,
   AuthenticationError,
   DEMO_AUTH_CREDENTIALS,
+  getGoogleAuthConfigStatus,
   getActivationTokenContext,
   getAuthSessionContext,
   getPasswordResetTokenContext,
+  GoogleAuthConfigurationError,
   invalidActivationError,
   invalidResetError,
   requestPasswordReset,
   resetPassword,
+  signInWithGoogleCode,
   signInWithPassword,
   signOutSession
 } from "../modules/auth/service.js";
@@ -33,6 +36,22 @@ const forgotPasswordSchema = z.object({
   email: z.string().email()
 });
 
+const googleCodeSchema = z.object({
+  code: z.string().min(1),
+  redirectUri: z.string().url()
+});
+
+router.get("/providers", async (_req, res) => {
+  const google = getGoogleAuthConfigStatus();
+
+  res.json({
+    ok: true,
+    providers: {
+      google
+    }
+  });
+});
+
 router.post("/login", async (req, res, next) => {
   try {
     const body = loginSchema.parse(req.body);
@@ -50,6 +69,33 @@ router.post("/login", async (req, res, next) => {
     });
   } catch (error) {
     if (error instanceof z.ZodError || error instanceof AuthenticationError) {
+      res.status(400).json({ ok: false, error: error.message });
+      return;
+    }
+    next(error);
+  }
+});
+
+router.post("/google/complete", async (req, res, next) => {
+  try {
+    const body = googleCodeSchema.parse(req.body);
+    const result = await signInWithGoogleCode(body);
+
+    setSessionCookie(res, result.session.token, result.session.expiresAt);
+    res.status(201).json({
+      ok: true,
+      sessionToken: result.session.token,
+      user: result.context.currentUser,
+      organization: result.context.currentOrganization,
+      membership: result.context.membership,
+      organizations: result.context.organizations
+    });
+  } catch (error) {
+    if (
+      error instanceof z.ZodError ||
+      error instanceof AuthenticationError ||
+      error instanceof GoogleAuthConfigurationError
+    ) {
       res.status(400).json({ ok: false, error: error.message });
       return;
     }

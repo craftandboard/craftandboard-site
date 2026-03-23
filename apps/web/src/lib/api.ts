@@ -837,6 +837,33 @@ export async function login(input: { email: string; password: string }) {
   });
 }
 
+export interface AuthProvidersResponse {
+  ok: true;
+  providers: {
+    google: {
+      enabled: boolean;
+      missing: string[];
+    };
+  };
+}
+
+export async function getAuthProviders() {
+  return readJson<AuthProvidersResponse>("/auth/providers", {
+    method: "GET",
+    headers: {}
+  });
+}
+
+export async function completeGoogleSignIn(input: {
+  code: string;
+  redirectUri: string;
+}) {
+  return sendJson<ActivationResponse>("/auth/google/complete", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
 export async function logout() {
   return sendJson<{ ok: true }>("/auth/logout", {
     method: "POST"

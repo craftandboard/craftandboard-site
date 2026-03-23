@@ -1,4 +1,5 @@
 import { prisma } from "../../lib/prisma.js";
+import { env } from "../../lib/env.js";
 import type { ApiRequestContext } from "../../lib/requestContext.js";
 import {
   DEV_OPERATOR_EMAIL,
@@ -25,8 +26,23 @@ import {
 
 const DEMO_OWNER_PASSWORD = "demo1234";
 const DEMO_OPERATOR_PASSWORD = "operator1234";
+const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
+const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 
 export class AuthenticationError extends Error {}
+export class GoogleAuthConfigurationError extends Error {}
+
+type GoogleTokenResponse = {
+  access_token?: string;
+  error?: string;
+  error_description?: string;
+};
+
+type GoogleUserInfoResponse = {
+  email?: string;
+  email_verified?: boolean;
+  name?: string;
+};
 
 export async function ensureSeededAuthUsers() {
   await ensureDefaultDevMembership();
@@ -83,6 +99,126 @@ export async function signInWithPassword(input: {
     where: { id: user.id },
     data: {
       lastLoginAt: new Date()
+    }
+  });
+
+  const session = await createUserSession(user.id);
+  const context = await resolveRequestContext({
+    sessionToken: session.token
+  });
+
+  return {
+    session,
+    context
+  };
+}
+
+function assertGoogleAuthConfigured() {
+  const clientId = env.GOOGLE_CLIENT_ID?.trim() ?? "";
+  const clientSecret = env.GOOGLE_CLIENT_SECRET?.trim() ?? "";
+
+  if (!clientId || !clientSecret) {
+    throw new GoogleAuthConfigurationError(
+      "Google sign-in is not configured. Missing GOOGLE_CLIENT_ID and/or GOOGLE_CLIENT_SECRET."
+    );
+  }
+
+  return {
+    clientId,
+    clientSecret
+  };
+}
+
+async function getGoogleUserInfo(input: { code: string; redirectUri: string }) {
+  const { clientId, clientSecret } = assertGoogleAuthConfigured();
+
+  const tokenResponse = await fetch(GOOGLE_TOKEN_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/x-www-form-urlencoded"
+    },
+    body: new URLSearchParams({
+      code: input.code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      grant_type: "authorization_code",
+      redirect_uri: input.redirectUri
+    }).toString()
+  });
+
+  const tokenPayload = (await tokenResponse.json()) as GoogleTokenResponse;
+
+  if (!tokenResponse.ok || !tokenPayload.access_token) {
+    throw new AuthenticationError(
+      tokenPayload.error_description || tokenPayload.error || "Google sign-in could not be completed."
+    );
+  }
+
+  const userInfoResponse = await fetch(GOOGLE_USERINFO_URL, {
+    headers: {
+      authorization: `Bearer ${tokenPayload.access_token}`
+    }
+  });
+
+  const userInfo = (await userInfoResponse.json()) as GoogleUserInfoResponse;
+
+  if (!userInfoResponse.ok || !userInfo.email || !userInfo.email_verified) {
+    throw new AuthenticationError(
+      "This Google account could not be verified for Craft & Board Admin."
+    );
+  }
+
+  return userInfo;
+}
+
+export function getGoogleAuthConfigStatus() {
+  return {
+    enabled: Boolean(env.GOOGLE_CLIENT_ID?.trim() && env.GOOGLE_CLIENT_SECRET?.trim()),
+    missing: [
+      ...(env.GOOGLE_CLIENT_ID?.trim() ? [] : ["GOOGLE_CLIENT_ID"]),
+      ...(env.GOOGLE_CLIENT_SECRET?.trim() ? [] : ["GOOGLE_CLIENT_SECRET"])
+    ]
+  };
+}
+
+export async function signInWithGoogleCode(input: {
+  code: string;
+  redirectUri: string;
+}) {
+  await ensureSeededAuthUsers();
+
+  const googleUser = await getGoogleUserInfo(input);
+  const email = googleUser.email?.trim().toLowerCase();
+
+  if (!email) {
+    throw new AuthenticationError(
+      "This Google account did not return a usable email address."
+    );
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { email },
+    include: {
+      memberships: {
+        include: {
+          organization: true
+        },
+        orderBy: [{ createdAt: "asc" }]
+      }
+    }
+  });
+
+  if (!user || user.memberships.length === 0) {
+    throw new AuthenticationError(
+      "This Google account is not authorized for Craft & Board Admin."
+    );
+  }
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      lastLoginAt: new Date(),
+      name: user.name ?? googleUser.name ?? null
     }
   });
 

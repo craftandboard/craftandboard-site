@@ -15,15 +15,14 @@ import {
   getScanEvents
 } from "../lib/api";
 import { getRequestSiteContext } from "../lib/request-site";
-import { appUrl } from "../lib/site-config";
 
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getRequestSiteContext();
 
   if (site.isMarketingHost) {
     return {
-      title: "FieldMetriq",
-      description: "FieldMetriq is the operating system for field and shop workflows.",
+      title: "Craft & Board Admin Access",
+      description: "Private Craft & Board admin access for authorized team members.",
       alternates: {
         canonical: "/"
       }
@@ -43,7 +42,7 @@ export default async function DashboardPage() {
   const site = await getRequestSiteContext();
 
   if (site.isMarketingHost) {
-    return <MarketingHome appHomeHref={appUrl("/")} signInHref={appUrl("/login")} />;
+    return <MarketingHome appHomeHref="/login" signInHref="/login" />;
   }
 
   const [

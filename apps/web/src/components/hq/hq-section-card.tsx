@@ -17,7 +17,7 @@ export function HqSectionCard({ section }: { section: HqSectionSummary }) {
         </div>
         <p className="mt-3 text-sm leading-6 text-[#6f5f51]">{section.summary}</p>
       </div>
-      <p className="mt-5 text-xs uppercase tracking-[0.18em] text-[#8d6b4f]">{section.detail}</p>
+      <p className="mt-5 text-xs uppercase tracking-[0.18em] text-[#87664b]">{section.detail}</p>
     </Link>
   );
 }

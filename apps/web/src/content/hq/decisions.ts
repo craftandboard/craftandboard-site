@@ -22,22 +22,3 @@ export const hqDecisionsIntro: HqStaticSection = {
     }
   ]
 };
-
-/**
- * Add an entry when a decision is agreed:
- *
- *   {
- *     id: "ownership-structure",
- *     title: "Ownership structure",
- *     body: "…what was decided and why…",
- *     decidedAt: "2026-08-23T00:00:00.000Z",
- *     agreedBy: ["Brandon", "Tyler", "Tim"],
- *     createdByUserId: "brandon",
- *     createdAt: "2026-08-23T00:00:00.000Z",
- *     updatedAt: "2026-08-23T00:00:00.000Z"
- *   }
- *
- * Empty until the first decision is agreed — nothing is recorded here that
- * did not actually happen.
- */
-export const hqDecisionRecords: HqDecisionRecord[] = [];

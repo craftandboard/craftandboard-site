@@ -36,7 +36,7 @@ export default async function HqNumbersPage() {
             >
               <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
                 <h3 className="text-lg font-semibold text-[#2c221b]">{group.title}</h3>
-                <p className="text-xs uppercase tracking-[0.18em] text-[#8d6b4f]">
+                <p className="text-xs uppercase tracking-[0.18em] text-[#87664b]">
                   {confirmed} of {group.lines.length} confirmed
                 </p>
               </div>
@@ -45,7 +45,7 @@ export default async function HqNumbersPage() {
               <div className="mt-5 overflow-x-auto">
                 <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
                   <thead>
-                    <tr className="border-b border-[#e2d6c9] text-xs uppercase tracking-[0.18em] text-[#6b7550]">
+                    <tr className="border-b border-[#e2d6c9] text-xs uppercase tracking-[0.18em] text-[#67714d]">
                       <th scope="col" className="py-3 pr-4 font-medium">Line item</th>
                       <th scope="col" className="py-3 pr-4 font-medium">Amount</th>
                       <th scope="col" className="py-3 font-medium">Note</th>
@@ -57,7 +57,7 @@ export default async function HqNumbersPage() {
                         <td className="py-3 pr-4 font-medium text-[#2c221b]">{line.label}</td>
                         <td className="py-3 pr-4">
                           {line.amountUsd === null ? (
-                            <span className="italic text-[#9a8a7b]">Not confirmed</span>
+                            <span className="italic text-[#786b5f]">Not confirmed</span>
                           ) : (
                             <span className="text-[#2c221b]">{currency.format(line.amountUsd)}</span>
                           )}

@@ -3,44 +3,41 @@
  * THIS FILE IS THE SEAM. READ THIS BEFORE CHANGING ANYTHING IN (hq).
  * ===========================================================================
  *
- * Today:  every accessor below returns fixtures and static content from
- *         `src/content/hq/*`. There is no database call anywhere in `apps/web`,
- *         and there is no HQ writer anywhere in the product — answers arrive by
- *         text or in person and get transcribed into the content files by hand.
- *         Real document editing lives in Google Docs by design. HQ is the read
- *         view.
+ * Record-backed data (decisions, partner answers, documents) now comes from
+ * `GET /hq/*` on apps/api, backed by the `Hq*` models in
+ * `prisma/schema.prisma` and scoped by `organizationId` like every other
+ * tenant query. Vision, opportunity, numbers, and the roles scaffolding stay
+ * static content in `src/content/hq/*` — no CMS, by design.
  *
- * Later:  these same accessors will call `GET /hq/*` on `apps/api` through
- *         `lib/api.ts`, backed by the `HqDecision`, `HqPartnerResponse`, and
- *         `HqDocument` models already in `prisma/schema.prisma`, scoped by
- *         `organizationId` like every other tenant query in the app.
+ * BLIND-THEN-REVEAL IS ENFORCED BY THE API, NOT HERE.
+ * For a question the viewer has not answered, the payload carries the other
+ * partners' names only — no `body` key exists on those objects. Never
+ * reintroduce a client-side filter that assumes bodies are present but
+ * hidden; that is how the guarantee gets quietly broken.
  *
  * The rules that keep this seam from rotting:
  *
- *   1. NO PAGE, LAYOUT, OR COMPONENT MAY IMPORT `src/content/hq/*` DIRECTLY.
- *      Everything goes through this file. If a page imports a content file,
- *      the swap to `fetch` stops being a one-file change.
+ *   1. NO PAGE, LAYOUT, OR COMPONENT MAY IMPORT `src/content/hq/*` DIRECTLY,
+ *      AND NONE MAY CALL `lib/api.ts` FOR HQ DATA. Everything goes through
+ *      this file, so the wiring stays in one place.
  *
- *   2. Every accessor is `async` and returns the exact shape the future API
- *      response will have — `{ ok: true, … }` envelopes and ISO date strings,
- *      not `Date` objects. They are async today purely so that swapping a
- *      fixture for a `fetch` is a body change, never a signature change.
+ *   2. Every accessor is `async` and returns the exact API response shape —
+ *      `{ ok: true, ... }` envelopes and ISO date strings, not `Date`s.
  *
  *   3. Every record-returning accessor takes the caller's `organizationId`.
- *      It is unused while these are fixtures, and it is the whole point the
- *      moment they are not. Do not remove the parameter to quiet a linter.
+ *      The API derives the real tenant from the session, so this parameter is
+ *      the caller asserting which tenant it believes it is rendering. Keep it.
  *
- *   4. Shapes here must stay aligned with `prisma/schema.prisma`. If a model
- *      changes, `lib/hq/types.ts` changes with it.
+ *   4. Shapes here must stay aligned with `prisma/schema.prisma` and
+ *      `apps/api/src/modules/hq/service.ts`. If a model changes, so does
+ *      `lib/hq/types.ts`.
  * ===========================================================================
  */
 
-import { hqDecisionRecords, hqDecisionsIntro } from "../../content/hq/decisions";
-import { hqDocumentRecords } from "../../content/hq/document-links";
+import { hqDecisionsIntro } from "../../content/hq/decisions";
 import { hqDocumentsIntro, hqExpectedDocuments } from "../../content/hq/documents";
 import { hqNumbersGroups, hqNumbersIntro } from "../../content/hq/numbers";
 import { hqOpportunity } from "../../content/hq/opportunity";
-import { hqPartnerResponseRecords } from "../../content/hq/partner-responses";
 import {
   hqOwnershipOptions,
   hqPartnerQuestions,
@@ -49,7 +46,17 @@ import {
   hqRolesIntro
 } from "../../content/hq/roles";
 import { hqVision } from "../../content/hq/vision";
+import {
+  createHqPartnerResponse,
+  getHqDecisionsFromApi,
+  getHqDocumentsFromApi,
+  getHqPartnerResponsesFromApi,
+  updateHqPartnerResponse
+} from "../api";
 import { HQ_SECTIONS } from "./nav";
+
+/** Matches HqPartnerResponse.question and the API. */
+export const HQ_QUESTION_NUMBERS = [1, 2, 3, 4];
 import type {
   HqDecisionsResponse,
   HqDocumentsResponse,
@@ -67,42 +74,83 @@ import type {
 } from "./types";
 
 // --- Record accessors -------------------------------------------------------
-// Future: `readJson<HqDecisionsResponse>("/hq/decisions")` etc.
+// These call apps/api. A null result means the API was unreachable or refused
+// the caller; every accessor degrades to empty rather than throwing, so a
+// page renders its empty state instead of a 500.
 
 export async function getHqDecisions(organizationId: string): Promise<HqDecisionsResponse> {
   void organizationId;
+  const response = await getHqDecisionsFromApi();
 
-  return {
-    ok: true,
-    decisions: [...hqDecisionRecords].sort((left, right) =>
-      right.decidedAt.localeCompare(left.decidedAt)
-    )
-  };
+  return { ok: true, decisions: response?.decisions ?? [] };
 }
 
 export async function getHqPartnerResponses(
   organizationId: string
 ): Promise<HqPartnerResponsesResponse> {
   void organizationId;
+  const response = await getHqPartnerResponsesFromApi();
+
+  if (!response) {
+    return {
+      ok: true,
+      viewer: { personName: null },
+      questions: HQ_QUESTION_NUMBERS.map((question) => ({
+        question,
+        unlocked: false,
+        responses: [],
+        locked: []
+      })),
+      totals: { answered: 0, target: 0 }
+    };
+  }
 
   return {
     ok: true,
-    responses: [...hqPartnerResponseRecords].sort(
-      (left, right) =>
-        left.question - right.question || left.personName.localeCompare(right.personName)
-    )
+    viewer: response.viewer,
+    questions: response.questions,
+    totals: response.totals
   };
 }
 
 export async function getHqDocuments(organizationId: string): Promise<HqDocumentsResponse> {
   void organizationId;
+  const response = await getHqDocumentsFromApi();
 
-  return {
-    ok: true,
-    documents: [...hqDocumentRecords].sort(
-      (left, right) => left.sortOrder - right.sortOrder || left.title.localeCompare(right.title)
-    )
-  };
+  return { ok: true, documents: response?.documents ?? [] };
+}
+
+// --- Writes -----------------------------------------------------------------
+// The author is derived from the session by the API. Nothing here sends a
+// personName, and nothing here may be trusted to enforce authorship.
+
+export type HqSaveResult = { ok: true } | { ok: false; error: string };
+
+export async function saveHqPartnerAnswer(input: {
+  responseId: string | null;
+  question: number;
+  body: string;
+}): Promise<HqSaveResult> {
+  const body = input.body.trim();
+
+  if (!body) {
+    return { ok: false, error: "An answer cannot be empty." };
+  }
+
+  try {
+    if (input.responseId) {
+      await updateHqPartnerResponse({ id: input.responseId, body });
+    } else {
+      await createHqPartnerResponse({ question: input.question, body });
+    }
+
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Could not save that answer."
+    };
+  }
 }
 
 // --- Static content accessors ----------------------------------------------
@@ -168,8 +216,8 @@ export async function getHqOverview(organizationId: string): Promise<HqOverviewR
     getHqDocuments(organizationId)
   ]);
 
-  const answerTarget = hqPartners.length * hqPartnerQuestions.length;
-  const answered = responses.responses.filter((response) => response.body.trim().length > 0).length;
+  const answerTarget = responses.totals.target || hqPartners.length * hqPartnerQuestions.length;
+  const answered = responses.totals.answered;
   const signed = documents.documents.filter((document) => document.status === "SIGNED").length;
 
   const derived: Record<string, { status: HqSectionStatus; detail: string }> = {

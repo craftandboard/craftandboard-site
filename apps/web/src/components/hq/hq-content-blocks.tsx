@@ -14,7 +14,7 @@ export function HqContentBlocks({ blocks }: { blocks: HqContentBlock[] }) {
             <ul className="mt-4 space-y-2">
               {block.points.map((point) => (
                 <li key={point} className="flex gap-3 text-sm leading-6 text-[#5c4a3d]">
-                  <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[#8d6b4f]" />
+                  <span aria-hidden className="mt-[0.55rem] h-1.5 w-1.5 shrink-0 rounded-full bg-[#87664b]" />
                   <span>{point}</span>
                 </li>
               ))}

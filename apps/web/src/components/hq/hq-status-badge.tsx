@@ -18,9 +18,9 @@ const DOCUMENT_LABELS: Record<HqDocumentStatus, string> = {
 const TONES: Record<string, string> = {
   NOT_STARTED: "border-[#ded2c5] bg-[#f6efe6] text-[#7a6858]",
   DRAFT: "border-[#ded2c5] bg-[#f6efe6] text-[#7a6858]",
-  IN_REVIEW: "border-[#d9c6ac] bg-[#fbf1e2] text-[#8d6b4f]",
-  IN_PROGRESS: "border-[#d9c6ac] bg-[#fbf1e2] text-[#8d6b4f]",
-  NEEDS_SIGNATURE: "border-[#d9c6ac] bg-[#fbf1e2] text-[#8d6b4f]",
+  IN_REVIEW: "border-[#d9c6ac] bg-[#fbf1e2] text-[#87664b]",
+  IN_PROGRESS: "border-[#d9c6ac] bg-[#fbf1e2] text-[#87664b]",
+  NEEDS_SIGNATURE: "border-[#d9c6ac] bg-[#fbf1e2] text-[#87664b]",
   READY_FOR_REVIEW: "border-[#c9d0b2] bg-[#f2f5e8] text-[#5d6a42]",
   AGREED: "border-[#c9d0b2] bg-[#f2f5e8] text-[#5d6a42]",
   SIGNED: "border-[#c9d0b2] bg-[#f2f5e8] text-[#5d6a42]"

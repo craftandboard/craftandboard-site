@@ -9,19 +9,23 @@ export function HqPageHeader({
   status,
   children
 }: {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   intent: string;
   status?: HqSectionStatus;
   children?: ReactNode;
 }) {
   return (
-    <header className="rounded-[2rem] border border-[#e2d6c9] bg-[#fffaf4] p-6 shadow-[0_16px_40px_rgba(73,50,33,0.06)]">
+    <header className="rounded-[1.5rem] border border-[#e2d6c9] bg-[#fffaf4] p-4 shadow-[0_16px_40px_rgba(73,50,33,0.06)] sm:rounded-[2rem] sm:p-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="space-y-3">
-          <p className="text-xs uppercase tracking-[0.3em] text-[#6b7550]">{eyebrow}</p>
-          <h2 className="text-3xl font-semibold tracking-tight text-[#2c221b]">{title}</h2>
-          <p className="max-w-3xl text-sm leading-7 text-[#6f5f51]">{intent}</p>
+          {eyebrow ? (
+            <p className="text-xs uppercase tracking-[0.3em] text-[#67714d]">{eyebrow}</p>
+          ) : null}
+          <h2 className="break-words text-2xl font-semibold tracking-tight text-[#2c221b] sm:text-3xl">
+            {title}
+          </h2>
+          <p className="max-w-3xl text-base leading-7 text-[#6f5f51]">{intent}</p>
         </div>
         {status ? <HqStatusBadge status={status} /> : null}
       </div>

@@ -43,14 +43,33 @@ export interface HqDecisionRecord {
   updatedAt: string;
 }
 
-/** Mirrors the `HqPartnerResponse` model. */
-export interface HqPartnerResponseRecord {
+/**
+ * One visible answer. Only ever present for a question the viewer has
+ * unlocked by answering it themselves.
+ */
+export interface HqAnswerRecord {
   id: string;
   personName: string;
-  question: number;
   body: string;
+  isOwn: boolean;
   submittedAt: string | null;
   updatedAt: string;
+}
+
+/**
+ * A partner who has answered a question the viewer has NOT answered.
+ * Deliberately carries no `body` — the API never sends one.
+ */
+export interface HqLockedPartner {
+  personName: string;
+  hasAnswered: true;
+}
+
+export interface HqQuestionView {
+  question: number;
+  unlocked: boolean;
+  responses: HqAnswerRecord[];
+  locked: HqLockedPartner[];
 }
 
 /** Mirrors the `HqDocument` model. */
@@ -71,7 +90,9 @@ export interface HqDecisionsResponse {
 
 export interface HqPartnerResponsesResponse {
   ok: true;
-  responses: HqPartnerResponseRecord[];
+  viewer: { personName: string | null };
+  questions: HqQuestionView[];
+  totals: { answered: number; target: number };
 }
 
 export interface HqDocumentsResponse {
@@ -108,17 +129,17 @@ export interface HqPartner {
 
 export interface HqRoleRow {
   area: string;
-  owner: string;
-  support: string;
-  notes: string;
+  /** Null until we agree who owns it — renders as "unassigned", never hidden. */
+  owner: string | null;
+  consulted: string | null;
 }
 
 export interface HqOwnershipOption {
   label: string;
-  structure: string;
-  tradeoff: string;
-  /** Left null until the partners agree on a split. */
-  split: string | null;
+  /** Null where the option does not define it on its own. */
+  timStake: string | null;
+  capitalReturn: string;
+  fitsWhen: string;
 }
 
 export interface HqNumbersLine {

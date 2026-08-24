@@ -30,7 +30,7 @@ const DEMO_OPERATOR_PASSWORD = "operator1234";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 const CANONICAL_OWNER_EMAIL = "brandonbozarth30@gmail.com";
-const CANONICAL_OWNER_NAME = "Liam Bozarth";
+const CANONICAL_OWNER_NAME = "Brandon Bozarth";
 
 export class AuthenticationError extends Error {
   code: string;

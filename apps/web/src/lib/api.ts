@@ -789,6 +789,86 @@ export interface OrganizationMembersResponse {
   members: OrganizationMemberRecord[];
 }
 
+// --- Craft & Board HQ (partner portal) -------------------------------------
+// Read/write for the (hq) route group. Blind-then-reveal is enforced by the
+// API: for a question the viewer has not answered, the response carries the
+// other partners' names only and no body at all.
+
+export interface HqAnswerRecord {
+  id: string;
+  personName: string;
+  body: string;
+  isOwn: boolean;
+  submittedAt: string | null;
+  updatedAt: string;
+}
+
+export interface HqQuestionView {
+  question: number;
+  unlocked: boolean;
+  responses: HqAnswerRecord[];
+  locked: Array<{ personName: string; hasAnswered: true }>;
+}
+
+export interface HqPartnerResponsesApiResponse {
+  ok: true;
+  viewer: { personName: string | null };
+  questions: HqQuestionView[];
+  totals: { answered: number; target: number };
+}
+
+export async function getHqPartnerResponsesFromApi() {
+  return readJson<HqPartnerResponsesApiResponse>("/hq/partner-responses");
+}
+
+export async function getHqDecisionsFromApi() {
+  return readJson<{
+    ok: true;
+    decisions: Array<{
+      id: string;
+      title: string;
+      body: string;
+      decidedAt: string;
+      agreedBy: string[];
+      createdByUserId: string;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  }>("/hq/decisions");
+}
+
+export async function getHqDocumentsFromApi() {
+  return readJson<{
+    ok: true;
+    documents: Array<{
+      id: string;
+      title: string;
+      url: string;
+      status: "DRAFT" | "IN_REVIEW" | "NEEDS_SIGNATURE" | "SIGNED";
+      sortOrder: number;
+      createdAt: string;
+      updatedAt: string;
+    }>;
+  }>("/hq/documents");
+}
+
+export async function createHqPartnerResponse(input: { question: number; body: string }) {
+  return sendJson<{ ok: true; response: { id: string } }>("/hq/partner-responses", {
+    method: "POST",
+    body: JSON.stringify(input)
+  });
+}
+
+export async function updateHqPartnerResponse(input: { id: string; body: string }) {
+  return sendJson<{ ok: true; response: { id: string } }>(
+    `/hq/partner-responses/${encodeURIComponent(input.id)}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify({ body: input.body })
+    }
+  );
+}
+
 export async function getOrganizationMembers() {
   return readJson<OrganizationMembersResponse>("/org/members");
 }

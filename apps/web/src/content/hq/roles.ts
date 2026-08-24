@@ -14,45 +14,40 @@ import type {
  * (`HqPartnerResponse`) served through the seam — see
  * `content/hq/partner-responses.ts` for the transcription fixture.
  */
+
+/**
+ * The roles page is question-first and phone-first, so it renders no intro
+ * blocks — `blocks` is intentionally empty. Everything a reader needs is in
+ * `intent`, which is one line.
+ */
 export const hqRolesIntro: HqStaticSection = {
   title: "Roles",
   intent:
-    "The four questions, each partner's answer, the working split, and the ownership options still open.",
+    "Same four questions, all three answers together. Nothing here is agreed until it reaches the decision log.",
   status: "IN_PROGRESS",
-  blocks: [
-    {
-      heading: "How this page works",
-      body:
-        "Answers come back by text or in person and get transcribed here. Nobody edits this page directly, and nothing below is agreed until it moves to the decision log.",
-      points: [
-        "Answer first, then argue — the four questions get answered before roles are fixed",
-        "A role in the table is a proposal until it appears on /hq/decisions",
-        "Ownership stays open until all three sets of answers are in"
-      ]
-    }
-  ]
+  blocks: []
 };
 
 /** `number` matches `HqPartnerResponse.question`. */
 export const hqPartnerQuestions: HqPartnerQuestion[] = [
   {
     number: 1,
-    prompt: "What do you bring?",
-    intent: "Capital, skills, time, equipment, relationships — what you are actually putting in."
+    prompt: "What you bring",
+    intent: "Capital, skills, time, equipment, relationships."
   },
   {
     number: 2,
-    prompt: "What role do you want?",
+    prompt: "What role you want",
     intent: "The job you want to own and be accountable for."
   },
   {
     number: 3,
-    prompt: "What do you not want to do?",
+    prompt: "What you don't want to do",
     intent: "The work you do not want, so it lands with someone who does."
   },
   {
     number: 4,
-    prompt: "How much time can you give?",
+    prompt: "How much time you can give",
     intent: "Realistic hours per week, and when that changes."
   }
 ];
@@ -76,90 +71,47 @@ export const hqPartners: HqPartner[] = [
   }
 ];
 
+/**
+ * One card per function area. Owner and consulted stay null until the three of
+ * us actually agree — the page shows "unassigned" rather than dropping the row,
+ * so an unowned function stays visible instead of quietly disappearing.
+ */
 export const hqRoleRows: HqRoleRow[] = [
-  {
-    area: "Product and listings",
-    owner: "Brandon",
-    support: "—",
-    notes: "Product definition, listing content, pricing inputs"
-  },
-  {
-    area: "Marketing and SEO",
-    owner: "Brandon",
-    support: "—",
-    notes: "Organic search, storefront content, keyword and backlink work"
-  },
-  {
-    area: "Software and systems",
-    owner: "Brandon",
-    support: "—",
-    notes: "Costing, order flow, manufacturing tooling"
-  },
-  {
-    area: "Shop floor operations",
-    owner: "Tyler",
-    support: "Brandon",
-    notes: "Cutting, edge banding, assembly, quality"
-  },
-  {
-    area: "Fulfillment and shipping",
-    owner: "Tyler",
-    support: "—",
-    notes: "Packing standard, carrier handoff, damage rate"
-  },
-  {
-    area: "Purchasing and materials",
-    owner: "TODO — unassigned",
-    support: "—",
-    notes: "Sheet stock, edge banding, packaging supply"
-  },
-  {
-    area: "Capital and financing",
-    owner: "Tim",
-    support: "—",
-    notes: "Funding the equipment and working capital"
-  },
-  {
-    area: "Books and admin",
-    owner: "TODO — unassigned",
-    support: "—",
-    notes: "Bookkeeping, entity filings, insurance"
-  },
-  {
-    area: "Customer service",
-    owner: "TODO — unassigned",
-    support: "—",
-    notes: "Amazon messages, sizing questions, returns"
-  }
+  { area: "Sales", owner: null, consulted: null },
+  { area: "Production", owner: null, consulted: null },
+  { area: "Estimating", owner: null, consulted: null },
+  { area: "Purchasing", owner: null, consulted: null },
+  { area: "Bookkeeping", owner: null, consulted: null },
+  { area: "Hiring", owner: null, consulted: null },
+  { area: "Marketing", owner: null, consulted: null },
+  { area: "Equipment", owner: null, consulted: null }
 ];
 
 export const hqOwnershipOptions: HqOwnershipOption[] = [
   {
     label: "Equal thirds",
-    structure: "Three equal partners regardless of contribution type.",
-    tradeoff:
-      "Simplest to agree and to explain. Ignores that capital, time, and existing systems are not the same input.",
-    split: null
+    timStake: "One third",
+    capitalReturn:
+      "No separate repayment. Capital is treated as contribution and comes back through distributions only.",
+    fitsWhen: "Fits if all three of us are putting in comparable value and want the simplest agreement."
   },
   {
     label: "Capital-weighted",
-    structure: "Ownership tracks money in, with sweat equity earned over time.",
-    tradeoff:
-      "Fair to the funding partner up front. Can leave the operators under-owned while doing the daily work.",
-    split: null
+    timStake: null,
+    capitalReturn: "Ownership is sized to capital in, so returns flow with the ownership split.",
+    fitsWhen: "Fits if Tim's money is the scarce input and the shop is not yet proven."
   },
   {
     label: "Role-weighted with vesting",
-    structure: "Ownership tied to the role each partner commits to, vesting over a set term.",
-    tradeoff:
-      "Protects against a partner stepping back early. Needs a written schedule and a departure clause.",
-    split: null
+    timStake: null,
+    capitalReturn:
+      "Capital is handled separately from role equity and needs its own repayment term.",
+    fitsWhen: "Fits if we are worried about someone stepping back after equity is issued."
   },
   {
     label: "Capital repaid first, then split",
-    structure: "Tim's contribution is repaid from profit before ongoing distributions begin.",
-    tradeoff:
-      "Lowers the funding partner's risk without permanently reducing operator ownership. Delays distributions.",
-    split: null
+    timStake: "One third after repayment",
+    capitalReturn: "Tim's contribution is repaid from profit before any distributions start.",
+    fitsWhen: "Fits if Tim wants his money back before upside and we want operators fully owned."
   }
 ];

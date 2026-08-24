@@ -9,6 +9,7 @@ import costingRouter from "./routes/costing.js";
 import costEngineRouter from "./routes/costEngine.js";
 import edgeBandingRouter from "./routes/edgeBanding.js";
 import healthRouter from "./routes/health.js";
+import hqRouter from "./routes/hq.js";
 import jobsRouter from "./routes/jobs.js";
 import labelsRouter from "./routes/labels.js";
 import leadsRouter from "./routes/leads.js";
@@ -62,6 +63,7 @@ export function createApp() {
 
   app.use("/auth", authRouter);
   app.use("/health", healthRouter);
+  app.use("/hq", hqRouter);
   app.use("/jobs", jobsRouter);
   app.use("/me", meRouter);
   app.use("/org", orgRouter);

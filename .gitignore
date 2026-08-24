@@ -21,3 +21,4 @@ prisma/dev.db-journal
 .turbo
 .vercel
 .deploy-trigger
+*.tsbuildinfo

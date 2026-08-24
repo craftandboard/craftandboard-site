@@ -3646,3 +3646,23 @@ model HqDocument {
   @@index([organizationId, sortOrder])
   @@index([organizationId, status])
 }
+
+/// Append-only history for HqPartnerResponse. Written inside the same
+/// transaction as every create and every edit, so history cannot be lost.
+/// Recorded, not displayed — there is no UI for this.
+model HqPartnerResponseRevision {
+  id              String   @id @default(cuid())
+  organizationId  String
+  responseId      String
+  personName      String
+  question        Int
+  /// Empty string on the first save (POST); the prior body on every edit.
+  previousBody    String
+  newBody         String
+  changedByUserId String
+  changedByEmail  String
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, responseId, createdAt])
+  @@index([organizationId, personName, question])
+}

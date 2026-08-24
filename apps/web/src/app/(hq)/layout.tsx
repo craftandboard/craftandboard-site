@@ -1,6 +1,18 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import Link from "next/link";
 import type { ReactNode } from "react";
 import { requireHqViewer } from "../../lib/hq/access";
+import { HQ_HOME_PATH } from "../../lib/hq/nav";
+
+/**
+ * HQ is a deliberately light, warm-paper design with no dark variant. Declaring
+ * the scheme stops browsers (Chrome auto-dark in particular) from inverting
+ * card backgrounds while leaving the explicitly-set text colors alone, which
+ * is what produced dark-text-on-dark-background.
+ */
+export const viewport: Viewport = {
+  colorScheme: "light"
+};
 
 /** Every (hq) route is private. Nothing here should ever be indexed. */
 export const metadata: Metadata = {
@@ -17,30 +29,27 @@ export const metadata: Metadata = {
   }
 };
 
+/**
+ * Minimal partner-facing shell. The root layout skips its admin chrome for
+ * these routes, so this is the whole frame: the name, small, top left, and
+ * nothing else. Phone width is the design target.
+ */
 export default async function HqLayout({ children }: { children: ReactNode }) {
-  const viewer = await requireHqViewer();
+  await requireHqViewer();
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[2rem] border border-[#e2d6c9] bg-[#fffaf4] p-6 shadow-[0_16px_40px_rgba(73,50,33,0.06)]">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-xs uppercase tracking-[0.3em] text-[#6b7550]">Partner Portal</p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#2c221b]">
-              Craft &amp; Board HQ
-            </h2>
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-[#6f5f51]">
-              One gated place for Brandon, Tim, and Tyler to see the plan and work out the
-              partnership. Read-only by design — answers are transcribed, documents live in Google
-              Docs.
-            </p>
-          </div>
-          <p className="text-xs uppercase tracking-[0.18em] text-[#8d6b4f]">
-            Signed in as {viewer.name ?? viewer.email}
-          </p>
-        </div>
-      </section>
-      {children}
+    <div className="min-h-screen">
+      <div className="mx-auto w-full max-w-3xl px-4 py-5">
+        <header className="mb-4">
+          <Link
+            href={HQ_HOME_PATH}
+            className="inline-flex min-h-[2.75rem] items-center text-base font-semibold tracking-tight text-[#2c221b]"
+          >
+            Craft &amp; Board
+          </Link>
+        </header>
+        <main>{children}</main>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { getViewerContext } from "../api";
+import { getHqDevBypassViewer } from "./dev-bypass";
 import { HQ_HOME_PATH } from "./nav";
 import type { HqViewer } from "./types";
 
@@ -47,6 +48,13 @@ async function hqSignInPath() {
  *     does not confirm its own existence to anyone outside the three of us
  */
 export const requireHqViewer = cache(async function requireHqViewer(): Promise<HqViewer> {
+  // Local-only escape hatch. Compiled out of production builds entirely.
+  const bypassViewer = getHqDevBypassViewer("(hq)/layout");
+
+  if (bypassViewer) {
+    return bypassViewer;
+  }
+
   const context = await getViewerContext();
 
   if (!context) {

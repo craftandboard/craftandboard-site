@@ -29,7 +29,7 @@ export default async function HqDecisionsPage() {
         <h3 className="text-lg font-semibold text-[#2c221b]">Decision log</h3>
 
         {decisions.decisions.length === 0 ? (
-          <p className="mt-3 text-sm italic leading-6 text-[#9a8a7b]">
+          <p className="mt-3 text-sm italic leading-6 text-[#786b5f]">
             Nothing agreed yet. The first entry lands here once all three of us sign off on it.
           </p>
         ) : (
@@ -45,7 +45,7 @@ export default async function HqDecisionsPage() {
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <h4 className="text-base font-semibold text-[#2c221b]">{decision.title}</h4>
                     {decidedAt ? (
-                      <p className="text-xs uppercase tracking-[0.18em] text-[#8d6b4f]">
+                      <p className="text-xs uppercase tracking-[0.18em] text-[#87664b]">
                         {decidedAt}
                       </p>
                     ) : null}
@@ -53,7 +53,7 @@ export default async function HqDecisionsPage() {
                   <p className="mt-3 whitespace-pre-line text-sm leading-6 text-[#5c4a3d]">
                     {decision.body}
                   </p>
-                  <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[#6b7550]">
+                  <p className="mt-4 text-xs uppercase tracking-[0.18em] text-[#67714d]">
                     Agreed by {decision.agreedBy.length > 0 ? decision.agreedBy.join(", ") : "—"}
                   </p>
                 </li>

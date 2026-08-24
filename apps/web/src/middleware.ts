@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { isHqDevBypassEnabled } from "./lib/hq/dev-bypass";
 
 /**
  * HQ-only middleware.
@@ -21,7 +22,10 @@ export function middleware(request: NextRequest) {
   const requestedPath = `${pathname}${search}`;
   const sessionToken = request.cookies.get(SESSION_COOKIE)?.value?.trim();
 
-  if (!sessionToken) {
+  // Local-only escape hatch. Compiled out of production builds entirely.
+  const bypassed = isHqDevBypassEnabled("middleware");
+
+  if (!bypassed && !sessionToken) {
     const startUrl = new URL("/auth/google/start", request.url);
     startUrl.searchParams.set("returnTo", requestedPath);
 

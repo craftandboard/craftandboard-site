@@ -32,7 +32,7 @@ export default async function HqDocumentsPage() {
       <section className="rounded-[1.75rem] border border-[#e2d6c9] bg-[#fffaf4] p-6">
         <h3 className="text-lg font-semibold text-[#2c221b]">Linked documents</h3>
         {documents.documents.length === 0 ? (
-          <p className="mt-3 text-sm italic leading-6 text-[#9a8a7b]">
+          <p className="mt-3 text-sm italic leading-6 text-[#786b5f]">
             No Google Docs linked yet. Everything below is still to be created.
           </p>
         ) : (
@@ -55,7 +55,7 @@ export default async function HqDocumentsPage() {
                       {document.title}
                     </a>
                     {updated ? (
-                      <p className="mt-1 text-xs text-[#8d6b4f]">Updated {updated}</p>
+                      <p className="mt-1 text-xs text-[#87664b]">Updated {updated}</p>
                     ) : null}
                   </div>
                   <HqStatusBadge status={document.status} />
@@ -69,7 +69,7 @@ export default async function HqDocumentsPage() {
       <section className="rounded-[1.75rem] border border-[#e2d6c9] bg-[#fffaf4] p-6">
         <div className="flex flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between">
           <h3 className="text-lg font-semibold text-[#2c221b]">Still to be created</h3>
-          <p className="text-xs uppercase tracking-[0.18em] text-[#8d6b4f]">
+          <p className="text-xs uppercase tracking-[0.18em] text-[#87664b]">
             {missing.length} of {content.expected.length} outstanding
           </p>
         </div>
@@ -82,7 +82,7 @@ export default async function HqDocumentsPage() {
           <div className="mt-5 overflow-x-auto">
             <table className="w-full min-w-[36rem] border-collapse text-left text-sm">
               <thead>
-                <tr className="border-b border-[#e2d6c9] text-xs uppercase tracking-[0.18em] text-[#6b7550]">
+                <tr className="border-b border-[#e2d6c9] text-xs uppercase tracking-[0.18em] text-[#67714d]">
                   <th scope="col" className="py-3 pr-4 font-medium">Document</th>
                   <th scope="col" className="py-3 pr-4 font-medium">Purpose</th>
                   <th scope="col" className="py-3 font-medium">Owner</th>

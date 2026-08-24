@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { CurrentContextChip } from "../components/current-context-chip";
 import { SeoAttributionTracker } from "../components/storefront/SeoAttributionTracker";
 import { StructuredDataScript } from "../components/storefront/StructuredDataScript";
@@ -8,11 +9,45 @@ import { getOrganizationSchema } from "../lib/seo/organizationSchema";
 import { getHomePageKey } from "../lib/seo/overrides";
 import { getSiteVerificationMetadata } from "../lib/seo/siteVerification";
 import { getRequestSiteContext } from "../lib/request-site";
+import { HQ_URL } from "../lib/hq/nav";
 import "../components/labels/shelf-label.css";
 import "./globals.css";
 
+/**
+ * `src/middleware.ts` matches `/hq` and nothing else, so the presence of the
+ * header it stamps is the signal that this request is for the partner portal.
+ * HQ opts out of the admin chrome and the admin title template below.
+ */
+async function isHqRequest() {
+  const requestHeaders = await headers();
+
+  return requestHeaders.get("x-hq-pathname") !== null;
+}
+
 export async function generateMetadata(): Promise<Metadata> {
   const site = await getRequestSiteContext();
+
+  if (await isHqRequest()) {
+    return {
+      metadataBase: new URL(HQ_URL),
+      applicationName: "Craft & Board HQ",
+      title: {
+        default: "Craft & Board HQ",
+        template: "%s"
+      },
+      robots: {
+        index: false,
+        follow: false,
+        nocache: true,
+        googleBot: {
+          index: false,
+          follow: false,
+          noimageindex: true
+        }
+      }
+    };
+  }
+
   const title = site.isMarketingHost ? "Craft & Board" : "Craft & Board Admin";
   const description = site.isMarketingHost
     ? "Craft & Board creates replacement cabinet shelves and made-to-order wood shelving with a calm, guided ordering experience."
@@ -55,6 +90,17 @@ export default async function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   const site = await getRequestSiteContext();
+
+  // HQ renders clean: no admin chrome, no viewer-context fetch, its own shell.
+  if (await isHqRequest()) {
+    return (
+      // colorScheme light: HQ has no dark variant; see (hq)/layout.tsx.
+      <html lang="en" style={{ colorScheme: "light" }}>
+        <body className="app-shell">{children}</body>
+      </html>
+    );
+  }
+
   const contextPromise = site.isMarketingHost ? null : getViewerContext();
 
   return (

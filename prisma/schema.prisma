@@ -3588,3 +3588,61 @@ model MaterialProfile {
 
   @@unique([organizationId, code])
 }
+
+// ---------------------------------------------------------------------------
+// Craft & Board HQ (partner portal)
+//
+// Additive models for the private partner portal at hq.craftandboard.com.
+// These intentionally use a scalar organizationId with no Organization
+// back-relation so the existing Organization model stays untouched. Scope
+// every query by organizationId, same tenant pattern as the rest of the app.
+// ---------------------------------------------------------------------------
+
+enum HqDocumentStatus {
+  DRAFT
+  IN_REVIEW
+  NEEDS_SIGNATURE
+  SIGNED
+}
+
+model HqDecision {
+  id              String   @id @default(cuid())
+  organizationId  String
+  title           String
+  body            String
+  decidedAt       DateTime
+  agreedBy        String[]
+  createdByUserId String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, decidedAt])
+  @@index([organizationId, createdAt])
+}
+
+model HqPartnerResponse {
+  id             String    @id @default(cuid())
+  organizationId String
+  personName     String
+  question       Int
+  body           String
+  submittedAt    DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  @@unique([organizationId, personName, question])
+  @@index([organizationId, question])
+}
+
+model HqDocument {
+  id             String           @id @default(cuid())
+  organizationId String
+  title          String
+  url            String
+  status         HqDocumentStatus @default(DRAFT)
+  sortOrder      Int              @default(0)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId, sortOrder])
+  @@index([organizationId, status])
+}

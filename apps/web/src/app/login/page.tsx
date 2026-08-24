@@ -24,6 +24,8 @@ function googleNotice(searchParams: Record<string, string | string[] | undefined
       return "Google sign-in could not be completed for this account.";
     case "unauthorized":
       return "This Google account is not authorized for Craft & Board Admin.";
+    case "session":
+      return "Google sign-in succeeded, but the admin session could not be finalized. Try again.";
     default:
       return null;
   }

@@ -96,7 +96,16 @@ router.post("/google/complete", async (req, res, next) => {
       error instanceof AuthenticationError ||
       error instanceof GoogleAuthConfigurationError
     ) {
-      res.status(400).json({ ok: false, error: error.message });
+      const status =
+        error instanceof AuthenticationError && error.code === "google_unauthorized" ? 401 : 400;
+      res.status(status).json({
+        ok: false,
+        error: error.message,
+        code:
+          error instanceof AuthenticationError || error instanceof GoogleAuthConfigurationError
+            ? error.code
+            : "invalid_google_request"
+      });
       return;
     }
     next(error);

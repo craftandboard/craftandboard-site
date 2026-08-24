@@ -7,6 +7,31 @@ function redirectWithError(request: Request, code: string) {
   return NextResponse.redirect(new URL(`/login?google=${code}`, request.url));
 }
 
+function googleErrorCode(error: unknown) {
+  if (!(error instanceof Error)) {
+    return "failed";
+  }
+
+  const code = "code" in error && typeof error.code === "string" ? error.code : null;
+  const message = error.message.toLowerCase();
+
+  if (code === "google_not_configured" || message.includes("not configured")) {
+    return "not-configured";
+  }
+  if (
+    code === "google_unauthorized" ||
+    code === "google_no_memberships" ||
+    message.includes("not authorized")
+  ) {
+    return "unauthorized";
+  }
+  if (code === "google_session_failed" || code === "google_context_failed") {
+    return "session";
+  }
+
+  return "failed";
+}
+
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
   const state = requestUrl.searchParams.get("state");
@@ -50,40 +75,46 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      const errorCode = response.error.includes("not authorized")
-        ? "unauthorized"
-        : response.error.includes("not configured")
-          ? "not-configured"
-          : "failed";
-      return redirectWithError(request, errorCode);
+      return redirectWithError(request, "failed");
     }
 
     const redirectTarget = parsedState.returnTo?.startsWith("/")
       ? parsedState.returnTo
       : "/admin/craft-board/dashboard";
-    const redirectResponse = NextResponse.redirect(new URL(redirectTarget, request.url));
+    try {
+      const redirectResponse = NextResponse.redirect(new URL(redirectTarget, request.url));
 
-    redirectResponse.cookies.set("cb_session", response.sessionToken, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 14,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: false
-    });
-    redirectResponse.cookies.set("cb_org_slug", response.organization.slug, {
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30,
-      sameSite: "lax",
-      secure: process.env.NODE_ENV === "production",
-      httpOnly: false
-    });
-    redirectResponse.cookies.set(GOOGLE_STATE_COOKIE, "", {
-      path: "/",
-      maxAge: 0
-    });
+      redirectResponse.cookies.set("cb_session", response.sessionToken, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 14,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: false
+      });
+      redirectResponse.cookies.set("cb_org_slug", response.organization.slug, {
+        path: "/",
+        maxAge: 60 * 60 * 24 * 30,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        httpOnly: false
+      });
+      redirectResponse.cookies.set(GOOGLE_STATE_COOKIE, "", {
+        path: "/",
+        maxAge: 0
+      });
 
-    return redirectResponse;
-  } catch {
-    return redirectWithError(request, "failed");
+      return redirectResponse;
+    } catch (error) {
+      console.error("[auth][google] callback_cookie_write_failed", {
+        error: error instanceof Error ? error.message : String(error)
+      });
+      return redirectWithError(request, "session");
+    }
+  } catch (error) {
+    console.error("[auth][google] callback_failed", {
+      error: error instanceof Error ? error.message : String(error),
+      code: error instanceof Error && "code" in error ? (error as Error & { code?: string }).code : null
+    });
+    return redirectWithError(request, googleErrorCode(error));
   }
 }

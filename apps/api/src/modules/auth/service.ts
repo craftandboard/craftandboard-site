@@ -7,6 +7,7 @@ import {
   ensureDefaultDevMembership,
   resolveRequestContext
 } from "../../lib/requestContext.js";
+import { LOCAL_ORG_ID } from "../settings/service.js";
 import { hashPassword, verifyPassword } from "./password.js";
 import {
   createActivationToken,
@@ -28,9 +29,28 @@ const DEMO_OWNER_PASSWORD = "demo1234";
 const DEMO_OPERATOR_PASSWORD = "operator1234";
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
+const CANONICAL_OWNER_EMAIL = "brandonbozarth30@gmail.com";
+const CANONICAL_OWNER_NAME = "Liam Bozarth";
 
-export class AuthenticationError extends Error {}
-export class GoogleAuthConfigurationError extends Error {}
+export class AuthenticationError extends Error {
+  code: string;
+
+  constructor(message: string, code = "auth_error") {
+    super(message);
+    this.name = "AuthenticationError";
+    this.code = code;
+  }
+}
+
+export class GoogleAuthConfigurationError extends Error {
+  code: string;
+
+  constructor(message: string, code = "google_not_configured") {
+    super(message);
+    this.name = "GoogleAuthConfigurationError";
+    this.code = code;
+  }
+}
 
 type GoogleTokenResponse = {
   access_token?: string;
@@ -43,6 +63,10 @@ type GoogleUserInfoResponse = {
   email_verified?: boolean;
   name?: string;
 };
+
+function logGoogleAuth(level: "warn" | "error", event: string, details: Record<string, unknown>) {
+  console[level](`[auth][google] ${event}`, details);
+}
 
 export async function ensureSeededAuthUsers() {
   await ensureDefaultDevMembership();
@@ -71,6 +95,36 @@ export async function ensureSeededAuthUsers() {
       }
     });
   }
+
+  const canonicalOwner = await prisma.user.upsert({
+    where: { email: CANONICAL_OWNER_EMAIL },
+    update: {
+      name: CANONICAL_OWNER_NAME,
+      organizationId: LOCAL_ORG_ID
+    },
+    create: {
+      email: CANONICAL_OWNER_EMAIL,
+      name: CANONICAL_OWNER_NAME,
+      organizationId: LOCAL_ORG_ID
+    }
+  });
+
+  await prisma.organizationMember.upsert({
+    where: {
+      organizationId_userId: {
+        organizationId: LOCAL_ORG_ID,
+        userId: canonicalOwner.id
+      }
+    },
+    update: {
+      role: "OWNER"
+    },
+    create: {
+      organizationId: LOCAL_ORG_ID,
+      userId: canonicalOwner.id,
+      role: "OWNER"
+    }
+  });
 }
 
 export async function signInWithPassword(input: {
@@ -149,8 +203,15 @@ async function getGoogleUserInfo(input: { code: string; redirectUri: string }) {
   const tokenPayload = (await tokenResponse.json()) as GoogleTokenResponse;
 
   if (!tokenResponse.ok || !tokenPayload.access_token) {
+    logGoogleAuth("warn", "token_exchange_failed", {
+      ok: tokenResponse.ok,
+      status: tokenResponse.status,
+      error: tokenPayload.error,
+      errorDescription: tokenPayload.error_description
+    });
     throw new AuthenticationError(
-      tokenPayload.error_description || tokenPayload.error || "Google sign-in could not be completed."
+      tokenPayload.error_description || tokenPayload.error || "Google sign-in could not be completed.",
+      "google_exchange_failed"
     );
   }
 
@@ -163,8 +224,15 @@ async function getGoogleUserInfo(input: { code: string; redirectUri: string }) {
   const userInfo = (await userInfoResponse.json()) as GoogleUserInfoResponse;
 
   if (!userInfoResponse.ok || !userInfo.email || !userInfo.email_verified) {
+    logGoogleAuth("warn", "userinfo_failed", {
+      ok: userInfoResponse.ok,
+      status: userInfoResponse.status,
+      email: userInfo.email ?? null,
+      emailVerified: userInfo.email_verified ?? null
+    });
     throw new AuthenticationError(
-      "This Google account could not be verified for Craft & Board Admin."
+      "This Google account could not be verified for Craft & Board Admin.",
+      "google_userinfo_failed"
     );
   }
 
@@ -191,8 +259,12 @@ export async function signInWithGoogleCode(input: {
   const email = googleUser.email?.trim().toLowerCase();
 
   if (!email) {
+    logGoogleAuth("warn", "missing_email", {
+      googleName: googleUser.name ?? null
+    });
     throw new AuthenticationError(
-      "This Google account did not return a usable email address."
+      "This Google account did not return a usable email address.",
+      "google_email_missing"
     );
   }
 
@@ -208,9 +280,24 @@ export async function signInWithGoogleCode(input: {
     }
   });
 
-  if (!user || user.memberships.length === 0) {
+  if (!user) {
+    logGoogleAuth("warn", "missing_user", {
+      email
+    });
     throw new AuthenticationError(
-      "This Google account is not authorized for Craft & Board Admin."
+      "This Google account is not authorized for Craft & Board Admin.",
+      "google_unauthorized"
+    );
+  }
+
+  if (user.memberships.length === 0) {
+    logGoogleAuth("warn", "missing_org_access", {
+      email,
+      userId: user.id
+    });
+    throw new AuthenticationError(
+      "This Google account is not authorized for Craft & Board Admin.",
+      "google_no_memberships"
     );
   }
 
@@ -222,10 +309,39 @@ export async function signInWithGoogleCode(input: {
     }
   });
 
-  const session = await createUserSession(user.id);
-  const context = await resolveRequestContext({
-    sessionToken: session.token
-  });
+  let session;
+
+  try {
+    session = await createUserSession(user.id);
+  } catch (error) {
+    logGoogleAuth("error", "session_creation_failed", {
+      email,
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    throw new AuthenticationError(
+      "Google sign-in could not create a session for this account.",
+      "google_session_failed"
+    );
+  }
+
+  let context: ApiRequestContext;
+
+  try {
+    context = await resolveRequestContext({
+      sessionToken: session.token
+    });
+  } catch (error) {
+    logGoogleAuth("error", "context_resolution_failed", {
+      email,
+      userId: user.id,
+      error: error instanceof Error ? error.message : String(error)
+    });
+    throw new AuthenticationError(
+      "Google sign-in could not finish the admin session.",
+      "google_context_failed"
+    );
+  }
 
   return {
     session,

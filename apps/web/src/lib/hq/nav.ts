@@ -41,6 +41,12 @@ export const HQ_SECTIONS: HqSectionDefinition[] = [
     summary: "Startup costs, equipment, revenue, and breakeven."
   },
   {
+    key: "partnership-agreement",
+    label: "Partnership Agreement",
+    href: "/hq/partnership-agreement",
+    summary: "Twelve questions to line up on before the attorney drafts the real document."
+  },
+  {
     key: "documents",
     label: "Documents",
     href: "/hq/documents",

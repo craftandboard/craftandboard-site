@@ -19,6 +19,7 @@ export type HqSectionKey =
   | "opportunity"
   | "roles"
   | "numbers"
+  | "partnership-agreement"
   | "documents"
   | "decisions";
 

@@ -19,8 +19,28 @@ export const HQ_ROSTER: HqRosterPartner[] = [
   { email: "tyler@sublimedesignnv.com", personName: "Tyler", fullName: "Tyler Phillips" }
 ];
 
-/** The four questions. Matches HqPartnerResponse.question. */
-export const HQ_QUESTION_NUMBERS = [1, 2, 3, 4] as const;
+/**
+ * All question numbers in use across every /hq section that answers into
+ * HqPartnerResponse. Matches HqPartnerResponse.question.
+ *
+ * Each section reserves its own range so numbers never collide:
+ *   - Roles:                  1-4
+ *   - Partnership agreement:  101-112
+ *
+ * Adding a question to an existing section: append its number to that
+ * section's array below (and mirror it in the matching content file under
+ * apps/web/src/content/hq/). Adding a new section: reserve a fresh, unused
+ * block (e.g. the next hundred) and add an array here.
+ */
+const HQ_ROLES_QUESTION_NUMBERS = [1, 2, 3, 4] as const;
+const HQ_PARTNERSHIP_AGREEMENT_QUESTION_NUMBERS = [
+  101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112
+] as const;
+
+export const HQ_QUESTION_NUMBERS = [
+  ...HQ_ROLES_QUESTION_NUMBERS,
+  ...HQ_PARTNERSHIP_AGREEMENT_QUESTION_NUMBERS
+] as const;
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();

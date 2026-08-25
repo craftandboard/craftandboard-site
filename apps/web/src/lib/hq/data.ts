@@ -6,8 +6,8 @@
  * Record-backed data (decisions, partner answers, documents) now comes from
  * `GET /hq/*` on apps/api, backed by the `Hq*` models in
  * `prisma/schema.prisma` and scoped by `organizationId` like every other
- * tenant query. Vision, opportunity, numbers, and the roles scaffolding stay
- * static content in `src/content/hq/*` — no CMS, by design.
+ * tenant query. Vision, opportunity, numbers, and the roles/partnership
+ * scaffolding stay static content in `src/content/hq/*` — no CMS, by design.
  *
  * BLIND-THEN-REVEAL IS ENFORCED BY THE API, NOT HERE.
  * For a question the viewer has not answered, the payload carries the other
@@ -31,6 +31,13 @@
  *   4. Shapes here must stay aligned with `prisma/schema.prisma` and
  *      `apps/api/src/modules/hq/service.ts`. If a model changes, so does
  *      `lib/hq/types.ts`.
+ *
+ *   5. `GET /hq/partner-responses` returns ALL sections' questions in one
+ *      flat list (see `HQ_QUESTION_NUMBERS` below). A page must filter
+ *      `questions` down to its own section's numbers before rendering a
+ *      count — never trust the API's `totals` for a single section, since
+ *      that field is a whole-org total across every section. Use
+ *      `scopeHqAnswerStats` for this.
  * ===========================================================================
  */
 
@@ -38,6 +45,10 @@ import { hqDecisionsIntro } from "../../content/hq/decisions";
 import { hqDocumentsIntro, hqExpectedDocuments } from "../../content/hq/documents";
 import { hqNumbersGroups, hqNumbersIntro } from "../../content/hq/numbers";
 import { hqOpportunity } from "../../content/hq/opportunity";
+import {
+  hqPartnershipAgreementIntro,
+  hqPartnershipAgreementQuestions
+} from "../../content/hq/partnership-agreement";
 import {
   hqOwnershipOptions,
   hqPartnerQuestions,
@@ -55,8 +66,18 @@ import {
 } from "../api";
 import { HQ_SECTIONS } from "./nav";
 
-/** Matches HqPartnerResponse.question and the API. */
-export const HQ_QUESTION_NUMBERS = [1, 2, 3, 4];
+/**
+ * Every question number in use across every section, derived from each
+ * section's own content file. Matches HqPartnerResponse.question and the
+ * API's HQ_QUESTION_NUMBERS (apps/api/src/modules/hq/partners.ts) — adding a
+ * question to a content file's array keeps this list correct automatically.
+ * This is only a client-side fallback for when the API is unreachable; the
+ * API's own list is what actually governs which numbers are accepted.
+ */
+export const HQ_QUESTION_NUMBERS = [...hqPartnerQuestions, ...hqPartnershipAgreementQuestions].map(
+  (question) => question.number
+);
+
 import type {
   HqDecisionsResponse,
   HqDocumentsResponse,
@@ -67,6 +88,7 @@ import type {
   HqPartner,
   HqPartnerQuestion,
   HqPartnerResponsesResponse,
+  HqQuestionView,
   HqRoleRow,
   HqSectionStatus,
   HqSectionSummary,
@@ -118,6 +140,27 @@ export async function getHqDocuments(organizationId: string): Promise<HqDocument
   const response = await getHqDocumentsFromApi();
 
   return { ok: true, documents: response?.documents ?? [] };
+}
+
+/**
+ * Scopes a partner-responses view down to one section's own question numbers
+ * and returns that section's own answered/target counts. Use this instead of
+ * the API's whole-org `totals` any time a page or the overview needs a count
+ * for a single section — see rule 5 in the file header.
+ */
+export function scopeHqAnswerStats(
+  questions: HqQuestionView[],
+  questionNumbers: number[],
+  partnerCount: number
+): { answered: number; target: number } {
+  const numbers = new Set(questionNumbers);
+  const scoped = questions.filter((entry) => numbers.has(entry.question));
+  const answered = scoped.reduce(
+    (sum, entry) => sum + (entry.unlocked ? entry.responses.length : entry.locked.length),
+    0
+  );
+
+  return { answered, target: partnerCount * questionNumbers.length };
 }
 
 // --- Writes -----------------------------------------------------------------
@@ -187,6 +230,18 @@ export async function getHqRolesContent(): Promise<{
   };
 }
 
+export async function getHqPartnershipAgreementContent(): Promise<{
+  intro: HqStaticSection;
+  questions: HqPartnerQuestion[];
+  partners: HqPartner[];
+}> {
+  return {
+    intro: hqPartnershipAgreementIntro,
+    questions: hqPartnershipAgreementQuestions,
+    partners: hqPartners
+  };
+}
+
 export async function getHqDocumentsContent(): Promise<{
   intro: HqStaticSection;
   expected: HqExpectedDocument[];
@@ -216,8 +271,16 @@ export async function getHqOverview(organizationId: string): Promise<HqOverviewR
     getHqDocuments(organizationId)
   ]);
 
-  const answerTarget = responses.totals.target || hqPartners.length * hqPartnerQuestions.length;
-  const answered = responses.totals.answered;
+  const rolesStats = scopeHqAnswerStats(
+    responses.questions,
+    hqPartnerQuestions.map((question) => question.number),
+    hqPartners.length
+  );
+  const partnershipStats = scopeHqAnswerStats(
+    responses.questions,
+    hqPartnershipAgreementQuestions.map((question) => question.number),
+    hqPartners.length
+  );
   const signed = documents.documents.filter((document) => document.status === "SIGNED").length;
 
   const derived: Record<string, { status: HqSectionStatus; detail: string }> = {
@@ -231,8 +294,22 @@ export async function getHqOverview(organizationId: string): Promise<HqOverviewR
       detail: `${hqNumbersGroups.length} cost groups, no figures confirmed`
     },
     roles: {
-      status: answered === 0 ? "NOT_STARTED" : answered < answerTarget ? "IN_PROGRESS" : "READY_FOR_REVIEW",
-      detail: `${answered} of ${answerTarget} partner answers in`
+      status:
+        rolesStats.answered === 0
+          ? "NOT_STARTED"
+          : rolesStats.answered < rolesStats.target
+            ? "IN_PROGRESS"
+            : "READY_FOR_REVIEW",
+      detail: `${rolesStats.answered} of ${rolesStats.target} partner answers in`
+    },
+    "partnership-agreement": {
+      status:
+        partnershipStats.answered === 0
+          ? "NOT_STARTED"
+          : partnershipStats.answered < partnershipStats.target
+            ? "IN_PROGRESS"
+            : "READY_FOR_REVIEW",
+      detail: `${partnershipStats.answered} of ${partnershipStats.target} partner answers in`
     },
     documents: {
       status:

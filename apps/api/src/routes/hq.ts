@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { RequestAuthenticationError } from "../lib/requestContext.js";
 import { requireHqRequester } from "../modules/hq/access.js";
+import { HQ_QUESTION_NUMBERS } from "../modules/hq/partners.js";
 import {
   createHqPartnerResponse,
   getHqPartnerResponseView,
@@ -18,8 +19,18 @@ const router = Router();
 /** Empty bodies are rejected so an answer cannot be cleared to stay unlocked. */
 const answerBodySchema = z.string().trim().min(1).max(20000);
 
+/**
+ * Validated against the live HQ_QUESTION_NUMBERS list rather than a hardcoded
+ * range, so adding a question number there is the only change a new section
+ * needs to be accepted here too.
+ */
+const questionNumberSchema = z.number().int().refine(
+  (value) => (HQ_QUESTION_NUMBERS as readonly number[]).includes(value),
+  { message: "Not a recognized HQ question number." }
+);
+
 const createResponseSchema = z.object({
-  question: z.number().int().min(1).max(4),
+  question: questionNumberSchema,
   body: answerBodySchema
 });
 

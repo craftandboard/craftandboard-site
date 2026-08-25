@@ -291,6 +291,39 @@ export async function resolveRequestContext(input?: {
   });
 }
 
+/**
+ * Routes that must be reachable without an existing session.
+ *
+ * These are the endpoints a caller hits BEFORE they hold a session -- sign-in,
+ * the OAuth callback, activation, password recovery -- plus the public proposal
+ * acceptance surface.
+ *
+ * `/auth/google/complete` is the Google callback that trades an OAuth code for
+ * a session. Gating it on having a session is circular, and left Google sign-in
+ * permanently unreachable: the request 401'd here before the token exchange in
+ * modules/auth/service.ts ever ran, so no account could ever log in for the
+ * first time. `/auth/providers` is the configuration probe the sign-in page
+ * reads to decide whether to offer the Google button, which likewise happens
+ * before anyone has authenticated.
+ *
+ * Single source of truth on purpose: this list previously existed twice in
+ * requestContextMiddleware, and only the copy in the catch block was live.
+ */
+function isPublicRoute(req: Request) {
+  return (
+    req.path === "/health" ||
+    req.path.startsWith("/auth/login") ||
+    req.path.startsWith("/auth/logout") ||
+    req.path.startsWith("/auth/providers") ||
+    req.path.startsWith("/auth/google/complete") ||
+    req.path.startsWith("/auth/activate") ||
+    req.path.startsWith("/auth/forgot-password") ||
+    req.path.startsWith("/auth/reset-password") ||
+    req.path.startsWith("/public/proposal-acceptance/") ||
+    (req.path.startsWith("/payments/providers/") && req.path.endsWith("/acceptance-signals"))
+  );
+}
+
 export async function requestContextMiddleware(req: Request, res: Response, next: NextFunction) {
   // `/health` is a liveness probe and must not touch the database. Resolving a
   // request context calls ensureDefaultDevMembership(), which upserts the demo
@@ -304,16 +337,6 @@ export async function requestContextMiddleware(req: Request, res: Response, next
   }
 
   try {
-    const isPublicRoute =
-      req.path === "/health" ||
-      req.path.startsWith("/auth/login") ||
-      req.path.startsWith("/auth/logout") ||
-      req.path.startsWith("/auth/activate") ||
-      req.path.startsWith("/auth/forgot-password") ||
-      req.path.startsWith("/auth/reset-password") ||
-      req.path.startsWith("/public/proposal-acceptance/") ||
-      req.path.startsWith("/payments/providers/") && req.path.endsWith("/acceptance-signals");
-
     req.requestContext = await resolveRequestContext({
       userEmail: req.header("x-user-email"),
       organizationSlug: req.header("x-organization-slug"),
@@ -322,17 +345,7 @@ export async function requestContextMiddleware(req: Request, res: Response, next
     next();
   } catch (error) {
     if (error instanceof RequestAuthenticationError) {
-      const isPublicRoute =
-        req.path === "/health" ||
-        req.path.startsWith("/auth/login") ||
-        req.path.startsWith("/auth/logout") ||
-        req.path.startsWith("/auth/activate") ||
-        req.path.startsWith("/auth/forgot-password") ||
-        req.path.startsWith("/auth/reset-password") ||
-        req.path.startsWith("/public/proposal-acceptance/") ||
-        req.path.startsWith("/payments/providers/") && req.path.endsWith("/acceptance-signals");
-
-      if (isPublicRoute) {
+      if (isPublicRoute(req)) {
         next();
         return;
       }

@@ -68,7 +68,23 @@ function logGoogleAuth(level: "warn" | "error", event: string, details: Record<s
   console[level](`[auth][google] ${event}`, details);
 }
 
+/**
+ * Gives the demo owner and operator accounts usable passwords.
+ *
+ * DEVELOPMENT ONLY, and gated on the same flag as ensureDefaultDevMembership()
+ * for the same reason. It must not run in a deployed environment: the
+ * findUniqueOrThrow calls below assume the demo users exist, which is only
+ * guaranteed once the dev fixtures have been seeded.
+ *
+ * Skipping this in production costs the real sign-in paths nothing.
+ * signInWithPassword and signInWithGoogleCode look the caller up by their own
+ * email and never read the demo accounts.
+ */
 export async function ensureSeededAuthUsers() {
+  if (!env.ALLOW_DEV_AUTH_BYPASS) {
+    return;
+  }
+
   await ensureDefaultDevMembership();
 
   const owner = await prisma.user.findUniqueOrThrow({

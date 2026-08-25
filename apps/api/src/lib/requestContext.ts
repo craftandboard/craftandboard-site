@@ -56,7 +56,28 @@ declare global {
   }
 }
 
+/**
+ * Seeds the local development fixtures: default cost profiles, the demo org,
+ * the demo owner and operator users, and their memberships.
+ *
+ * DEVELOPMENT ONLY. This runs on the way into every resolved request context,
+ * so leaving it enabled in a deployed environment means every API call rewrites
+ * fixture rows into the live database. It also reaches well outside auth --
+ * ensureDefaultProfiles() touches CostProfile -- so on a database whose schema
+ * has drifted from prisma/schema.prisma it fails the request outright, turning
+ * unrelated endpoints into 500s.
+ *
+ * Gated on ALLOW_DEV_AUTH_BYPASS because these fixtures exist to support the
+ * dev identity path: the bypass resolves requests to the demo user this
+ * function creates, so the two belong to the same mode. The flag defaults to
+ * "false" (see lib/env.ts), which means deployed environments opt out unless
+ * someone deliberately turns it on.
+ */
 export async function ensureDefaultDevMembership() {
+  if (!env.ALLOW_DEV_AUTH_BYPASS) {
+    return;
+  }
+
   await ensureDefaultProfiles();
 
   await prisma.organization.upsert({

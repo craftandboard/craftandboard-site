@@ -11,7 +11,7 @@
     "lint": "./scripts/pnpm -r lint",
     "format": "prettier --write .",
     "prisma:generate": "prisma generate",
-    "build:api": "./scripts/pnpm exec prisma generate --schema prisma/schema.prisma && ./scripts/pnpm --filter api... build",
+    "build:api": "chmod +x node_modules/.bin/* 2>/dev/null; ./scripts/pnpm exec prisma generate --schema prisma/schema.prisma && ./scripts/pnpm --filter api... build",
     "start:api": "./scripts/pnpm --filter api start",
     "prisma:migrate:dev": "prisma migrate dev --schema prisma/schema.prisma",
     "db:up": "docker compose -f infrastructure/docker/docker-compose.yml up -d",

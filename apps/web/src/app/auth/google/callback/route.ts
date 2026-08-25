@@ -80,7 +80,7 @@ export async function GET(request: Request) {
 
     const redirectTarget = parsedState.returnTo?.startsWith("/")
       ? parsedState.returnTo
-      : "/admin/craft-board/dashboard";
+      : "/";
     try {
       const redirectResponse = NextResponse.redirect(new URL(redirectTarget, request.url));
 

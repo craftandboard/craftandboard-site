@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   }
 
   const requestUrl = new URL(request.url);
-  const returnTo = requestUrl.searchParams.get("returnTo") || "/admin/craft-board/dashboard";
+  const returnTo = requestUrl.searchParams.get("returnTo") || "/";
   const nonce = randomUUID();
   const redirectUri = new URL("/auth/google/callback", request.url).toString();
   const googleUrl = new URL(GOOGLE_AUTHORIZE_URL);

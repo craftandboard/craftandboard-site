@@ -48,12 +48,35 @@ import trustedAutoApplyRouter from "./routes/trustedAutoApply.js";
 import workModulesRouter from "./routes/workModules.js";
 import { logger } from "./lib/logger.js";
 
+/**
+ * Browser origins allowed to call this API, from CORS_ALLOWED_ORIGINS
+ * (comma-separated). Deployment config, not code: the Vercel preview host and
+ * the craftandboard.com domains are set on the Railway service.
+ *
+ * Read straight from process.env rather than through lib/env.js on purpose --
+ * importing the validated env schema here would force it to parse whenever
+ * app.ts is imported, which breaks tests that mock the request-context module
+ * and never set AUTH_SESSION_SECRET.
+ */
+function corsAllowedOrigins(): string[] {
+  const raw = process.env.CORS_ALLOWED_ORIGINS?.trim();
+
+  if (!raw) {
+    return ["http://localhost:3000"];
+  }
+
+  return raw
+    .split(",")
+    .map((origin) => origin.trim())
+    .filter((origin) => origin.length > 0);
+}
+
 export function createApp() {
   const app = express();
 
   app.use(
     cors({
-      origin: ["http://localhost:3000"],
+      origin: corsAllowedOrigins(),
       credentials: false
     })
   );

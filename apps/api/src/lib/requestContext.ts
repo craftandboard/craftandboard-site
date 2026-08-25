@@ -271,6 +271,17 @@ export async function resolveRequestContext(input?: {
 }
 
 export async function requestContextMiddleware(req: Request, res: Response, next: NextFunction) {
+  // `/health` is a liveness probe and must not touch the database. Resolving a
+  // request context calls ensureDefaultDevMembership(), which upserts the demo
+  // org, demo users and default profiles — so without this short-circuit every
+  // health check (Railway polls it continuously) writes fixture rows into
+  // whatever DATABASE_URL points at, and the probe fails whenever the database
+  // is merely unreachable rather than the process being unhealthy.
+  if (req.path === "/health") {
+    next();
+    return;
+  }
+
   try {
     const isPublicRoute =
       req.path === "/health" ||

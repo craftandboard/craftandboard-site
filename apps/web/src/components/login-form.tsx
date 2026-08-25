@@ -29,7 +29,7 @@ export function LoginForm() {
 
           document.cookie = `cb_session=${encodeURIComponent(response.sessionToken)}; path=/; max-age=1209600; samesite=lax`;
           document.cookie = `cb_org_slug=${encodeURIComponent(response.organization.slug)}; path=/; max-age=2592000; samesite=lax`;
-          router.push("/admin/craft-board/dashboard");
+          router.push("/");
           router.refresh();
         } catch (requestError) {
           setError(requestError instanceof Error ? requestError.message : "Login failed.");

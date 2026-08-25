@@ -198,50 +198,6 @@ export default async function HqRolesPage() {
           </article>
         ))}
       </section>
-
-      {/* C — ownership options, one stacked card each, no comparison table */}
-      <section className="space-y-3">
-        <h3 className="px-1 text-xl font-semibold text-[#2c221b]">Ownership options</h3>
-
-        {content.ownershipOptions.map((option) => (
-          <article
-            key={option.label}
-            className="rounded-[1.5rem] border border-[#e2d6c9] bg-[#fffaf4] p-4"
-          >
-            <h4 className="break-words text-base font-semibold text-[#2c221b]">{option.label}</h4>
-            <dl className="mt-3 space-y-3">
-              <div>
-                <dt className="text-sm uppercase tracking-[0.16em] text-[#67714d]">
-                  Tim&rsquo;s stake
-                </dt>
-                <dd
-                  className={
-                    option.timStake
-                      ? "mt-1 break-words text-base leading-7 text-[#2c221b]"
-                      : "mt-1 text-base italic text-[#786b5f]"
-                  }
-                >
-                  {option.timStake ?? "not set"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm uppercase tracking-[0.16em] text-[#67714d]">
-                  How capital comes back
-                </dt>
-                <dd className="mt-1 break-words text-base leading-7 text-[#5c4a3d]">
-                  {option.capitalReturn}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm uppercase tracking-[0.16em] text-[#67714d]">When it fits</dt>
-                <dd className="mt-1 break-words text-base leading-7 text-[#5c4a3d]">
-                  {option.fitsWhen}
-                </dd>
-              </div>
-            </dl>
-          </article>
-        ))}
-      </section>
     </div>
   );
 }

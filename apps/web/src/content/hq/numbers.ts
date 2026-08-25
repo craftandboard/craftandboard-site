@@ -10,20 +10,9 @@ import type { HqNumbersGroup, HqStaticSection } from "../../lib/hq/types";
  */
 export const hqNumbersIntro: HqStaticSection = {
   title: "Numbers",
-  intent: "Startup costs, equipment, revenue model, and what breakeven actually requires.",
+  intent: "Startup costs, revenue model, and what breakeven actually requires.",
   status: "NOT_STARTED",
-  blocks: [
-    {
-      heading: "Read this first",
-      body:
-        "Nothing on this page is filled in yet. The line items exist so the three of us are arguing about the same list rather than three different mental models.",
-      points: [
-        "A blank amount means unconfirmed, not zero",
-        "Equipment figures should be actual quotes, not catalog list prices",
-        "Breakeven is stated in units per month, not in revenue"
-      ]
-    }
-  ]
+  blocks: []
 };
 
 export const hqNumbersGroups: HqNumbersGroup[] = [
@@ -33,22 +22,9 @@ export const hqNumbersGroups: HqNumbersGroup[] = [
     lines: [
       { label: "Entity formation and filings", amountUsd: null, note: "LLC, registered agent, state fees" },
       { label: "Business insurance", amountUsd: null, note: "General liability and equipment coverage" },
-      { label: "Shop space deposit and setup", amountUsd: null, note: "First/last, electrical, dust collection" },
       { label: "Initial material inventory", amountUsd: null, note: "Sheet stock and edge banding to start" },
       { label: "Packaging and shipping supplies", amountUsd: null, note: "Cartons, corner protection, labels" },
       { label: "Software and tooling", amountUsd: null, note: "Hosting, Amazon fees, design tools" }
-    ]
-  },
-  {
-    title: "Equipment",
-    intent: "The capital purchases Tim's contribution is largely sizing.",
-    lines: [
-      { label: "CNC router", amountUsd: null, note: "Primary cutting capacity constraint" },
-      { label: "Panel saw or table saw", amountUsd: null, note: "Breakdown cuts ahead of the CNC" },
-      { label: "Edge bander", amountUsd: null, note: "Determines finish quality on every shelf" },
-      { label: "Dust collection", amountUsd: null, note: "Required before the shop runs daily" },
-      { label: "Material handling and racking", amountUsd: null, note: "Sheet storage, cart, lift assist" },
-      { label: "Packing station and label printer", amountUsd: null, note: "Throughput at the ship end" }
     ]
   },
   {
